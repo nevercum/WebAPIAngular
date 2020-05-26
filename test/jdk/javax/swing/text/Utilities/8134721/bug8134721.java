@@ -41,4 +41,18 @@ public class bug8134721 {
 
     private static void testNPE() {
 
-        Graphics g = null
+        Graphics g = null;
+        try {
+            String test = "\ttest\ttest2";
+            BufferedImage buffImage = new BufferedImage(
+                    100, 100, BufferedImage.TYPE_INT_RGB);
+            g = buffImage.createGraphics();
+            Segment segment = new Segment(test.toCharArray(), 0, test.length());
+            Utilities.drawTabbedText(segment, 0, 0, g, null, 0);
+        } finally {
+            if (g != null) {
+                g.dispose();
+            }
+        }
+    }
+}
