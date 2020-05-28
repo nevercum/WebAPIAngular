@@ -43,4 +43,43 @@ public class HttpHeadersBuilder {
 
     public HttpHeadersBuilder structuralCopy() {
         HttpHeadersBuilder builder = new HttpHeadersBuilder();
-        for (Map.Entry<String, List<String>> entry : headersMap.entrySet
+        for (Map.Entry<String, List<String>> entry : headersMap.entrySet()) {
+            List<String> valuesCopy = new ArrayList<>(entry.getValue());
+            builder.headersMap.put(entry.getKey(), valuesCopy);
+        }
+        return builder;
+    }
+
+    public void addHeader(String name, String value) {
+        headersMap.computeIfAbsent(name, k -> new ArrayList<>(1))
+                  .add(value);
+    }
+
+    public void setHeader(String name, String value) {
+        // headers typically have one value
+        List<String> values = new ArrayList<>(1);
+        values.add(value);
+        headersMap.put(name, values);
+    }
+
+    public void clear() {
+        headersMap.clear();
+    }
+
+    public Map<String, List<String>> map() {
+        return headersMap;
+    }
+
+    public HttpHeaders build() {
+        return HttpHeaders.of(headersMap, ACCEPT_ALL);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(super.toString()).append(" { ");
+        sb.append(map());
+        sb.append(" }");
+        return sb.toString();
+    }
+}
