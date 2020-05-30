@@ -23,4 +23,83 @@
 
 package jdk.jfr.api.flightrecorder;
 
-i
+import static jdk.test.lib.Asserts.assertFalse;
+import static jdk.test.lib.Asserts.assertTrue;
+
+import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+
+import jdk.jfr.Event;
+import jdk.jfr.FlightRecorder;
+import jdk.jfr.Recording;
+
+/**
+ * @test
+ * @summary
+ * @key jfr
+ * @requires vm.hasJFR
+ * @library /test/lib
+ * @run main/othervm jdk.jfr.api.flightrecorder.TestAddPeriodicEvent
+ */
+public class TestAddPeriodicEvent {
+
+    private static class MyEvent extends Event {
+
+    }
+
+    CountDownLatch latch = new CountDownLatch(3);
+
+    class MyHook implements Runnable {
+
+        private int eventCounter;
+        private long previousTime;
+
+        @Override
+        public void run() {
+            log("Commiting event " + (++eventCounter));
+            if (previousTime == 0) {
+                previousTime = System.currentTimeMillis();
+            } else {
+                long nowTime = System.currentTimeMillis();
+                long elapsedTime = nowTime - previousTime;
+                previousTime = nowTime;
+                log("Elapsed time since the previous event: " + elapsedTime);
+            }
+
+            commitEvent();
+            latch.countDown();
+        }
+
+        private void commitEvent() {
+            MyEvent event = new MyEvent();
+            event.commit();
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        new TestAddPeriodicEvent().doTest(1000, 3);
+    }
+
+    private void doTest(long eventDuration, int numOfEvents) throws Exception {
+        latch = new CountDownLatch(numOfEvents);
+        MyHook hook = new MyHook();
+
+        Recording r = new Recording();
+        r.enable(MyEvent.class).withPeriod(Duration.ofMillis(eventDuration));
+        r.start();
+
+        FlightRecorder.addPeriodicEvent(MyEvent.class, hook);
+
+        latch.await();
+
+        assertTrue(FlightRecorder.removePeriodicEvent(hook));
+        assertFalse(FlightRecorder.removePeriodicEvent(hook));
+
+        r.stop();
+        r.close();
+    }
+
+    private static void log(String text) {
+        System.out.println(text);
+    }
+}
