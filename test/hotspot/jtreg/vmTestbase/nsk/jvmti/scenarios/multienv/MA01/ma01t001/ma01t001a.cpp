@@ -92,3 +92,25 @@ jint Agent_Initialize(JavaVM *jvm, char *options, void *reserved) {
 
     if (!found) {
         NSK_COMPLAIN1("Expected option not found: \"%s\"\n", EXPECTED_OPTION);
+        nsk_jvmti_setFailStatus();
+    }
+
+    timeout = nsk_jvmti_getWaitTime() * 60 * 1000;
+
+    if (!NSK_VERIFY((jvmti =
+            nsk_jvmti_createJVMTIEnv(jvm, reserved)) != NULL))
+        return JNI_ERR;
+
+    if (!NSK_VERIFY(nsk_jvmti_setAgentProc(agentProc, NULL)))
+        return JNI_ERR;
+
+    memset(&callbacks, 0, sizeof(callbacks));
+    if (!NSK_VERIFY(nsk_jvmti_init_MA(&callbacks)))
+        return JNI_ERR;
+
+    return JNI_OK;
+}
+
+/* ========================================================================== */
+
+}
