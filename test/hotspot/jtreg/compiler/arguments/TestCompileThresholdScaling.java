@@ -64,4 +64,9 @@ public class TestCompileThresholdScaling {
         Asserts.assertEquals(found, fail, "Unexpected result");
 
         for (String threshold : thresholdList) {
-       
+            pattern = ".*" + threshold + "=.* is outside the allowed range";
+            Asserts.assertEquals(found, fail, "Unexpected result");
+        }
+    }
+
+}
