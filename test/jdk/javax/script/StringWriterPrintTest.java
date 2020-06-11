@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,6 +21,28 @@
  * questions.
  */
 
-module test.dummy {
-    provides java.security.Provider with org.test.dummy.DummyProvider;
-}
+/*
+ * @test
+ * @bug 6759414
+ * @summary javascript engine can not write to StringWriter.
+ */
+
+import javax.script.*;
+import java.io.*;
+
+public class StringWriterPrintTest {
+    public static void main(String[] args) throws ScriptException {
+        ScriptEngineManager sem = new ScriptEngineManager();
+        ScriptEngine engine = sem.getEngineByName("nashorn");
+        if (engine == null) {
+            System.out.println("Warning: No nashorn engine found; test vacuously passes.");
+            return;
+        }
+        StringWriter sw = new StringWriter();
+        engine.eval("print(\"hello world 1\\n\")");
+        engine.getContext().setWriter(sw);
+        // the following "print" call throws exception
+        engine.eval("print(\"hello world 2\\n\")");
+        System.out.println(sw.toString());
+    }
+};
