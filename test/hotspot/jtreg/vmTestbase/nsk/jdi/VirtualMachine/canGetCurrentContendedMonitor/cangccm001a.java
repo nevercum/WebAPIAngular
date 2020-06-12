@@ -88,4 +88,102 @@ public class cangccm001a {
             instruction = pipe.readln();
             if (instruction.equals("quit")) {
                 log1("'quit' recieved");
-                bre
+                break ;
+
+            } else if (instruction.equals("newcheck")) {
+                switch (i) {
+
+    //------------------------------------------------------  section tested
+
+                case 0:
+                         thread2 = JDIThreadFactory.newThread(new
+                              Threadcangccm001a("Thread2"));
+                         log1("       thread2 is created");
+
+
+                     label: {
+                         synchronized (Threadcangccm001a.lockingObject) {
+                             synchronized (Threadcangccm001a.waitnotifyObj) {
+                                 log1("       synchronized (waitnotifyObj) { enter");
+                                 log1("       before: thread2.start()");
+                                 thread2.start();
+
+                                 try {
+                                     log1("       before:   waitnotifyObj.wait();");
+                                     Threadcangccm001a.waitnotifyObj.wait();
+                                     log1("       after:    waitnotifyObj.wait();");
+
+                                     pipe.println("checkready");
+                                     instruction = pipe.readln();
+                                     if (!instruction.equals("continue")) {
+                                         logErr("ERROR: unexpected instruction: " + instruction);
+                                         exitCode = FAILED;
+                                         break label;
+                                     }
+                                     pipe.println("docontinue");
+                                 } catch ( Exception e2) {
+                                     log1("       Exception e2 exception: " + e2 );
+                                     pipe.println("waitnotifyerr");
+                                 }
+                             }
+                         }
+
+                     }  // closing to 'label:'
+
+                         log1("mainThread is out of: synchronized (lockingObject) {");
+
+                         break ;
+
+    //-------------------------------------------------    standard end section
+
+                default:
+                                pipe.println("checkend");
+                                break ;
+                }
+
+            } else {
+                logErr("ERRROR: unexpected instruction: " + instruction);
+                exitCode = FAILED;
+                break ;
+            }
+        }
+
+        System.exit(exitCode + PASS_BASE);
+    }
+}
+
+
+class Threadcangccm001a extends NamedTask {
+
+    public Threadcangccm001a(String threadName) {
+        super(threadName);
+    }
+
+    public static Object waitnotifyObj = new Object();
+    public static Object lockingObject = new Object();
+
+
+    private int i1 = 0, i2 = 10;
+
+    public void run() {
+        log("method 'run' enter");
+
+        synchronized (waitnotifyObj)                                    {
+            log("entered into block:  synchronized (waitnotifyObj)");
+            waitnotifyObj.notify();                                     }
+        log("exited from block:  synchronized (waitnotifyObj)");
+        synchronized (lockingObject)                                    {
+            log("entered into block:  synchronized (lockingObject)");   }
+        log("exited from block:  synchronized (lockingObject)");
+        i1++;
+        i2--;
+
+        log("method 'run' exit");
+        return;
+    }
+
+
+    void log(String str) {
+        cangccm001a.log2("thread2: " + str);
+    }
+}
