@@ -274,4 +274,156 @@ public class DisabledAlgorithms {
                     OutputStream out = socket.getOutputStream();
                     int b = in.read();
                     if (b < 0) {
-                        thr
+                        throw new IOException("Unexpected EOF");
+                    }
+                    System.out.println("Server: send data: " + b);
+                    out.write(b);
+                    out.flush();
+                    socket.getSession().invalidate();
+                } catch (SSLHandshakeException e) {
+                    System.out.println("Server: run: " + e);
+                    sslError = true;
+                } catch (IOException e) {
+                    if (!stopped) {
+                        System.out.println("Server: run: unexpected exception: "
+                                + e);
+                        e.printStackTrace();
+                        otherError = true;
+                        stopped = true;
+                    } else {
+                        System.out.println("Server: run: " + e);
+                        System.out.println("The exception above occurred "
+                                    + "because socket was closed, "
+                                    + "please ignore it");
+                    }
+                }
+            }
+
+            System.out.println("Server: finished");
+            running = false;
+        }
+
+        int getPort() {
+            return ssocket.getLocalPort();
+        }
+
+        String[] getEnabledCiperSuites() {
+            return ssocket.getEnabledCipherSuites();
+        }
+
+        boolean isRunning() {
+            return running;
+        }
+
+        boolean sslError() {
+            return sslError;
+        }
+
+        boolean error() {
+            return sslError || otherError;
+        }
+
+        void stop() {
+            stopped = true;
+            if (!ssocket.isClosed()) {
+                try {
+                    System.out.println("Server: close socket");
+                    ssocket.close();
+                } catch (IOException e) {
+                    System.out.println("Server: close: " + e);
+                }
+            }
+        }
+
+        @Override
+        public void close() {
+            stop();
+        }
+
+        static SSLServer init(String[] ciphersuites)
+                throws IOException {
+            SSLServerSocketFactory ssf = (SSLServerSocketFactory)
+                    SSLServerSocketFactory.getDefault();
+            SSLServerSocket ssocket = (SSLServerSocket)
+                    ssf.createServerSocket(0);
+
+            if (ciphersuites != null) {
+                System.out.println("Server: enable cipher suites: "
+                        + java.util.Arrays.toString(ciphersuites));
+                ssocket.setEnabledCipherSuites(ciphersuites);
+            }
+
+            return new SSLServer(ssocket);
+        }
+    }
+
+    static class SSLClient implements AutoCloseable {
+
+        private final SSLSocket socket;
+
+        private SSLClient(SSLSocket socket) {
+            this.socket = socket;
+        }
+
+        void connect() throws IOException {
+            System.out.println("Client: connect to server");
+            try (
+                    BufferedInputStream bis = new BufferedInputStream(
+                            socket.getInputStream());
+                    BufferedOutputStream bos = new BufferedOutputStream(
+                            socket.getOutputStream())) {
+                bos.write('x');
+                bos.flush();
+
+                int read = bis.read();
+                if (read < 0) {
+                    throw new IOException("Client: couldn't read a response");
+                }
+                socket.getSession().invalidate();
+            }
+        }
+
+        String[] getEnabledCiperSuites() {
+            return socket.getEnabledCipherSuites();
+        }
+
+        String getNegotiatedCipherSuite() {
+            return socket.getSession().getCipherSuite();
+        }
+
+        @Override
+        public void close() throws Exception {
+            if (!socket.isClosed()) {
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    System.out.println("Client: close: " + e);
+                }
+            }
+        }
+
+        static SSLClient init(int port)
+                throws NoSuchAlgorithmException, IOException {
+            return init(port, null);
+        }
+
+        static SSLClient init(int port, String ciphersuite)
+                throws NoSuchAlgorithmException, IOException {
+            SSLContext context = SSLContext.getDefault();
+            SSLSocketFactory ssf = (SSLSocketFactory)
+                    context.getSocketFactory();
+            SSLSocket socket = (SSLSocket) ssf.createSocket("localhost", port);
+
+            if (ciphersuite != null) {
+                System.out.println("Client: enable cipher suite: "
+                        + ciphersuite);
+                socket.setEnabledCipherSuites(new String[] { ciphersuite });
+            }
+
+            return new SSLClient(socket);
+        }
+
+    }
+
+
+}
