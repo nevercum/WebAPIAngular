@@ -181,4 +181,200 @@ final class X509KeyManagerImpl extends X509ExtendedKeyManager
     //
 
     // Gets algorithm constraints of the socket.
-    private AlgorithmConstraints getAlgorithmConstraints(Soc
+    private AlgorithmConstraints getAlgorithmConstraints(Socket socket) {
+        if (socket != null && socket.isConnected() &&
+                socket instanceof SSLSocket sslSocket) {
+
+            SSLSession session = sslSocket.getHandshakeSession();
+
+            if (session != null) {
+                if (ProtocolVersion.useTLS12PlusSpec(session.getProtocol())) {
+                    String[] peerSupportedSignAlgs = null;
+
+                    if (session instanceof ExtendedSSLSession extSession) {
+                        peerSupportedSignAlgs =
+                            extSession.getPeerSupportedSignatureAlgorithms();
+                    }
+
+                    return SSLAlgorithmConstraints.forSocket(
+                        sslSocket, peerSupportedSignAlgs, true);
+                }
+            }
+
+            return SSLAlgorithmConstraints.forSocket(sslSocket, true);
+        }
+
+        return SSLAlgorithmConstraints.DEFAULT;
+    }
+
+    // Gets algorithm constraints of the engine.
+    private AlgorithmConstraints getAlgorithmConstraints(SSLEngine engine) {
+        if (engine != null) {
+            SSLSession session = engine.getHandshakeSession();
+            if (session != null) {
+                if (ProtocolVersion.useTLS12PlusSpec(session.getProtocol())) {
+                    String[] peerSupportedSignAlgs = null;
+
+                    if (session instanceof ExtendedSSLSession extSession) {
+                        peerSupportedSignAlgs =
+                            extSession.getPeerSupportedSignatureAlgorithms();
+                    }
+
+                    return SSLAlgorithmConstraints.forEngine(
+                        engine, peerSupportedSignAlgs, true);
+                }
+            }
+        }
+
+        return SSLAlgorithmConstraints.forEngine(engine, true);
+    }
+
+    // we construct the alias we return to JSSE as seen in the code below
+    // a unique id is included to allow us to reliably cache entries
+    // between the calls to getCertificateChain() and getPrivateKey()
+    // even if tokens are inserted or removed
+    private String makeAlias(EntryStatus entry) {
+        return uidCounter.incrementAndGet() + "." + entry.builderIndex + "."
+                + entry.alias;
+    }
+
+    private PrivateKeyEntry getEntry(String alias) {
+        // if the alias is null, return immediately
+        if (alias == null) {
+            return null;
+        }
+
+        // try to get the entry from cache
+        Reference<PrivateKeyEntry> ref = entryCacheMap.get(alias);
+        PrivateKeyEntry entry = (ref != null) ? ref.get() : null;
+        if (entry != null) {
+            return entry;
+        }
+
+        // parse the alias
+        int firstDot = alias.indexOf('.');
+        int secondDot = alias.indexOf('.', firstDot + 1);
+        if ((firstDot == -1) || (secondDot == firstDot)) {
+            // invalid alias
+            return null;
+        }
+        try {
+            int builderIndex = Integer.parseInt
+                                (alias.substring(firstDot + 1, secondDot));
+            String keyStoreAlias = alias.substring(secondDot + 1);
+            Builder builder = builders.get(builderIndex);
+            KeyStore ks = builder.getKeyStore();
+            Entry newEntry = ks.getEntry(keyStoreAlias,
+                    builder.getProtectionParameter(keyStoreAlias));
+            if (!(newEntry instanceof PrivateKeyEntry)) {
+                // unexpected type of entry
+                return null;
+            }
+            entry = (PrivateKeyEntry)newEntry;
+            entryCacheMap.put(alias, new SoftReference<>(entry));
+            return entry;
+        } catch (Exception e) {
+            // ignore
+            return null;
+        }
+    }
+
+    // Class to help verify that the public key algorithm (and optionally
+    // the signature algorithm) of a certificate matches what we need.
+    private static class KeyType {
+
+        final String keyAlgorithm;
+
+        // In TLS 1.2, the signature algorithm  has been obsoleted by the
+        // supported_signature_algorithms, and the certificate type no longer
+        // restricts the algorithm used to sign the certificate.
+        //
+        // However, because we don't support certificate type checking other
+        // than rsa_sign, dss_sign and ecdsa_sign, we don't have to check the
+        // protocol version here.
+        final String sigKeyAlgorithm;
+
+        KeyType(String algorithm) {
+            int k = algorithm.indexOf('_');
+            if (k == -1) {
+                keyAlgorithm = algorithm;
+                sigKeyAlgorithm = null;
+            } else {
+                keyAlgorithm = algorithm.substring(0, k);
+                sigKeyAlgorithm = algorithm.substring(k + 1);
+            }
+        }
+
+        boolean matches(Certificate[] chain) {
+            if (!chain[0].getPublicKey().getAlgorithm().equals(keyAlgorithm)) {
+                return false;
+            }
+            if (sigKeyAlgorithm == null) {
+                return true;
+            }
+            if (chain.length > 1) {
+                // if possible, check the public key in the issuer cert
+                return sigKeyAlgorithm.equals(
+                        chain[1].getPublicKey().getAlgorithm());
+            } else {
+                // Check the signature algorithm of the certificate itself.
+                // Look for the "withRSA" in "SHA1withRSA", etc.
+                X509Certificate issuer = (X509Certificate)chain[0];
+                String sigAlgName =
+                        issuer.getSigAlgName().toUpperCase(Locale.ENGLISH);
+                String pattern =
+                        "WITH" + sigKeyAlgorithm.toUpperCase(Locale.ENGLISH);
+                return sigAlgName.contains(pattern);
+            }
+        }
+    }
+
+    private static List<KeyType> getKeyTypes(String ... keyTypes) {
+        if ((keyTypes == null) ||
+                (keyTypes.length == 0) || (keyTypes[0] == null)) {
+            return null;
+        }
+        List<KeyType> list = new ArrayList<>(keyTypes.length);
+        for (String keyType : keyTypes) {
+            list.add(new KeyType(keyType));
+        }
+        return list;
+    }
+
+    /*
+     * Return the best alias that fits the given parameters.
+     * The algorithm we use is:
+     *   . scan through all the aliases in all builders in order
+     *   . as soon as we find a perfect match, return
+     *     (i.e. a match with a cert that has appropriate key usage,
+     *      qualified endpoint identity, and is not expired).
+     *   . if we do not find a perfect match, keep looping and remember
+     *     the imperfect matches
+     *   . at the end, sort the imperfect matches. we prefer expired certs
+     *     with appropriate key usage to certs with the wrong key usage.
+     *     return the first one of them.
+     */
+    private String chooseAlias(List<KeyType> keyTypeList, Principal[] issuers,
+            CheckType checkType, AlgorithmConstraints constraints) {
+
+        return chooseAlias(keyTypeList, issuers,
+                                    checkType, constraints, null, null);
+    }
+
+    private String chooseAlias(List<KeyType> keyTypeList, Principal[] issuers,
+            CheckType checkType, AlgorithmConstraints constraints,
+            List<SNIServerName> requestedServerNames, String idAlgorithm) {
+
+        if (keyTypeList == null || keyTypeList.isEmpty()) {
+            return null;
+        }
+
+        Set<Principal> issuerSet = getIssuerSet(issuers);
+        List<EntryStatus> allResults = null;
+        for (int i = 0, n = builders.size(); i < n; i++) {
+            try {
+                List<EntryStatus> results = getAliases(i, keyTypeList,
+                            issuerSet, false, checkType, constraints,
+                            requestedServerNames, idAlgorithm);
+                if (results != null) {
+                    
