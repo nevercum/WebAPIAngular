@@ -377,4 +377,201 @@ final class X509KeyManagerImpl extends X509ExtendedKeyManager
                             issuerSet, false, checkType, constraints,
                             requestedServerNames, idAlgorithm);
                 if (results != null) {
-                    
+                    for (EntryStatus status : results) {
+                        if (status.checkResult == CheckResult.OK) {
+                            if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+                                SSLLogger.fine("KeyMgr: choosing key: " + status);
+                            }
+                            return makeAlias(status);
+                        }
+                    }
+                    if (allResults == null) {
+                        allResults = new ArrayList<>();
+                    }
+                    allResults.addAll(results);
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        if (allResults == null) {
+            if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+                SSLLogger.fine("KeyMgr: no matching key found");
+            }
+            return null;
+        }
+        Collections.sort(allResults);
+        if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+            SSLLogger.fine(
+                    "KeyMgr: no good matching key found, "
+                    + "returning best match out of", allResults);
+        }
+        return makeAlias(allResults.get(0));
+    }
+
+    /*
+     * Return all aliases that (approximately) fit the parameters.
+     * These are perfect matches plus imperfect matches (expired certificates
+     * and certificates with the wrong extensions).
+     * The perfect matches will be first in the array.
+     */
+    public String[] getAliases(String keyType, Principal[] issuers,
+            CheckType checkType, AlgorithmConstraints constraints) {
+        if (keyType == null) {
+            return null;
+        }
+
+        Set<Principal> issuerSet = getIssuerSet(issuers);
+        List<KeyType> keyTypeList = getKeyTypes(keyType);
+        List<EntryStatus> allResults = null;
+        for (int i = 0, n = builders.size(); i < n; i++) {
+            try {
+                List<EntryStatus> results = getAliases(i, keyTypeList,
+                                    issuerSet, true, checkType, constraints,
+                                    null, null);
+                if (results != null) {
+                    if (allResults == null) {
+                        allResults = new ArrayList<>();
+                    }
+                    allResults.addAll(results);
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        if (allResults == null || allResults.isEmpty()) {
+            if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+                SSLLogger.fine("KeyMgr: no matching alias found");
+            }
+            return null;
+        }
+        Collections.sort(allResults);
+        if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+            SSLLogger.fine("KeyMgr: getting aliases", allResults);
+        }
+        return toAliases(allResults);
+    }
+
+    // turn candidate entries into unique aliases we can return to JSSE
+    private String[] toAliases(List<EntryStatus> results) {
+        String[] s = new String[results.size()];
+        int i = 0;
+        for (EntryStatus result : results) {
+            s[i++] = makeAlias(result);
+        }
+        return s;
+    }
+
+    // make a Set out of the array
+    private Set<Principal> getIssuerSet(Principal[] issuers) {
+        if ((issuers != null) && (issuers.length != 0)) {
+            return new HashSet<>(Arrays.asList(issuers));
+        } else {
+            return null;
+        }
+    }
+
+    // a candidate match
+    // identifies the entry by builder and alias
+    // and includes the result of the certificate check
+    private static class EntryStatus implements Comparable<EntryStatus> {
+
+        final int builderIndex;
+        final int keyIndex;
+        final String alias;
+        final CheckResult checkResult;
+
+        EntryStatus(int builderIndex, int keyIndex, String alias,
+                Certificate[] chain, CheckResult checkResult) {
+            this.builderIndex = builderIndex;
+            this.keyIndex = keyIndex;
+            this.alias = alias;
+            this.checkResult = checkResult;
+        }
+
+        @Override
+        public int compareTo(EntryStatus other) {
+            int result = this.checkResult.compareTo(other.checkResult);
+            return (result == 0) ? (this.keyIndex - other.keyIndex) : result;
+        }
+
+        @Override
+        public String toString() {
+            String s = alias + " (verified: " + checkResult + ")";
+            if (builderIndex == 0) {
+                return s;
+            } else {
+                return "Builder #" + builderIndex + ", alias: " + s;
+            }
+        }
+    }
+
+    // enum for the type of certificate check we want to perform
+    // (client or server)
+    // also includes the check code itself
+    private enum CheckType {
+
+        // enum constant for "no check" (currently not used)
+        NONE(Collections.emptySet()),
+
+        // enum constant for "tls client" check
+        // valid EKU for TLS client: any, tls_client
+        CLIENT(new HashSet<>(List.of(
+                KnownOIDs.anyExtendedKeyUsage.value(),
+                KnownOIDs.clientAuth.value()
+        ))),
+
+        // enum constant for "tls server" check
+        // valid EKU for TLS server: any, tls_server, ns_sgc, ms_sgc
+        SERVER(new HashSet<>(List.of(
+                KnownOIDs.anyExtendedKeyUsage.value(),
+                KnownOIDs.serverAuth.value(),
+                KnownOIDs.NETSCAPE_ExportApproved.value(),
+                KnownOIDs.MICROSOFT_ExportApproved.value()
+        )));
+
+        // set of valid EKU values for this type
+        final Set<String> validEku;
+
+        CheckType(Set<String> validEku) {
+            this.validEku = validEku;
+        }
+
+        private static boolean getBit(boolean[] keyUsage, int bit) {
+            return (bit < keyUsage.length) && keyUsage[bit];
+        }
+
+        // Check if this certificate is appropriate for this type of use
+        // first check extensions, if they match, check expiration.
+        //
+        // Note: we may want to move this code into the sun.security.validator
+        // package
+        CheckResult check(X509Certificate cert, Date date,
+                List<SNIServerName> serverNames, String idAlgorithm) {
+
+            if (this == NONE) {
+                return CheckResult.OK;
+            }
+
+            // check extensions
+            try {
+                // check extended key usage
+                List<String> certEku = cert.getExtendedKeyUsage();
+                if ((certEku != null) &&
+                        Collections.disjoint(validEku, certEku)) {
+                    // if extension is present and does not contain any of
+                    // the valid EKU OIDs, return extension_mismatch
+                    return CheckResult.EXTENSION_MISMATCH;
+                }
+
+                // check key usage
+                boolean[] ku = cert.getKeyUsage();
+                if (ku != null) {
+                    String algorithm = cert.getPublicKey().getAlgorithm();
+                    boolean supportsDigitalSignature = getBit(ku, 0);
+                    switch (algorithm) {
+                        case "RSA":
+                            // require either signature bit
+                            // or if server also allow key encipherment bit
+                            if (!supportsDigitalSignature) {
+                             
