@@ -741,4 +741,125 @@ final class X509KeyManagerImpl extends X509ExtendedKeyManager
 
             boolean incompatible = false;
             for (Certificate cert : chain) {
-                if (!(cert instanceof X509
+                if (!(cert instanceof X509Certificate)) {
+                    // not an X509Certificate, ignore this alias
+                    incompatible = true;
+                    break;
+                }
+            }
+            if (incompatible) {
+                continue;
+            }
+
+            // check keytype
+            int keyIndex = -1;
+            int j = 0;
+            for (KeyType keyType : keyTypes) {
+                if (keyType.matches(chain)) {
+                    keyIndex = j;
+                    break;
+                }
+                j++;
+            }
+            if (keyIndex == -1) {
+                if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+                    SSLLogger.fine("Ignore alias " + alias
+                                + ": key algorithm does not match");
+                }
+                continue;
+            }
+            // check issuers
+            if (issuerSet != null) {
+                boolean found = false;
+                for (Certificate cert : chain) {
+                    X509Certificate xcert = (X509Certificate)cert;
+                    if (issuerSet.contains(xcert.getIssuerX500Principal())) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+                        SSLLogger.fine(
+                                "Ignore alias " + alias
+                                + ": issuers do not match");
+                    }
+                    continue;
+                }
+            }
+
+            // check the algorithm constraints
+            if (constraints != null &&
+                    !conformsToAlgorithmConstraints(constraints, chain,
+                            checkType.getValidator())) {
+
+                if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+                    SSLLogger.fine("Ignore alias " + alias +
+                            ": certificate list does not conform to " +
+                            "algorithm constraints");
+                }
+                continue;
+            }
+
+            if (date == null) {
+                date = new Date();
+            }
+            CheckResult checkResult =
+                    checkType.check((X509Certificate)chain[0], date,
+                                    requestedServerNames, idAlgorithm);
+            EntryStatus status =
+                    new EntryStatus(builderIndex, keyIndex,
+                                        alias, chain, checkResult);
+            if (!preferred && checkResult == CheckResult.OK && keyIndex == 0) {
+                preferred = true;
+            }
+            if (preferred && !findAll) {
+                // if we have a good match and do not need all matches,
+                // return immediately
+                return Collections.singletonList(status);
+            } else {
+                if (results == null) {
+                    results = new ArrayList<>();
+                }
+                results.add(status);
+            }
+        }
+        return results;
+    }
+
+    private static boolean conformsToAlgorithmConstraints(
+            AlgorithmConstraints constraints, Certificate[] chain,
+            String variant) {
+
+        AlgorithmChecker checker = new AlgorithmChecker(constraints, variant);
+        try {
+            checker.init(false);
+        } catch (CertPathValidatorException cpve) {
+            // unlikely to happen
+            if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+                SSLLogger.fine(
+                    "Cannot initialize algorithm constraints checker", cpve);
+            }
+
+            return false;
+        }
+
+        // It is a forward checker, so we need to check from trust to target.
+        for (int i = chain.length - 1; i >= 0; i--) {
+            Certificate cert = chain[i];
+            try {
+                // We don't care about the unresolved critical extensions.
+                checker.check(cert, Collections.emptySet());
+            } catch (CertPathValidatorException cpve) {
+                if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+                    SSLLogger.fine("Certificate does not conform to " +
+                            "algorithm constraints", cert, cpve);
+                }
+
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
