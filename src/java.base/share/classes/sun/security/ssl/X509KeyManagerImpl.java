@@ -574,4 +574,171 @@ final class X509KeyManagerImpl extends X509ExtendedKeyManager
                             // require either signature bit
                             // or if server also allow key encipherment bit
                             if (!supportsDigitalSignature) {
-                             
+                                if (this == CLIENT || !getBit(ku, 2)) {
+                                    return CheckResult.EXTENSION_MISMATCH;
+                                }
+                            }
+                            break;
+                        case "RSASSA-PSS":
+                            if (!supportsDigitalSignature && (this == SERVER)) {
+                                return CheckResult.EXTENSION_MISMATCH;
+                            }
+                            break;
+                        case "DSA":
+                            // require signature bit
+                            if (!supportsDigitalSignature) {
+                                return CheckResult.EXTENSION_MISMATCH;
+                            }
+                            break;
+                        case "DH":
+                            // require keyagreement bit
+                            if (!getBit(ku, 4)) {
+                                return CheckResult.EXTENSION_MISMATCH;
+                            }
+                            break;
+                        case "EC":
+                            // require signature bit
+                            if (!supportsDigitalSignature) {
+                                return CheckResult.EXTENSION_MISMATCH;
+                            }
+                            // For servers, also require key agreement.
+                            // This is not totally accurate as the keyAgreement
+                            // bit is only necessary for static ECDH key
+                            // exchange and not ephemeral ECDH. We leave it in
+                            // for now until there are signs that this check
+                            // causes problems for real world EC certificates.
+                            if (this == SERVER && !getBit(ku, 4)) {
+                                return CheckResult.EXTENSION_MISMATCH;
+                            }
+                            break;
+                    }
+                }
+            } catch (CertificateException e) {
+                // extensions unparseable, return failure
+                return CheckResult.EXTENSION_MISMATCH;
+            }
+
+            try {
+                cert.checkValidity(date);
+            } catch (CertificateException e) {
+                return CheckResult.EXPIRED;
+            }
+
+            if (serverNames != null && !serverNames.isEmpty()) {
+                for (SNIServerName serverName : serverNames) {
+                    if (serverName.getType() ==
+                                StandardConstants.SNI_HOST_NAME) {
+                        if (!(serverName instanceof SNIHostName)) {
+                            try {
+                                serverName =
+                                    new SNIHostName(serverName.getEncoded());
+                            } catch (IllegalArgumentException iae) {
+                                // unlikely to happen, just in case ...
+                                if (SSLLogger.isOn &&
+                                        SSLLogger.isOn("keymanager")) {
+                                    SSLLogger.fine(
+                                       "Illegal server name: " + serverName);
+                                }
+
+                                return CheckResult.INSENSITIVE;
+                            }
+                        }
+                        String hostname =
+                                ((SNIHostName)serverName).getAsciiName();
+
+                        try {
+                            X509TrustManagerImpl.checkIdentity(hostname,
+                                                        cert, idAlgorithm);
+                        } catch (CertificateException e) {
+                            if (SSLLogger.isOn &&
+                                    SSLLogger.isOn("keymanager")) {
+                                SSLLogger.fine(
+                                    "Certificate identity does not match " +
+                                    "Server Name Indication (SNI): " +
+                                    hostname);
+                            }
+                            return CheckResult.INSENSITIVE;
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            return CheckResult.OK;
+        }
+
+        public String getValidator() {
+            if (this == CLIENT) {
+                return Validator.VAR_TLS_CLIENT;
+            } else if (this == SERVER) {
+                return Validator.VAR_TLS_SERVER;
+            }
+            return Validator.VAR_GENERIC;
+        }
+    }
+
+    // enum for the result of the extension check
+    // NOTE: the order of the constants is important as they are used
+    // for sorting, i.e. OK is best, followed by EXPIRED and EXTENSION_MISMATCH
+    private enum CheckResult {
+        OK,                     // ok or not checked
+        INSENSITIVE,            // server name indication insensitive
+        EXPIRED,                // extensions valid but cert expired
+        EXTENSION_MISMATCH,     // extensions invalid (expiration not checked)
+    }
+
+    /*
+     * Return a List of all candidate matches in the specified builder
+     * that fit the parameters.
+     * We exclude entries in the KeyStore if they are not:
+     *  . private key entries
+     *  . the certificates are not X509 certificates
+     *  . the algorithm of the key in the EE cert doesn't match one of keyTypes
+     *  . none of the certs is issued by a Principal in issuerSet
+     * Using those entries would not be possible or they would almost
+     * certainly be rejected by the peer.
+     *
+     * In addition to those checks, we also check the extensions in the EE
+     * cert and its expiration. Even if there is a mismatch, we include
+     * such certificates because they technically work and might be accepted
+     * by the peer. This leads to more graceful failure and better error
+     * messages if the cert expires from one day to the next.
+     *
+     * The return values are:
+     *   . null, if there are no matching entries at all
+     *   . if 'findAll' is 'false' and there is a perfect match, a List
+     *     with a single element (early return)
+     *   . if 'findAll' is 'false' and there is NO perfect match, a List
+     *     with all the imperfect matches (expired, wrong extensions)
+     *   . if 'findAll' is 'true', a List with all perfect and imperfect
+     *     matches
+     */
+    private List<EntryStatus> getAliases(int builderIndex,
+            List<KeyType> keyTypes, Set<Principal> issuerSet,
+            boolean findAll, CheckType checkType,
+            AlgorithmConstraints constraints,
+            List<SNIServerName> requestedServerNames,
+            String idAlgorithm) throws Exception {
+
+        Builder builder = builders.get(builderIndex);
+        KeyStore ks = builder.getKeyStore();
+        List<EntryStatus> results = null;
+        Date date = verificationDate;
+        boolean preferred = false;
+        for (Enumeration<String> e = ks.aliases(); e.hasMoreElements(); ) {
+            String alias = e.nextElement();
+            // check if it is a key entry (private key or secret key)
+            if (!ks.isKeyEntry(alias)) {
+                continue;
+            }
+
+            Certificate[] chain = ks.getCertificateChain(alias);
+            if ((chain == null) || (chain.length == 0)) {
+                // must be secret key entry, ignore
+                continue;
+            }
+
+            boolean incompatible = false;
+            for (Certificate cert : chain) {
+                if (!(cert instanceof X509
