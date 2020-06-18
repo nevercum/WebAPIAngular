@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,12 +21,34 @@
  * questions.
  */
 
-import java.lang.annotation.Retention;
-import static java.lang.annotation.RetentionPolicy.*;
+// This is not the real sun.security.provider.SeedGenerator class. Used by
+// ../../../../CommonSeeder.java only.
+package sun.security.provider;
 
-/**
- * A marker annotation.  Used so that at least one annotation will be
- * present on the classes tested by MissingTest.
- */
-@Retention(RUNTIME)
-public @interface Marker {}
+public class SeedGenerator {
+
+    static int count = 100;
+    static int lastCount = 100;
+
+    public static void generateSeed(byte[] result) {
+        count--;
+    }
+
+    /**
+     * Confirms genEntropy() has been called {@code less} times
+     * since last check.
+     */
+    public static void checkUsage(int less) throws Exception {
+        if (lastCount != count + less) {
+            throw new Exception(String.format(
+                    "lastCount = %d, count = %d, less = %d",
+                    lastCount, count, less));
+        }
+        lastCount = count;
+    }
+
+    // Needed by AbstractDrbg.java
+    static byte[] getSystemEntropy() {
+        return new byte[20];
+    }
+}

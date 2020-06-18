@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,12 +21,18 @@
  * questions.
  */
 
-import java.lang.annotation.Retention;
-import static java.lang.annotation.RetentionPolicy.*;
-
-/**
- * A marker annotation.  Used so that at least one annotation will be
- * present on the classes tested by MissingTest.
+/*
+ * @test
+ * @bug 4506596
+ * @summary Tests PropertyEditor for value of type Float
+ * @author Sergey Malenkov
+ * @modules java.compiler
+ *          java.desktop
+ *          jdk.compiler
  */
-@Retention(RUNTIME)
-public @interface Marker {}
+
+public class TestFloatClassJava {
+    public static void main(String[] args) {
+        new TestEditor(Float.class).testJava(Float.valueOf(12.34f));
+    }
+}
