@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2004, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -20,27 +21,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package somelib;
 
-package nsk.jvmti.scenarios.hotswap.HS201;
+// This class will be patched
+public class PatchInfo {
 
-public class hs201t001a extends Exception {
-
-    public hs201t001a () {
-        System.out.println("Current step: " + hs201t001.currentStep); // Avoid calling classloader to find hs201t001 in doInit()
-        doInit();
+    public static String patchName() {
+        return "patch2";
     }
 
-    private void doInit() {
-        // Mark that we are in the doInit function.
-        hs201t001.isInDoInitFunction = true;
-
-        int localVariable;
-        localVariable = 1;
-        localVariable = 2;
-        localVariable = 3;
-
-        while (hs201t001.currentStep <= 4) {
-            localVariable = 3;
-        }
-    }
 }
