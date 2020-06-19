@@ -167,4 +167,136 @@ public class tc09x001 {
             if (eventIterator != null) {
                 while (eventIterator.hasNext()) {
                     event = eventIterator.nextEvent();
-//                    display("\n event
+//                    display("\n event ===>>> " + event);
+
+                    if (event instanceof ClassPrepareEvent) {
+                        display("\n event ===>>> " + event);
+                        debugeeClass = ((ClassPrepareEvent )event).referenceType();
+                        display("Tested class\t:" + debugeeClass.name());
+
+                        brkpRequest1 = debugee.setBreakpoint(debugeeClass,
+                                                    tc09x001a.brkpMethodName,
+                                                    tc09x001a.brkpLineNumber1);
+
+                        brkpRequest2 = debugee.setBreakpoint(debugeeClass,
+                                                    tc09x001a.brkpMethodName,
+                                                    tc09x001a.brkpLineNumber2);
+
+                        breakpointInfo(brkpRequest1);
+                        breakpointInfo(brkpRequest2);
+
+                        debugee.resume();
+
+                    } else if (event instanceof BreakpointEvent) {
+                        display("\n event ===>>> " + event);
+                        hitBreakpoint((BreakpointEvent )event);
+                        if (eventCount == 1) {
+                            display("redefining...");
+                            redefineDebugee();
+                            breakpointInfo(brkpRequest1);
+                            breakpointInfo(brkpRequest2);
+                        }
+                        debugee.resume();
+
+                    } else if (event instanceof VMDeathEvent) {
+                        exit = true;
+                        break;
+                    } else if (event instanceof VMDisconnectEvent) {
+                        exit = true;
+                        break;
+                    } // if
+                } // while
+            } // if
+            tmp = System.currentTimeMillis();
+            delta = tmp - begin;
+            totalTime -= delta;
+                begin = tmp;
+        }
+
+        if (eventCount != expectedEventCount) {
+            if (totalTime <= 0) {
+                complain("out of wait time...");
+            }
+            complain("expecting " + expectedEventCount
+                        + " events, but "
+                        + eventCount + " events arrived.");
+            exitStatus = Consts.TEST_FAILED;
+        }
+
+        display("=============");
+        display("TEST FINISHES\n");
+    }
+
+    private void redefineDebugee() {
+        Map<? extends com.sun.jdi.ReferenceType,byte[]> mapBytes;
+        boolean alreadyComplained = false;
+        mapBytes = mapClassToBytes(newClassFile);
+        try {
+            debugee.VM().redefineClasses(mapBytes);
+        } catch (Exception e) {
+            throw new Failure(UNEXPECTED_STRING + e);
+        }
+    }
+
+    private Map<? extends com.sun.jdi.ReferenceType,byte[]> mapClassToBytes(String fileName) {
+        display("class-file\t:" + fileName);
+        File fileToBeRedefined = new File(classDir + File.separator + fileName);
+        int fileToRedefineLength = (int )fileToBeRedefined.length();
+        byte[] arrayToRedefine = new byte[fileToRedefineLength];
+
+        FileInputStream inputFile;
+        try {
+            inputFile = new FileInputStream(fileToBeRedefined);
+        } catch (FileNotFoundException e) {
+            throw new Failure(UNEXPECTED_STRING + e);
+        }
+
+        try {
+            inputFile.read(arrayToRedefine);
+            inputFile.close();
+        } catch (IOException e) {
+            throw new Failure(UNEXPECTED_STRING + e);
+        }
+        HashMap<com.sun.jdi.ReferenceType,byte[]> mapForClass = new HashMap<com.sun.jdi.ReferenceType,byte[]>();
+        mapForClass.put(debugeeClass, arrayToRedefine);
+        return mapForClass;
+    }
+
+    private void hitBreakpoint(BreakpointEvent event) {
+        eventInfo(event);
+        if (event.location().lineNumber() == tc09x001a.checkLastLine &&
+                eventCount == 1) {
+            display("!!!BreakpointEvent steps to the expected line "
+                        + event.location().lineNumber() + "!!!");
+        } else {
+            complain("BreakpointEvent steps to line " + event.location().lineNumber()
+                        + ", expected line number is "
+                        + tc09x001a.checkLastLine);
+            exitStatus = Consts.TEST_FAILED;
+        }
+        display("");
+    }
+
+    private void eventInfo(LocatableEvent event) {
+        eventCount++;
+        display("event info: #" + eventCount);
+        display("\tthread\t- " + event.thread().name());
+        locationInfo(event);
+    }
+
+    private void breakpointInfo(BreakpointRequest request) {
+        display("breakpoint info: ");
+        display("\tis enabled - " + request.isEnabled());
+        locationInfo(request);
+    }
+
+    private void locationInfo(Locatable loc) {
+        try {
+            display("\tsource\t- " + loc.location().sourceName());
+            display("\tmethod\t- " + loc.location().method().name());
+            display("\tline\t- " + loc.location().lineNumber());
+        } catch (AbsentInformationException e) {
+            display("***information is not available***");
+        }
+    }
+}
