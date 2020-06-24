@@ -84,4 +84,36 @@ final class FileInputStreamInstrumentor {
             long duration = EventConfiguration.timestamp() - start;
             if (eventConfiguration.shouldCommit(duration)) {
                 if (bytesRead < 0) {
-                    FileReadEvent.commit(start, duration, 
+                    FileReadEvent.commit(start, duration, path, 0L, true);
+                } else {
+                    FileReadEvent.commit(start, duration, path, bytesRead, false);
+                }
+            }
+        }
+        return bytesRead;
+    }
+
+    @JIInstrumentationMethod
+    public int read(byte b[], int off, int len) throws IOException {
+        EventConfiguration eventConfiguration = EventConfigurations.FILE_READ;
+        if (!eventConfiguration.isEnabled()) {
+            return read(b, off, len);
+        }
+        int bytesRead = 0;
+        long start = 0;
+        try {
+            start = EventConfiguration.timestamp();
+            bytesRead = read(b, off, len);
+        } finally {
+            long duration = EventConfiguration.timestamp() - start;
+            if (eventConfiguration.shouldCommit(duration)) {
+                if (bytesRead < 0) {
+                    FileReadEvent.commit(start, duration, path, 0L, true);
+                } else {
+                    FileReadEvent.commit(start, duration, path, bytesRead, false);
+                }
+            }
+        }
+        return bytesRead;
+    }
+}
