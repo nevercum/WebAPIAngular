@@ -72,4 +72,12 @@ public class Bug6949607Test {
             String attr_WithNs = atts.getValue("something", "attr");
             String attr_NoNs = atts.getValue("", "attr");
 
-            System.out.print
+            System.out.println("withNs: " + attr_WithNs);
+            System.out.println("NoNs: " + attr_NoNs);
+
+            Assert.assertTrue(attr_NoNs == null, "Should return null when uri is empty.");
+
+        }
+    }
+
+}
