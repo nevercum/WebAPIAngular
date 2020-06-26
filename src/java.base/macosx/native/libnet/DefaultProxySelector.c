@@ -164,4 +164,120 @@ JNIEXPORT jobjectArray JNICALL
 Java_sun_net_spi_DefaultProxySelector_getSystemProxies(JNIEnv *env,
                                                        jobject this,
                                                        jstring proto,
- 
+                                                       jstring host)
+{
+    CFDictionaryRef proxyDicRef = NULL;
+    CFURLRef        urlRef = NULL;
+    jobjectArray proxyArray = NULL;
+    const char *cproto;
+    const char *chost;
+
+    /* Get system proxy settings */
+    proxyDicRef = CFNetworkCopySystemProxySettings();
+    if (proxyDicRef == NULL) {
+        return NULL;
+    }
+
+    /* Create CFURLRef from proto and host */
+    cproto = (*env)->GetStringUTFChars(env, proto, NULL);
+    if (cproto != NULL) {
+        chost  = (*env)->GetStringUTFChars(env, host, NULL);
+        if (chost != NULL) {
+            char* uri = NULL;
+            size_t protoLen = 0;
+            size_t hostLen = 0;
+
+            protoLen = strlen(cproto);
+            hostLen = strlen(chost);
+
+            /* Construct the uri, cproto + "://" + chost */
+            uri = malloc(protoLen + hostLen + 4);
+            if (uri != NULL) {
+                memcpy(uri, cproto, protoLen);
+                memcpy(uri + protoLen, "://", 3);
+                memcpy(uri + protoLen + 3, chost, hostLen + 1);
+
+                urlRef = CFURLCreateWithBytes(NULL, (const UInt8 *) uri, strlen(uri),
+                                              kCFStringEncodingUTF8, NULL);
+                free(uri);
+            }
+            (*env)->ReleaseStringUTFChars(env, host, chost);
+        }
+        (*env)->ReleaseStringUTFChars(env, proto, cproto);
+    }
+    if (urlRef != NULL) {
+        CFArrayRef urlProxyArrayRef = CFNetworkCopyProxiesForURL(urlRef, proxyDicRef);
+        if (urlProxyArrayRef != NULL) {
+            CFIndex count;
+            CFIndex index;
+
+            CFArrayRef expandedProxyArray = createExpandedProxiesArray(urlProxyArrayRef, urlRef);
+            CFRelease(urlProxyArrayRef);
+
+            if (expandedProxyArray == NULL) {
+                CFRelease(urlRef);
+                CFRelease(proxyDicRef);
+                return NULL;
+            }
+
+            count = CFArrayGetCount(expandedProxyArray);
+
+            proxyArray = (*env)->NewObjectArray(env, count, proxy_class, NULL);
+            if (proxyArray != NULL || (*env)->ExceptionCheck(env)) {
+                /* Iterate over the expanded array of proxies */
+                for (index = 0; index < count ; index++) {
+                    CFDictionaryRef currentProxy;
+                    CFStringRef proxyType;
+                    jobject proxy = NULL;
+
+                    currentProxy = (CFDictionaryRef) CFArrayGetValueAtIndex(expandedProxyArray,
+                                                                            index);
+                    proxyType = (CFStringRef) CFDictionaryGetValue(currentProxy, kCFProxyTypeKey);
+                    if (CFEqual(proxyType, kCFProxyTypeNone)) {
+                        /* This entry states no proxy, therefore just add a NO_PROXY object. */
+                        proxy = (*env)->GetStaticObjectField(env, proxy_class, pr_no_proxyID);
+                    } else {
+                        /*
+                         * Create a proxy object for this entry.
+                         * Differentiate between SOCKS and HTTP type.
+                         */
+                        jfieldID typeID = ptype_httpID;
+                        if (CFEqual(proxyType, kCFProxyTypeSOCKS)) {
+                            typeID = ptype_socksID;
+                        }
+                        CFNumberRef portNumberRef = (CFNumberRef)CFDictionaryGetValue(currentProxy,
+                                                    (const void*)kCFProxyPortNumberKey);
+                        if (portNumberRef  != NULL) {
+                            int port = 0;
+                            if (CFNumberGetValue(portNumberRef, kCFNumberSInt32Type, &port)) {
+                                CFStringRef hostNameRef = (CFStringRef)CFDictionaryGetValue(
+                                              currentProxy, (const void*)kCFProxyHostNameKey);
+                                if (hostNameRef != NULL) {
+                                    char hostNameBuffer[BUFFER_SIZE];
+                                    if (CFStringGetCString(hostNameRef, hostNameBuffer,
+                                                           BUFFER_SIZE, kCFStringEncodingUTF8)) {
+                                        proxy = createProxy(env, typeID, &hostNameBuffer[0], port);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (proxy == NULL || (*env)->ExceptionCheck(env)) {
+                        proxyArray = NULL;
+                        break;
+                    }
+                    (*env)->SetObjectArrayElement(env, proxyArray, index, proxy);
+                    if ((*env)->ExceptionCheck(env)) {
+                        proxyArray = NULL;
+                        break;
+                    }
+                }
+            }
+            CFRelease(expandedProxyArray);
+        }
+        CFRelease(urlRef);
+    }
+    CFRelease(proxyDicRef);
+
+    return proxyArray;
+}
