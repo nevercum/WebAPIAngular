@@ -23,4 +23,8 @@
       <option name="processLiterals" value="false" />
       <option name="processComments" value="false" />
     </inspection_tool>
-    <inspection_tool cla
+    <inspection_tool class="SuspiciousMethodCalls" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="REPORT_CONVERTIBLE_METHOD_CALLS" value="false" />
+    </inspection_tool>
+  </profile>
+</component>
