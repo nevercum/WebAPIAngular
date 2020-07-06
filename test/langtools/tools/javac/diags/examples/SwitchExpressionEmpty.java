@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,26 +21,12 @@
  * questions.
  */
 
-import javax.swing.plaf.ColorUIResource;
-import javax.swing.plaf.metal.DefaultMetalTheme;
+// key: compiler.err.switch.expression.empty
 
-/**
- * This class describes a theme using red colors.
- *
- * @author Jeff Dinkins
- */
-public class RubyTheme extends DefaultMetalTheme {
-
-    public static String NAME = "Ruby";
-
-    public String getName() { return NAME; }
-
-    private final ColorUIResource primary1 = new ColorUIResource(80, 10, 22);
-    private final ColorUIResource primary2 = new ColorUIResource(193, 10, 44);
-    private final ColorUIResource primary3 = new ColorUIResource(244, 10, 66);
-
-    protected ColorUIResource getPrimary1() { return primary1; }
-    protected ColorUIResource getPrimary2() { return primary2; }
-    protected ColorUIResource getPrimary3() { return primary3; }
-
+class BreakOutsideSwitchExpression {
+    String t(E e) {
+        return switch (e) {
+        };
+    }
+    enum E {}
 }
