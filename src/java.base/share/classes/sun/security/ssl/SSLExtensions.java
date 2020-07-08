@@ -320,4 +320,83 @@ final class SSLExtensions {
         if (extMap.isEmpty()) {
             return 0;
         } else {
-          
+            return encodedLength;
+        }
+    }
+
+    // Note that TLS 1.3 may use empty extensions.  Please consider it while
+    // using this method.
+    void send(HandshakeOutStream hos) throws IOException {
+        int extsLen = length();
+        if (extsLen == 0) {
+            return;
+        }
+        hos.putInt16(extsLen - 2);
+        // extensions must be sent in the order they appear in the enum
+        for (SSLExtension ext : SSLExtension.values()) {
+            byte[] extData = extMap.get(ext);
+            if (extData != null) {
+                hos.putInt16(ext.id);
+                hos.putBytes16(extData);
+            }
+        }
+    }
+
+    @Override
+    public String toString() {
+        if (extMap.isEmpty() && (logMap == null || logMap.isEmpty())) {
+            return "<no extension>";
+        } else {
+            StringBuilder builder = new StringBuilder(512);
+            if (logMap != null && !logMap.isEmpty()) {
+                for (Map.Entry<Integer, byte[]> en : logMap.entrySet()) {
+                    SSLExtension ext = SSLExtension.valueOf(
+                            handshakeMessage.handshakeType(), en.getKey());
+                    if (builder.length() != 0) {
+                        builder.append(",\n");
+                    }
+                    if (ext != null) {
+                        builder.append(
+                            ext.toString(handshakeMessage.handshakeContext,
+                                    ByteBuffer.wrap(en.getValue())));
+                    } else {
+                        builder.append(toString(en.getKey(), en.getValue()));
+                    }
+                }
+
+            } else {
+                for (Map.Entry<SSLExtension, byte[]> en : extMap.entrySet()) {
+                    if (builder.length() != 0) {
+                        builder.append(",\n");
+                    }
+                    builder.append(
+                        en.getKey().toString(handshakeMessage.handshakeContext,
+                                ByteBuffer.wrap(en.getValue())));
+                }
+
+            }
+            return builder.toString();
+        }
+    }
+
+    private static String toString(int extId, byte[] extData) {
+        String extName = SSLExtension.nameOf(extId);
+        MessageFormat messageFormat = new MessageFormat(
+                """
+                        "{0} ({1})": '{'
+                        {2}
+                        '}'""",
+            Locale.ENGLISH);
+
+        HexDumpEncoder hexEncoder = new HexDumpEncoder();
+        String encoded = hexEncoder.encodeBuffer(extData);
+
+        Object[] messageFields = {
+            extName,
+            extId,
+            Utilities.indent(encoded)
+        };
+
+        return messageFormat.format(messageFields);
+    }
+}
