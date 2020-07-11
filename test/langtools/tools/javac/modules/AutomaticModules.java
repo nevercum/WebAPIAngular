@@ -469,4 +469,202 @@ public class AutomaticModules extends ModuleTestBase {
                           """
                               module m1x {
                                   requires transitive automaticA;
-                         
+                                  requires automaticB;
+                              }""");
+
+        Path classes = base.resolve("classes");
+
+        Files.createDirectories(classes);
+
+        List<String> expected;
+        List<String> log;
+
+        log = new JavacTask(tb)
+            .options("--source-path", src.toString(),
+                     "--module-path", modulePath.toString(),
+                     "-XDrawDiagnostics",
+                     "-Werror")
+            .outdir(classes)
+            .files(findJavaFiles(src))
+            .run(Task.Expect.FAIL)
+            .writeAll()
+            .getOutputLines(Task.OutputKind.DIRECT);
+
+        expected = Arrays.asList("module-info.java:2:25: compiler.warn.requires.transitive.automatic",
+                                 "- compiler.err.warnings.and.werror",
+                                 "1 error",
+                                 "1 warning");
+
+        if (!expected.equals(log)) {
+            throw new Exception("expected output not found: " + log);
+        }
+
+        log = new JavacTask(tb)
+            .options("--source-path", src.toString(),
+                     "--module-path", modulePath.toString(),
+                     "-Xlint:requires-automatic",
+                     "-XDrawDiagnostics",
+                     "-Werror")
+            .outdir(classes)
+            .files(findJavaFiles(src))
+            .run(Task.Expect.FAIL)
+            .writeAll()
+            .getOutputLines(Task.OutputKind.DIRECT);
+
+        expected = Arrays.asList("module-info.java:2:25: compiler.warn.requires.transitive.automatic",
+                                 "module-info.java:3:14: compiler.warn.requires.automatic",
+                                 "- compiler.err.warnings.and.werror",
+                                 "1 error",
+                                 "2 warnings");
+
+        if (!expected.equals(log)) {
+            throw new Exception("expected output not found: " + log);
+        }
+
+        log = new JavacTask(tb)
+            .options("--source-path", src.toString(),
+                     "--module-path", modulePath.toString(),
+                     "-Xlint:-requires-transitive-automatic,requires-automatic",
+                     "-XDrawDiagnostics",
+                     "-Werror")
+            .outdir(classes)
+            .files(findJavaFiles(src))
+            .run(Task.Expect.FAIL)
+            .writeAll()
+            .getOutputLines(Task.OutputKind.DIRECT);
+
+        expected = Arrays.asList("module-info.java:2:25: compiler.warn.requires.automatic",
+                                 "module-info.java:3:14: compiler.warn.requires.automatic",
+                                 "- compiler.err.warnings.and.werror",
+                                 "1 error",
+                                 "2 warnings");
+
+        if (!expected.equals(log)) {
+            throw new Exception("expected output not found: " + log);
+        }
+
+        new JavacTask(tb)
+            .options("--source-path", src.toString(),
+                     "--module-path", modulePath.toString(),
+                     "-Xlint:-requires-transitive-automatic",
+                     "-XDrawDiagnostics",
+                     "-Werror")
+            .outdir(classes)
+            .files(findJavaFiles(src))
+            .run(Task.Expect.SUCCESS)
+            .writeAll()
+            .getOutputLines(Task.OutputKind.DIRECT);
+
+        tb.writeJavaFiles(src,
+                          """
+                              @SuppressWarnings("requires-transitive-automatic")
+                              module m1x {
+                                  requires transitive automaticA;
+                                  requires automaticB;
+                              }""");
+
+        new JavacTask(tb)
+            .options("--source-path", src.toString(),
+                     "--module-path", modulePath.toString(),
+                     "-XDrawDiagnostics",
+                     "-Werror")
+            .outdir(classes)
+            .files(findJavaFiles(src))
+            .run(Task.Expect.SUCCESS)
+            .writeAll()
+            .getOutputLines(Task.OutputKind.DIRECT);
+
+        log = new JavacTask(tb)
+            .options("--source-path", src.toString(),
+                     "--module-path", modulePath.toString(),
+                     "-Xlint:requires-automatic",
+                     "-XDrawDiagnostics",
+                     "-Werror")
+            .outdir(classes)
+            .files(findJavaFiles(src))
+            .run(Task.Expect.FAIL)
+            .writeAll()
+            .getOutputLines(Task.OutputKind.DIRECT);
+
+        expected = Arrays.asList("module-info.java:3:25: compiler.warn.requires.automatic",
+                                 "module-info.java:4:14: compiler.warn.requires.automatic",
+                                 "- compiler.err.warnings.and.werror",
+                                 "1 error",
+                                 "2 warnings");
+
+        if (!expected.equals(log)) {
+            throw new Exception("expected output not found: " + log);
+        }
+
+        tb.writeJavaFiles(src,
+                          """
+                              @SuppressWarnings("requires-automatic")
+                              module m1x {
+                                  requires transitive automaticA;
+                                  requires automaticB;
+                              }""");
+
+        log = new JavacTask(tb)
+            .options("--source-path", src.toString(),
+                     "--module-path", modulePath.toString(),
+                     "-Xlint:requires-automatic",
+                     "-XDrawDiagnostics",
+                     "-Werror")
+            .outdir(classes)
+            .files(findJavaFiles(src))
+            .run(Task.Expect.FAIL)
+            .writeAll()
+            .getOutputLines(Task.OutputKind.DIRECT);
+
+        expected = Arrays.asList("module-info.java:3:25: compiler.warn.requires.transitive.automatic",
+                                 "- compiler.err.warnings.and.werror",
+                                 "1 error",
+                                 "1 warning");
+
+        if (!expected.equals(log)) {
+            throw new Exception("expected output not found: " + log);
+        }
+    }
+
+    @Test
+    public void testAutomaticModuleNameCorrect(Path base) throws Exception {
+        Path modulePath = base.resolve("module-path");
+
+        Files.createDirectories(modulePath);
+
+        Path automaticSrc = base.resolve("automaticSrc");
+        tb.writeJavaFiles(automaticSrc, "package api; public class Api {}");
+        Path automaticClasses = base.resolve("automaticClasses");
+        tb.createDirectories(automaticClasses);
+
+        String automaticLog = new JavacTask(tb)
+                                .outdir(automaticClasses)
+                                .files(findJavaFiles(automaticSrc))
+                                .run()
+                                .writeAll()
+                                .getOutput(Task.OutputKind.DIRECT);
+
+        if (!automaticLog.isEmpty())
+            throw new Exception("expected output not found: " + automaticLog);
+
+        Path automaticJar = modulePath.resolve("automatic-1.0.jar");
+
+        new JarTask(tb, automaticJar)
+          .baseDir(automaticClasses)
+          .files("api/Api.class")
+          .manifest("Automatic-Module-Name: custom.module.name\n\n")
+          .run();
+
+        Path src = base.resolve("src");
+
+        tb.writeJavaFiles(src,
+                          "module m { requires custom.module.name; }",
+                          "package impl; public class Impl { api.Api a; }");
+
+        Path classes = base.resolve("classes");
+
+        Files.createDirectories(classes);
+
+        new JavacTask(tb)
+                .options("--module-path", modulePath.toString(),
+                         "-XD
