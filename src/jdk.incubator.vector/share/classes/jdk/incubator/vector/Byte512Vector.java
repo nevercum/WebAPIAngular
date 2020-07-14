@@ -252,4 +252,249 @@ final class Byte512Vector extends ByteVector {
     @ForceInline
     public final <F>
     Vector<F> reinterpretShape(VectorSpecies<F> toSpecies, int part) {
-        return super.reinterpretShapeTemplate(toSpecies, part);  // special
+        return super.reinterpretShapeTemplate(toSpecies, part);  // specialize
+    }
+
+    // Specialized algebraic operations:
+
+    // The following definition forces a specialized version of this
+    // crucial method into the v-table of this class.  A call to add()
+    // will inline to a call to lanewise(ADD,), at which point the JIT
+    // intrinsic will have the opcode of ADD, plus all the metadata
+    // for this particular class, enabling it to generate precise
+    // code.
+    //
+    // There is probably no benefit to the JIT to specialize the
+    // masked or broadcast versions of the lanewise method.
+
+    @Override
+    @ForceInline
+    public Byte512Vector lanewise(Unary op) {
+        return (Byte512Vector) super.lanewiseTemplate(op);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector lanewise(Unary op, VectorMask<Byte> m) {
+        return (Byte512Vector) super.lanewiseTemplate(op, Byte512Mask.class, (Byte512Mask) m);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector lanewise(Binary op, Vector<Byte> v) {
+        return (Byte512Vector) super.lanewiseTemplate(op, v);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector lanewise(Binary op, Vector<Byte> v, VectorMask<Byte> m) {
+        return (Byte512Vector) super.lanewiseTemplate(op, Byte512Mask.class, v, (Byte512Mask) m);  // specialize
+    }
+
+    /*package-private*/
+    @Override
+    @ForceInline Byte512Vector
+    lanewiseShift(VectorOperators.Binary op, int e) {
+        return (Byte512Vector) super.lanewiseShiftTemplate(op, e);  // specialize
+    }
+
+    /*package-private*/
+    @Override
+    @ForceInline Byte512Vector
+    lanewiseShift(VectorOperators.Binary op, int e, VectorMask<Byte> m) {
+        return (Byte512Vector) super.lanewiseShiftTemplate(op, Byte512Mask.class, e, (Byte512Mask) m);  // specialize
+    }
+
+    /*package-private*/
+    @Override
+    @ForceInline
+    public final
+    Byte512Vector
+    lanewise(Ternary op, Vector<Byte> v1, Vector<Byte> v2) {
+        return (Byte512Vector) super.lanewiseTemplate(op, v1, v2);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public final
+    Byte512Vector
+    lanewise(Ternary op, Vector<Byte> v1, Vector<Byte> v2, VectorMask<Byte> m) {
+        return (Byte512Vector) super.lanewiseTemplate(op, Byte512Mask.class, v1, v2, (Byte512Mask) m);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public final
+    Byte512Vector addIndex(int scale) {
+        return (Byte512Vector) super.addIndexTemplate(scale);  // specialize
+    }
+
+    // Type specific horizontal reductions
+
+    @Override
+    @ForceInline
+    public final byte reduceLanes(VectorOperators.Associative op) {
+        return super.reduceLanesTemplate(op);  // specialized
+    }
+
+    @Override
+    @ForceInline
+    public final byte reduceLanes(VectorOperators.Associative op,
+                                    VectorMask<Byte> m) {
+        return super.reduceLanesTemplate(op, Byte512Mask.class, (Byte512Mask) m);  // specialized
+    }
+
+    @Override
+    @ForceInline
+    public final long reduceLanesToLong(VectorOperators.Associative op) {
+        return (long) super.reduceLanesTemplate(op);  // specialized
+    }
+
+    @Override
+    @ForceInline
+    public final long reduceLanesToLong(VectorOperators.Associative op,
+                                        VectorMask<Byte> m) {
+        return (long) super.reduceLanesTemplate(op, Byte512Mask.class, (Byte512Mask) m);  // specialized
+    }
+
+    @ForceInline
+    public VectorShuffle<Byte> toShuffle() {
+        return super.toShuffleTemplate(Byte512Shuffle.class); // specialize
+    }
+
+    // Specialized unary testing
+
+    @Override
+    @ForceInline
+    public final Byte512Mask test(Test op) {
+        return super.testTemplate(Byte512Mask.class, op);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public final Byte512Mask test(Test op, VectorMask<Byte> m) {
+        return super.testTemplate(Byte512Mask.class, op, (Byte512Mask) m);  // specialize
+    }
+
+    // Specialized comparisons
+
+    @Override
+    @ForceInline
+    public final Byte512Mask compare(Comparison op, Vector<Byte> v) {
+        return super.compareTemplate(Byte512Mask.class, op, v);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public final Byte512Mask compare(Comparison op, byte s) {
+        return super.compareTemplate(Byte512Mask.class, op, s);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public final Byte512Mask compare(Comparison op, long s) {
+        return super.compareTemplate(Byte512Mask.class, op, s);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public final Byte512Mask compare(Comparison op, Vector<Byte> v, VectorMask<Byte> m) {
+        return super.compareTemplate(Byte512Mask.class, op, v, (Byte512Mask) m);
+    }
+
+
+    @Override
+    @ForceInline
+    public Byte512Vector blend(Vector<Byte> v, VectorMask<Byte> m) {
+        return (Byte512Vector)
+            super.blendTemplate(Byte512Mask.class,
+                                (Byte512Vector) v,
+                                (Byte512Mask) m);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector slice(int origin, Vector<Byte> v) {
+        return (Byte512Vector) super.sliceTemplate(origin, v);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector slice(int origin) {
+        return (Byte512Vector) super.sliceTemplate(origin);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector unslice(int origin, Vector<Byte> w, int part) {
+        return (Byte512Vector) super.unsliceTemplate(origin, w, part);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector unslice(int origin, Vector<Byte> w, int part, VectorMask<Byte> m) {
+        return (Byte512Vector)
+            super.unsliceTemplate(Byte512Mask.class,
+                                  origin, w, part,
+                                  (Byte512Mask) m);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector unslice(int origin) {
+        return (Byte512Vector) super.unsliceTemplate(origin);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector rearrange(VectorShuffle<Byte> s) {
+        return (Byte512Vector)
+            super.rearrangeTemplate(Byte512Shuffle.class,
+                                    (Byte512Shuffle) s);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector rearrange(VectorShuffle<Byte> shuffle,
+                                  VectorMask<Byte> m) {
+        return (Byte512Vector)
+            super.rearrangeTemplate(Byte512Shuffle.class,
+                                    Byte512Mask.class,
+                                    (Byte512Shuffle) shuffle,
+                                    (Byte512Mask) m);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector rearrange(VectorShuffle<Byte> s,
+                                  Vector<Byte> v) {
+        return (Byte512Vector)
+            super.rearrangeTemplate(Byte512Shuffle.class,
+                                    (Byte512Shuffle) s,
+                                    (Byte512Vector) v);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector compress(VectorMask<Byte> m) {
+        return (Byte512Vector)
+            super.compressTemplate(Byte512Mask.class,
+                                   (Byte512Mask) m);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector expand(VectorMask<Byte> m) {
+        return (Byte512Vector)
+            super.expandTemplate(Byte512Mask.class,
+                                   (Byte512Mask) m);  // specialize
+    }
+
+    @Override
+    @ForceInline
+    public Byte512Vector selectFrom(Vector<Byte> v) {
+        return (Byte512Vector)
+            super.selectFromTemplate((Byte512Vector) v);  // specialize
+    }
+
+   
