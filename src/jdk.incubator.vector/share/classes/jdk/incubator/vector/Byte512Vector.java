@@ -668,4 +668,214 @@ final class Byte512Vector extends ByteVector {
                                 (v, ix, bits) -> {
                                     byte[] res = v.vec().clone();
                                     res[ix] = (byte)bits;
-                          
+                                    return v.vectorFactory(res);
+                                });
+    }
+
+    // Mask
+
+    static final class Byte512Mask extends AbstractMask<Byte> {
+        static final int VLENGTH = VSPECIES.laneCount();    // used by the JVM
+        static final Class<Byte> ETYPE = byte.class; // used by the JVM
+
+        Byte512Mask(boolean[] bits) {
+            this(bits, 0);
+        }
+
+        Byte512Mask(boolean[] bits, int offset) {
+            super(prepare(bits, offset));
+        }
+
+        Byte512Mask(boolean val) {
+            super(prepare(val));
+        }
+
+        private static boolean[] prepare(boolean[] bits, int offset) {
+            boolean[] newBits = new boolean[VSPECIES.laneCount()];
+            for (int i = 0; i < newBits.length; i++) {
+                newBits[i] = bits[offset + i];
+            }
+            return newBits;
+        }
+
+        private static boolean[] prepare(boolean val) {
+            boolean[] bits = new boolean[VSPECIES.laneCount()];
+            Arrays.fill(bits, val);
+            return bits;
+        }
+
+        @ForceInline
+        final @Override
+        public ByteSpecies vspecies() {
+            // ISSUE:  This should probably be a @Stable
+            // field inside AbstractMask, rather than
+            // a megamorphic method.
+            return VSPECIES;
+        }
+
+        @ForceInline
+        boolean[] getBits() {
+            return (boolean[])getPayload();
+        }
+
+        @Override
+        Byte512Mask uOp(MUnOp f) {
+            boolean[] res = new boolean[vspecies().laneCount()];
+            boolean[] bits = getBits();
+            for (int i = 0; i < res.length; i++) {
+                res[i] = f.apply(i, bits[i]);
+            }
+            return new Byte512Mask(res);
+        }
+
+        @Override
+        Byte512Mask bOp(VectorMask<Byte> m, MBinOp f) {
+            boolean[] res = new boolean[vspecies().laneCount()];
+            boolean[] bits = getBits();
+            boolean[] mbits = ((Byte512Mask)m).getBits();
+            for (int i = 0; i < res.length; i++) {
+                res[i] = f.apply(i, bits[i], mbits[i]);
+            }
+            return new Byte512Mask(res);
+        }
+
+        @ForceInline
+        @Override
+        public final
+        Byte512Vector toVector() {
+            return (Byte512Vector) super.toVectorTemplate();  // specialize
+        }
+
+        /**
+         * Helper function for lane-wise mask conversions.
+         * This function kicks in after intrinsic failure.
+         */
+        @ForceInline
+        private final <E>
+        VectorMask<E> defaultMaskCast(AbstractSpecies<E> dsp) {
+            if (length() != dsp.laneCount())
+                throw new IllegalArgumentException("VectorMask length and species length differ");
+            boolean[] maskArray = toArray();
+            return  dsp.maskFactory(maskArray).check(dsp);
+        }
+
+        @Override
+        @ForceInline
+        public <E> VectorMask<E> cast(VectorSpecies<E> dsp) {
+            AbstractSpecies<E> species = (AbstractSpecies<E>) dsp;
+            if (length() != species.laneCount())
+                throw new IllegalArgumentException("VectorMask length and species length differ");
+
+            return VectorSupport.convert(VectorSupport.VECTOR_OP_CAST,
+                this.getClass(), ETYPE, VLENGTH,
+                species.maskType(), species.elementType(), VLENGTH,
+                this, species,
+                (m, s) -> s.maskFactory(m.toArray()).check(s));
+        }
+
+        @Override
+        @ForceInline
+        public Byte512Mask eq(VectorMask<Byte> mask) {
+            Objects.requireNonNull(mask);
+            Byte512Mask m = (Byte512Mask)mask;
+            return xor(m.not());
+        }
+
+        @Override
+        @ForceInline
+        /*package-private*/
+        Byte512Mask indexPartiallyInUpperRange(long offset, long limit) {
+            return (Byte512Mask) VectorSupport.indexPartiallyInUpperRange(
+                Byte512Mask.class, byte.class, VLENGTH, offset, limit,
+                (o, l) -> (Byte512Mask) TRUE_MASK.indexPartiallyInRange(o, l));
+        }
+
+        // Unary operations
+
+        @Override
+        @ForceInline
+        public Byte512Mask not() {
+            return xor(maskAll(true));
+        }
+
+        @Override
+        @ForceInline
+        public Byte512Mask compress() {
+            return (Byte512Mask)VectorSupport.compressExpandOp(VectorSupport.VECTOR_OP_MASK_COMPRESS,
+                Byte512Vector.class, Byte512Mask.class, ETYPE, VLENGTH, null, this,
+                (v1, m1) -> VSPECIES.iota().compare(VectorOperators.LT, m1.trueCount()));
+        }
+
+
+        // Binary operations
+
+        @Override
+        @ForceInline
+        public Byte512Mask and(VectorMask<Byte> mask) {
+            Objects.requireNonNull(mask);
+            Byte512Mask m = (Byte512Mask)mask;
+            return VectorSupport.binaryOp(VECTOR_OP_AND, Byte512Mask.class, null, byte.class, VLENGTH,
+                                          this, m, null,
+                                          (m1, m2, vm) -> m1.bOp(m2, (i, a, b) -> a & b));
+        }
+
+        @Override
+        @ForceInline
+        public Byte512Mask or(VectorMask<Byte> mask) {
+            Objects.requireNonNull(mask);
+            Byte512Mask m = (Byte512Mask)mask;
+            return VectorSupport.binaryOp(VECTOR_OP_OR, Byte512Mask.class, null, byte.class, VLENGTH,
+                                          this, m, null,
+                                          (m1, m2, vm) -> m1.bOp(m2, (i, a, b) -> a | b));
+        }
+
+        @ForceInline
+        /* package-private */
+        Byte512Mask xor(VectorMask<Byte> mask) {
+            Objects.requireNonNull(mask);
+            Byte512Mask m = (Byte512Mask)mask;
+            return VectorSupport.binaryOp(VECTOR_OP_XOR, Byte512Mask.class, null, byte.class, VLENGTH,
+                                          this, m, null,
+                                          (m1, m2, vm) -> m1.bOp(m2, (i, a, b) -> a ^ b));
+        }
+
+        // Mask Query operations
+
+        @Override
+        @ForceInline
+        public int trueCount() {
+            return (int) VectorSupport.maskReductionCoerced(VECTOR_OP_MASK_TRUECOUNT, Byte512Mask.class, byte.class, VLENGTH, this,
+                                                      (m) -> trueCountHelper(m.getBits()));
+        }
+
+        @Override
+        @ForceInline
+        public int firstTrue() {
+            return (int) VectorSupport.maskReductionCoerced(VECTOR_OP_MASK_FIRSTTRUE, Byte512Mask.class, byte.class, VLENGTH, this,
+                                                      (m) -> firstTrueHelper(m.getBits()));
+        }
+
+        @Override
+        @ForceInline
+        public int lastTrue() {
+            return (int) VectorSupport.maskReductionCoerced(VECTOR_OP_MASK_LASTTRUE, Byte512Mask.class, byte.class, VLENGTH, this,
+                                                      (m) -> lastTrueHelper(m.getBits()));
+        }
+
+        @Override
+        @ForceInline
+        public long toLong() {
+            if (length() > Long.SIZE) {
+                throw new UnsupportedOperationException("too many lanes for one long");
+            }
+            return VectorSupport.maskReductionCoerced(VECTOR_OP_MASK_TOLONG, Byte512Mask.class, byte.class, VLENGTH, this,
+                                                      (m) -> toLongHelper(m.getBits()));
+        }
+
+        // Reductions
+
+        @Override
+        @ForceInline
+        public boolean anyTrue() {
+            return VectorSupport.test(BT_ne, Byte512Mask.class, byte.class, VLENGTH,
+                                        
