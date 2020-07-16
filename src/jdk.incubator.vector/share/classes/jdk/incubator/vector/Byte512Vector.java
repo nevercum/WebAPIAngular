@@ -878,4 +878,178 @@ final class Byte512Vector extends ByteVector {
         @ForceInline
         public boolean anyTrue() {
             return VectorSupport.test(BT_ne, Byte512Mask.class, byte.class, VLENGTH,
-                                        
+                                         this, vspecies().maskAll(true),
+                                         (m, __) -> anyTrueHelper(((Byte512Mask)m).getBits()));
+        }
+
+        @Override
+        @ForceInline
+        public boolean allTrue() {
+            return VectorSupport.test(BT_overflow, Byte512Mask.class, byte.class, VLENGTH,
+                                         this, vspecies().maskAll(true),
+                                         (m, __) -> allTrueHelper(((Byte512Mask)m).getBits()));
+        }
+
+        @ForceInline
+        /*package-private*/
+        static Byte512Mask maskAll(boolean bit) {
+            return VectorSupport.fromBitsCoerced(Byte512Mask.class, byte.class, VLENGTH,
+                                                 (bit ? -1 : 0), MODE_BROADCAST, null,
+                                                 (v, __) -> (v != 0 ? TRUE_MASK : FALSE_MASK));
+        }
+        private static final Byte512Mask  TRUE_MASK = new Byte512Mask(true);
+        private static final Byte512Mask FALSE_MASK = new Byte512Mask(false);
+
+    }
+
+    // Shuffle
+
+    static final class Byte512Shuffle extends AbstractShuffle<Byte> {
+        static final int VLENGTH = VSPECIES.laneCount();    // used by the JVM
+        static final Class<Byte> ETYPE = byte.class; // used by the JVM
+
+        Byte512Shuffle(byte[] reorder) {
+            super(VLENGTH, reorder);
+        }
+
+        public Byte512Shuffle(int[] reorder) {
+            super(VLENGTH, reorder);
+        }
+
+        public Byte512Shuffle(int[] reorder, int i) {
+            super(VLENGTH, reorder, i);
+        }
+
+        public Byte512Shuffle(IntUnaryOperator fn) {
+            super(VLENGTH, fn);
+        }
+
+        @Override
+        public ByteSpecies vspecies() {
+            return VSPECIES;
+        }
+
+        static {
+            // There must be enough bits in the shuffle lanes to encode
+            // VLENGTH valid indexes and VLENGTH exceptional ones.
+            assert(VLENGTH < Byte.MAX_VALUE);
+            assert(Byte.MIN_VALUE <= -VLENGTH);
+        }
+        static final Byte512Shuffle IOTA = new Byte512Shuffle(IDENTITY);
+
+        @Override
+        @ForceInline
+        public Byte512Vector toVector() {
+            return VectorSupport.shuffleToVector(VCLASS, ETYPE, Byte512Shuffle.class, this, VLENGTH,
+                                                    (s) -> ((Byte512Vector)(((AbstractShuffle<Byte>)(s)).toVectorTemplate())));
+        }
+
+        @Override
+        @ForceInline
+        public <F> VectorShuffle<F> cast(VectorSpecies<F> s) {
+            AbstractSpecies<F> species = (AbstractSpecies<F>) s;
+            if (length() != species.laneCount())
+                throw new IllegalArgumentException("VectorShuffle length and species length differ");
+            int[] shuffleArray = toArray();
+            return s.shuffleFromArray(shuffleArray, 0).check(s);
+        }
+
+        @ForceInline
+        @Override
+        public Byte512Shuffle rearrange(VectorShuffle<Byte> shuffle) {
+            Byte512Shuffle s = (Byte512Shuffle) shuffle;
+            byte[] reorder1 = reorder();
+            byte[] reorder2 = s.reorder();
+            byte[] r = new byte[reorder1.length];
+            for (int i = 0; i < reorder1.length; i++) {
+                int ssi = reorder2[i];
+                r[i] = reorder1[ssi];  // throws on exceptional index
+            }
+            return new Byte512Shuffle(r);
+        }
+    }
+
+    // ================================================
+
+    // Specialized low-level memory operations.
+
+    @ForceInline
+    @Override
+    final
+    ByteVector fromArray0(byte[] a, int offset) {
+        return super.fromArray0Template(a, offset);  // specialize
+    }
+
+    @ForceInline
+    @Override
+    final
+    ByteVector fromArray0(byte[] a, int offset, VectorMask<Byte> m, int offsetInRange) {
+        return super.fromArray0Template(Byte512Mask.class, a, offset, (Byte512Mask) m, offsetInRange);  // specialize
+    }
+
+
+
+    @ForceInline
+    @Override
+    final
+    ByteVector fromBooleanArray0(boolean[] a, int offset) {
+        return super.fromBooleanArray0Template(a, offset);  // specialize
+    }
+
+    @ForceInline
+    @Override
+    final
+    ByteVector fromBooleanArray0(boolean[] a, int offset, VectorMask<Byte> m, int offsetInRange) {
+        return super.fromBooleanArray0Template(Byte512Mask.class, a, offset, (Byte512Mask) m, offsetInRange);  // specialize
+    }
+
+    @ForceInline
+    @Override
+    final
+    ByteVector fromMemorySegment0(MemorySegment ms, long offset) {
+        return super.fromMemorySegment0Template(ms, offset);  // specialize
+    }
+
+    @ForceInline
+    @Override
+    final
+    ByteVector fromMemorySegment0(MemorySegment ms, long offset, VectorMask<Byte> m, int offsetInRange) {
+        return super.fromMemorySegment0Template(Byte512Mask.class, ms, offset, (Byte512Mask) m, offsetInRange);  // specialize
+    }
+
+    @ForceInline
+    @Override
+    final
+    void intoArray0(byte[] a, int offset) {
+        super.intoArray0Template(a, offset);  // specialize
+    }
+
+    @ForceInline
+    @Override
+    final
+    void intoArray0(byte[] a, int offset, VectorMask<Byte> m) {
+        super.intoArray0Template(Byte512Mask.class, a, offset, (Byte512Mask) m);
+    }
+
+
+    @ForceInline
+    @Override
+    final
+    void intoBooleanArray0(boolean[] a, int offset, VectorMask<Byte> m) {
+        super.intoBooleanArray0Template(Byte512Mask.class, a, offset, (Byte512Mask) m);
+    }
+
+    @ForceInline
+    @Override
+    final
+    void intoMemorySegment0(MemorySegment ms, long offset, VectorMask<Byte> m) {
+        super.intoMemorySegment0Template(Byte512Mask.class, ms, offset, (Byte512Mask) m);
+    }
+
+
+    // End of specialized low-level memory operations.
+
+    // ================================================
+
+}
+
