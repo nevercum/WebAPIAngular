@@ -53,4 +53,26 @@
                  Id="InstallDesktopShortcut"
                  Y="$(var.JpDesktopShortcutPromptControlY)"
                  Property="JP_INSTALL_DESKTOP_SHORTCUT"
-                 Text="!(loc.ShortcutPromptDlgDesktopShortcutControlLabe
+                 Text="!(loc.ShortcutPromptDlgDesktopShortcutControlLabel)"/>
+        <?endif?>
+
+        <?ifdef JpStartMenuShortcutPrompt ?>
+        <Control Type="CheckBox" X="20" Width="200" Height="17" CheckBoxValue="1"
+                 Id="InstallStartMenuShortcut"
+                 Y="$(var.JpStartMenuShortcutPromptControlY)"
+                 Property="JP_INSTALL_STARTMENU_SHORTCUT"
+                 Text="!(loc.ShortcutPromptDlgStartMenuShortcutControlLabel)"/>
+        <?endif?>
+
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes"
+                 Text="!(loc.WixUINext)" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17"
+                 Text="!(loc.WixUIBack)" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes"
+                 Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        </Control>
+      </Dialog>
+    </UI>
+  </Fragment>
+</Wix>
