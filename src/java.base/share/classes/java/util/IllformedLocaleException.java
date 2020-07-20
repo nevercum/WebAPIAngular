@@ -56,4 +56,36 @@ public class IllformedLocaleException extends RuntimeException {
 
     /**
      * Constructs a new {@code IllformedLocaleException} with the
-     * given messa
+     * given message and -1 as the error index.
+     *
+     * @param message the message
+     */
+    public IllformedLocaleException(String message) {
+        super(message);
+    }
+
+    /**
+     * Constructs a new {@code IllformedLocaleException} with the
+     * given message and the error index.  The error index is the approximate
+     * offset from the start of the ill-formed value to the point where the
+     * parse first detected an error.  A negative error index value indicates
+     * either the error index is not applicable or unknown.
+     *
+     * @param message the message
+     * @param errorIndex the index
+     */
+    public IllformedLocaleException(String message, int errorIndex) {
+        super(message + ((errorIndex < 0) ? "" : " [at index " + errorIndex + "]"));
+        _errIdx = errorIndex;
+    }
+
+    /**
+     * Returns the index where the error was found. A negative value indicates
+     * either the error index is not applicable or unknown.
+     *
+     * @return the error index
+     */
+    public int getErrorIndex() {
+        return _errIdx;
+    }
+}
