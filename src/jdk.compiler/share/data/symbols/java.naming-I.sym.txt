@@ -59,4 +59,18 @@ header extends java/lang/Object implements java/io/Serializable flags 421
 innerclass innerClass java/lang/invoke/MethodHandles$Lookup outerClass java/lang/invoke/MethodHandles innerClassName Lookup flags 19
 
 class name javax/naming/Reference
-header extends java/lang/Object implements 
+header extends java/lang/Object implements java/lang/Cloneable,java/io/Serializable flags 21
+innerclass innerClass java/lang/invoke/MethodHandles$Lookup outerClass java/lang/invoke/MethodHandles innerClassName Lookup flags 19
+
+class name javax/naming/directory/AttributeModificationException
+header extends javax/naming/NamingException flags 21
+innerclass innerClass java/lang/invoke/MethodHandles$Lookup outerClass java/lang/invoke/MethodHandles innerClassName Lookup flags 19
+
+class name javax/naming/directory/ModificationItem
+header extends java/lang/Object implements java/io/Serializable flags 21
+innerclass innerClass java/lang/invoke/MethodHandles$Lookup outerClass java/lang/invoke/MethodHandles innerClassName Lookup flags 19
+
+class name javax/naming/directory/SearchResult
+header extends javax/naming/Binding flags 21
+innerclass innerClass java/lang/invoke/MethodHandles$Lookup outerClass java/lang/invoke/MethodHandles innerClassName Lookup flags 19
+
