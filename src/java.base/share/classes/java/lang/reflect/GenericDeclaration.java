@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,39 +24,27 @@
  * questions.
  */
 
-package jdk.jfr.events;
+package java.lang.reflect;
 
-import jdk.jfr.Category;
-import jdk.jfr.Description;
-import jdk.jfr.Label;
-import jdk.jfr.DataAmount;
-import jdk.jfr.Name;
-import jdk.jfr.internal.Type;
-
-@Name(Type.EVENT_NAME_PREFIX + "SocketWrite")
-@Label("Socket Write")
-@Category("Java Application")
-@Description("Writing data to a socket")
-public final class SocketWriteEvent extends AbstractJDKEvent {
-
-    // The order of these fields must be the same as the parameters in
-    // commit(..., String, String, int, long)
-
-    @Label("Remote Host")
-    public String host;
-
-    @Label("Remote Address")
-    public String address;
-
-    @Label("Remote Port")
-    public int port;
-
-    @Label("Bytes Written")
-    @Description("Number of bytes written to the socket")
-    @DataAmount
-    public long bytesWritten;
-
-    public static void commit(long start, long duration, String host, String address, int port, long bytes) {
-        // Generated
-    }
+/**
+ * A common interface for all entities that declare type variables.
+ *
+ * @since 1.5
+ */
+public interface GenericDeclaration extends AnnotatedElement {
+    /**
+     * Returns an array of {@code TypeVariable} objects that
+     * represent the type variables declared by the generic
+     * declaration represented by this {@code GenericDeclaration}
+     * object, in declaration order.  Returns an array of length 0 if
+     * the underlying generic declaration declares no type variables.
+     *
+     * @return an array of {@code TypeVariable} objects that represent
+     *     the type variables declared by this generic declaration
+     * @throws GenericSignatureFormatError if the generic
+     *     signature of this generic declaration does not conform to
+     *     the format specified in
+     *     <cite>The Java Virtual Machine Specification</cite>
+     */
+    public TypeVariable<?>[] getTypeParameters();
 }
