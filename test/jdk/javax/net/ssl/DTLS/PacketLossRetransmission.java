@@ -58,4 +58,55 @@
  * @run main/othervm PacketLossRetransmission server 13 certificate_request
  * @run main/othervm PacketLossRetransmission server 14 server_hello_done
  * @run main/othervm PacketLossRetransmission server 15 certificate_verify
- * @run main/othervm PacketLossRetransmission 
+ * @run main/othervm PacketLossRetransmission server 16 client_key_exchange
+ * @run main/othervm PacketLossRetransmission server 20 finished
+ * @run main/othervm PacketLossRetransmission server 21 certificate_url
+ * @run main/othervm PacketLossRetransmission server 22 certificate_status
+ * @run main/othervm PacketLossRetransmission server 23 supplemental_data
+ * @run main/othervm PacketLossRetransmission server -1 change_cipher_spec
+ */
+
+import java.util.List;
+import java.util.ArrayList;
+import java.net.DatagramPacket;
+import java.net.SocketAddress;
+import javax.net.ssl.SSLEngine;
+
+/**
+ * Test that DTLS implementation is able to do retransmission internally
+ * automatically if packet get lost.
+ */
+public class PacketLossRetransmission extends DTLSOverDatagram {
+    private static boolean isClient;
+    private static byte handshakeType;
+
+    private boolean needPacketLoss = true;
+
+    public static void main(String[] args) throws Exception {
+        isClient = args[0].equals("client");
+        handshakeType = Byte.parseByte(args[1]);
+
+        PacketLossRetransmission testCase = new PacketLossRetransmission();
+        testCase.runTest(testCase);
+    }
+
+    @Override
+    boolean produceHandshakePackets(SSLEngine engine, SocketAddress socketAddr,
+            String side, List<DatagramPacket> packets) throws Exception {
+
+        boolean finished = super.produceHandshakePackets(
+                engine, socketAddr, side, packets);
+
+        if (needPacketLoss && (isClient == engine.getUseClientMode())) {
+            DatagramPacket packet = getPacket(packets, handshakeType);
+            if (packet != null) {
+                needPacketLoss = false;
+
+                System.out.println("Loss a packet of handshake messahe");
+                packets.remove(packet);
+            }
+        }
+
+        return finished;
+    }
+}
