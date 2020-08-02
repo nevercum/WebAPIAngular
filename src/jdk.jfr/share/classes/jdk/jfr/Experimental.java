@@ -54,4 +54,6 @@ import java.lang.annotation.Target;
 @Description("Element is not to be shown to a user by default")
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.FIELD, Eleme
+@Target({ ElementType.FIELD, ElementType.TYPE })
+public @interface Experimental {
+}
