@@ -71,4 +71,11 @@ import java.lang.annotation.Target;
 @Target({ ElementType.TYPE, ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @MetadataDefinition
-publ
+public @interface Name {
+    /**
+     * Returns the name.
+     *
+     * @return the name
+     */
+    String value();
+}
