@@ -1,12 +1,11 @@
+
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2004, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,26 +22,25 @@
  * questions.
  */
 
-package sun.security.jgss;
-
-/**
- * Denotes what client is calling the JGSS-API. The object can be sent deep
- * into the mechanism level so that special actions can be performed for
- * different callers.
+/*
+ * @test
+ * @bug 5006662
+ * @summary enum switch on null fails to throw NullPointerException
+ * @author gafter
  */
-public sealed class GSSCaller permits HttpCaller {
 
-    public static final GSSCaller CALLER_UNKNOWN = new GSSCaller("UNKNOWN");
-    public static final GSSCaller CALLER_INITIATE = new GSSCaller("INITIATE");
-    public static final GSSCaller CALLER_ACCEPT = new GSSCaller("ACCEPT");
+public enum EnumSwitch4 {
+    foo, bar, baz;
 
-    private final String name;
-    GSSCaller(String s) {
-        name = s;
-    }
-    @Override
-    public String toString() {
-        return "GSSCaller{" + name + '}';
+    public static void main(String[] args) {
+        EnumSwitch4 e = null;
+        try {
+            switch (e) {
+            default: break;
+            }
+            throw new Error("failed to throw NullPointerException");
+        } catch (NullPointerException ex) {
+            System.out.println("passed");
+        }
     }
 }
-
