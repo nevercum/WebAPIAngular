@@ -77,4 +77,22 @@
  *         JAVAC_OPTS=-g
  *     is put in the locationsofline002.cfg file.
  *
- * @library /vmT
+ * @library /vmTestbase
+ *          /test/lib
+ * @build nsk.jdi.Method.locationsOfLine_ssi.locationsofline_ssi001
+ *        nsk.jdi.Method.locationsOfLine_ssi.locationsofline_ssi001a
+ *
+ * @comment make sure locationsofline_ssi001a is compiled with full debug info
+ * @clean nsk.jdi.Method.locationsOfLine_ssi.locationsofline_ssi001a
+ * @compile -g:lines,source,vars ../locationsofline_ssi001a.java
+ *
+ * @run main/othervm
+ *      nsk.jdi.Method.locationsOfLine_ssi.locationsofline_ssi001
+ *      -verbose
+ *      -arch=${os.family}-${os.simpleArch}
+ *      -waittime=5
+ *      -debugee.vmkind=java
+ *      -transport.address=dynamic
+ *      -debugee.vmkeys="${test.vm.opts} ${test.java.opts}"
+ */
+
