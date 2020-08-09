@@ -121,4 +121,270 @@ public class PumpReader extends Reader {
      *
      * @return If more input is available
      */
-    private boole
+    private boolean rewindReadBuffer() {
+        return rewind(readBuffer, writeBuffer) && readBuffer.hasRemaining();
+    }
+
+    /**
+     * Attempts to find additional buffer space by rewinding the {@link #writeBuffer}.
+     * Updates the {@link #readBuffer} to make written bytes available to the reader.
+     */
+    private void rewindWriteBuffer() {
+        rewind(writeBuffer, readBuffer);
+    }
+
+    @Override
+    public synchronized boolean ready() {
+        return readBuffer.hasRemaining();
+    }
+
+    public synchronized int available() {
+        int count = readBuffer.remaining();
+        if (writeBuffer.position() < readBuffer.position()) {
+            count += writeBuffer.position();
+        }
+        return count;
+    }
+
+    @Override
+    public synchronized int read() throws IOException {
+        if (!waitForInput()) {
+            return EOF;
+        }
+
+        int b = readBuffer.get();
+        rewindReadBuffer();
+        return b;
+    }
+
+    private int copyFromBuffer(char[] cbuf, int off, int len) {
+        len = Math.min(len, readBuffer.remaining());
+        readBuffer.get(cbuf, off, len);
+        return len;
+    }
+
+    @Override
+    public synchronized int read(char[] cbuf, int off, int len) throws IOException {
+        if (len == 0) {
+            return 0;
+        }
+
+        if (!waitForInput()) {
+            return EOF;
+        }
+
+        int count = copyFromBuffer(cbuf, off, len);
+        if (rewindReadBuffer() && count < len) {
+            count += copyFromBuffer(cbuf, off + count, len - count);
+            rewindReadBuffer();
+        }
+
+        return count;
+    }
+
+    @Override
+    public synchronized int read(CharBuffer target) throws IOException {
+        if (!target.hasRemaining()) {
+            return 0;
+        }
+
+        if (!waitForInput()) {
+            return EOF;
+        }
+
+        int count = readBuffer.read(target);
+        if (rewindReadBuffer() && target.hasRemaining()) {
+            count += readBuffer.read(target);
+            rewindReadBuffer();
+        }
+
+        return count;
+    }
+
+    private void encodeBytes(CharsetEncoder encoder, ByteBuffer output) throws IOException {
+        CoderResult result = encoder.encode(readBuffer, output, false);
+        if (rewindReadBuffer() && result.isUnderflow()) {
+            encoder.encode(readBuffer, output, false);
+            rewindReadBuffer();
+        }
+    }
+
+    synchronized int readBytes(CharsetEncoder encoder, byte[] b, int off, int len) throws IOException {
+        if (!waitForInput()) {
+            return 0;
+        }
+
+        ByteBuffer output = ByteBuffer.wrap(b, off, len);
+        encodeBytes(encoder, output);
+        return output.position() - off;
+    }
+
+    synchronized void readBytes(CharsetEncoder encoder, ByteBuffer output) throws IOException {
+        if (!waitForInput()) {
+            return;
+        }
+
+        encodeBytes(encoder, output);
+    }
+
+    synchronized void write(char c) throws IOException {
+        waitForBufferSpace();
+        writeBuffer.put(c);
+        rewindWriteBuffer();
+    }
+
+    synchronized void write(char[] cbuf, int off, int len) throws IOException {
+        while (len > 0) {
+            waitForBufferSpace();
+
+            // Copy as much characters as we can
+            int count = Math.min(len, writeBuffer.remaining());
+            writeBuffer.put(cbuf, off, count);
+
+            off += count;
+            len -= count;
+
+            // Update buffer states and rewind if necessary
+            rewindWriteBuffer();
+        }
+    }
+
+    synchronized void write(String str, int off, int len) throws IOException {
+        char[] buf = writeBuffer.array();
+
+        while (len > 0) {
+            waitForBufferSpace();
+
+            // Copy as much characters as we can
+            int count = Math.min(len, writeBuffer.remaining());
+            // CharBuffer.put(String) doesn't use getChars so do it manually
+            str.getChars(off, off + count, buf, writeBuffer.position());
+            writeBuffer.position(writeBuffer.position() + count);
+
+            off += count;
+            len -= count;
+
+            // Update buffer states and rewind if necessary
+            rewindWriteBuffer();
+        }
+    }
+
+    synchronized void flush() {
+        // Avoid waking up readers when there is nothing to read
+        if (readBuffer.hasRemaining()) {
+            // Notify readers
+            notifyAll();
+        }
+    }
+
+    @Override
+    public synchronized void close() throws IOException {
+        this.closed = true;
+        notifyAll();
+    }
+
+    private static class Writer extends java.io.Writer {
+
+        private final PumpReader reader;
+
+        private Writer(PumpReader reader) {
+            this.reader = reader;
+        }
+
+        @Override
+        public void write(int c) throws IOException {
+            reader.write((char) c);
+        }
+
+        @Override
+        public void write(char[] cbuf, int off, int len) throws IOException {
+            reader.write(cbuf, off, len);
+        }
+
+        @Override
+        public void write(String str, int off, int len) throws IOException {
+            reader.write(str, off, len);
+        }
+
+        @Override
+        public void flush() throws IOException {
+            reader.flush();
+        }
+
+        @Override
+        public void close() throws IOException {
+            reader.close();
+        }
+
+    }
+
+    private static class InputStream extends java.io.InputStream {
+
+        private final PumpReader reader;
+        private final CharsetEncoder encoder;
+
+        // To encode a character with multiple bytes (e.g. certain Unicode characters)
+        // we need enough space to encode them. Reading would fail if the read() method
+        // is used to read a single byte in these cases.
+        // Use this buffer to ensure we always have enough space to encode a character.
+        private final ByteBuffer buffer;
+
+        private InputStream(PumpReader reader, Charset charset) {
+            this.reader = reader;
+            this.encoder = charset.newEncoder()
+                    .onUnmappableCharacter(CodingErrorAction.REPLACE)
+                    .onMalformedInput(CodingErrorAction.REPLACE);
+            this.buffer = ByteBuffer.allocate((int) Math.ceil(encoder.maxBytesPerChar()));
+
+            // No input available after initialization
+            buffer.limit(0);
+        }
+
+        @Override
+        public int available() throws IOException {
+            return (int) (reader.available() * (double) this.encoder.averageBytesPerChar()) + buffer.remaining();
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (!buffer.hasRemaining() && !readUsingBuffer()) {
+                return EOF;
+            }
+
+            return buffer.get();
+        }
+
+        private boolean readUsingBuffer() throws IOException {
+            buffer.clear(); // Reset buffer
+            reader.readBytes(encoder, buffer);
+            buffer.flip();
+            return buffer.hasRemaining();
+        }
+
+        private int copyFromBuffer(byte[] b, int off, int len) {
+            len = Math.min(len, buffer.remaining());
+            buffer.get(b, off, len);
+            return len;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (len == 0) {
+                return 0;
+            }
+
+            int read;
+            if (buffer.hasRemaining()) {
+                read = copyFromBuffer(b, off, len);
+                if (read == len) {
+                    return len;
+                }
+
+                off += read;
+                len -= read;
+            } else {
+                read = 0;
+            }
+
+            // Do we have enough space to avoid buffering?
+            if (len >= buffer.capa
