@@ -387,4 +387,21 @@ public class PumpReader extends Reader {
             }
 
             // Do we have enough space to avoid buffering?
-            if (len >= buffer.capa
+            if (len >= buffer.capacity()) {
+                read += reader.readBytes(this.encoder, b, off, len);
+            } else if (readUsingBuffer()) {
+                read += copyFromBuffer(b, off, len);
+            }
+
+            // Return EOF if we didn't read any bytes
+            return read == 0 ? EOF : read;
+        }
+
+        @Override
+        public void close() throws IOException {
+            reader.close();
+        }
+
+    }
+
+}
