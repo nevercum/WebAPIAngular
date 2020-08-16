@@ -693,4 +693,286 @@
     FT_TRACE4(( "FT_New_GlyphSlot: Creating new slot object\n" ));
     if ( !FT_ALLOC( slot, clazz->slot_object_size ) )
     {
-      slot->
+      slot->face = face;
+
+      error = ft_glyphslot_init( slot );
+      if ( error )
+      {
+        ft_glyphslot_done( slot );
+        FT_FREE( slot );
+        goto Exit;
+      }
+
+      slot->next  = face->glyph;
+      face->glyph = slot;
+
+      if ( aslot )
+        *aslot = slot;
+    }
+    else if ( aslot )
+      *aslot = NULL;
+
+
+  Exit:
+    FT_TRACE4(( "FT_New_GlyphSlot: Return 0x%x\n", error ));
+
+    return error;
+  }
+
+
+  /* documentation is in ftobjs.h */
+
+  FT_BASE_DEF( void )
+  FT_Done_GlyphSlot( FT_GlyphSlot  slot )
+  {
+    if ( slot )
+    {
+      FT_Driver     driver = slot->face->driver;
+      FT_Memory     memory = driver->root.memory;
+      FT_GlyphSlot  prev;
+      FT_GlyphSlot  cur;
+
+
+      /* Remove slot from its parent face's list */
+      prev = NULL;
+      cur  = slot->face->glyph;
+
+      while ( cur )
+      {
+        if ( cur == slot )
+        {
+          if ( !prev )
+            slot->face->glyph = cur->next;
+          else
+            prev->next = cur->next;
+
+          /* finalize client-specific data */
+          if ( slot->generic.finalizer )
+            slot->generic.finalizer( slot );
+
+          ft_glyphslot_done( slot );
+          FT_FREE( slot );
+          break;
+        }
+        prev = cur;
+        cur  = cur->next;
+      }
+    }
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( void )
+  FT_Set_Transform( FT_Face     face,
+                    FT_Matrix*  matrix,
+                    FT_Vector*  delta )
+  {
+    FT_Face_Internal  internal;
+
+
+    if ( !face )
+      return;
+
+    internal = face->internal;
+
+    internal->transform_flags = 0;
+
+    if ( !matrix )
+    {
+      internal->transform_matrix.xx = 0x10000L;
+      internal->transform_matrix.xy = 0;
+      internal->transform_matrix.yx = 0;
+      internal->transform_matrix.yy = 0x10000L;
+
+      matrix = &internal->transform_matrix;
+    }
+    else
+      internal->transform_matrix = *matrix;
+
+    /* set transform_flags bit flag 0 if `matrix' isn't the identity */
+    if ( ( matrix->xy | matrix->yx ) ||
+         matrix->xx != 0x10000L      ||
+         matrix->yy != 0x10000L      )
+      internal->transform_flags |= 1;
+
+    if ( !delta )
+    {
+      internal->transform_delta.x = 0;
+      internal->transform_delta.y = 0;
+
+      delta = &internal->transform_delta;
+    }
+    else
+      internal->transform_delta = *delta;
+
+    /* set transform_flags bit flag 1 if `delta' isn't the null vector */
+    if ( delta->x | delta->y )
+      internal->transform_flags |= 2;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( void )
+  FT_Get_Transform( FT_Face     face,
+                    FT_Matrix*  matrix,
+                    FT_Vector*  delta )
+  {
+    FT_Face_Internal  internal;
+
+
+    if ( !face )
+      return;
+
+    internal = face->internal;
+
+    if ( matrix )
+      *matrix = internal->transform_matrix;
+
+    if ( delta )
+      *delta = internal->transform_delta;
+  }
+
+
+  static FT_Renderer
+  ft_lookup_glyph_renderer( FT_GlyphSlot  slot );
+
+
+#ifdef GRID_FIT_METRICS
+  static void
+  ft_glyphslot_grid_fit_metrics( FT_GlyphSlot  slot,
+                                 FT_Bool       vertical )
+  {
+    FT_Glyph_Metrics*  metrics = &slot->metrics;
+    FT_Pos             right, bottom;
+
+
+    if ( vertical )
+    {
+      metrics->horiBearingX = FT_PIX_FLOOR( metrics->horiBearingX );
+      metrics->horiBearingY = FT_PIX_CEIL_LONG( metrics->horiBearingY );
+
+      right  = FT_PIX_CEIL_LONG( ADD_LONG( metrics->vertBearingX,
+                                           metrics->width ) );
+      bottom = FT_PIX_CEIL_LONG( ADD_LONG( metrics->vertBearingY,
+                                           metrics->height ) );
+
+      metrics->vertBearingX = FT_PIX_FLOOR( metrics->vertBearingX );
+      metrics->vertBearingY = FT_PIX_FLOOR( metrics->vertBearingY );
+
+      metrics->width  = SUB_LONG( right,
+                                  metrics->vertBearingX );
+      metrics->height = SUB_LONG( bottom,
+                                  metrics->vertBearingY );
+    }
+    else
+    {
+      metrics->vertBearingX = FT_PIX_FLOOR( metrics->vertBearingX );
+      metrics->vertBearingY = FT_PIX_FLOOR( metrics->vertBearingY );
+
+      right  = FT_PIX_CEIL_LONG( ADD_LONG( metrics->horiBearingX,
+                                           metrics->width ) );
+      bottom = FT_PIX_FLOOR( SUB_LONG( metrics->horiBearingY,
+                                       metrics->height ) );
+
+      metrics->horiBearingX = FT_PIX_FLOOR( metrics->horiBearingX );
+      metrics->horiBearingY = FT_PIX_CEIL_LONG( metrics->horiBearingY );
+
+      metrics->width  = SUB_LONG( right,
+                                  metrics->horiBearingX );
+      metrics->height = SUB_LONG( metrics->horiBearingY,
+                                  bottom );
+    }
+
+    metrics->horiAdvance = FT_PIX_ROUND_LONG( metrics->horiAdvance );
+    metrics->vertAdvance = FT_PIX_ROUND_LONG( metrics->vertAdvance );
+  }
+#endif /* GRID_FIT_METRICS */
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Load_Glyph( FT_Face   face,
+                 FT_UInt   glyph_index,
+                 FT_Int32  load_flags )
+  {
+    FT_Error      error;
+    FT_Driver     driver;
+    FT_GlyphSlot  slot;
+    FT_Library    library;
+    FT_Bool       autohint = FALSE;
+    FT_Module     hinter;
+    TT_Face       ttface = (TT_Face)face;
+
+
+    if ( !face || !face->size || !face->glyph )
+      return FT_THROW( Invalid_Face_Handle );
+
+    /* The validity test for `glyph_index' is performed by the */
+    /* font drivers.                                           */
+
+    slot = face->glyph;
+    ft_glyphslot_clear( slot );
+
+    driver  = face->driver;
+    library = driver->root.library;
+    hinter  = library->auto_hinter;
+
+    /* undefined scale means no scale */
+    if ( face->size->metrics.x_ppem == 0 ||
+         face->size->metrics.y_ppem == 0 )
+      load_flags |= FT_LOAD_NO_SCALE;
+
+    /* resolve load flags dependencies */
+
+    if ( load_flags & FT_LOAD_NO_RECURSE )
+      load_flags |= FT_LOAD_NO_SCALE         |
+                    FT_LOAD_IGNORE_TRANSFORM;
+
+    if ( load_flags & FT_LOAD_NO_SCALE )
+    {
+      load_flags |= FT_LOAD_NO_HINTING |
+                    FT_LOAD_NO_BITMAP;
+
+      load_flags &= ~FT_LOAD_RENDER;
+    }
+
+    if ( load_flags & FT_LOAD_BITMAP_METRICS_ONLY )
+      load_flags &= ~FT_LOAD_RENDER;
+
+    /*
+     * Determine whether we need to auto-hint or not.
+     * The general rules are:
+     *
+     * - Do only auto-hinting if we have
+     *
+     *   - a hinter module,
+     *   - a scalable font,
+     *   - not a tricky font, and
+     *   - no transforms except simple slants and/or rotations by
+     *     integer multiples of 90 degrees.
+     *
+     * - Then, auto-hint if FT_LOAD_FORCE_AUTOHINT is set or if we don't
+     *   have a native font hinter.
+     *
+     * - Otherwise, auto-hint for LIGHT hinting mode or if there isn't
+     *   any hinting bytecode in the TrueType/OpenType font.
+     *
+     * - Exception: The font is `tricky' and requires the native hinter to
+     *   load properly.
+     */
+
+    if ( hinter                                           &&
+         !( load_flags & FT_LOAD_NO_HINTING )             &&
+         !( load_flags & FT_LOAD_NO_AUTOHINT )            &&
+         FT_IS_SCALABLE( face )                           &&
+         !FT_IS_TRICKY( face )                            &&
+         ( ( load_flags & FT_LOAD_IGNORE_TRANSFORM )    ||
+           ( face->internal->transform_matrix.yx == 0 &&
+             face->internal->transform_matrix.xx != 0 ) ||
+           ( face->internal->transform_matrix.xx == 0 &&
+             face->internal->transform_matrix.yx != 0 ) ) )
+    {
+      if ( ( load_flags & FT_LOAD_
