@@ -389,4 +389,308 @@
 
     if ( slot->format == FT_GLYPH_FORMAT_SVG )
     {
-      FT_Module    modu
+      FT_Module    module;
+      SVG_Service  svg_service;
+
+
+      module      = FT_Get_Module( slot->library, "ot-svg" );
+      svg_service = (SVG_Service)module->clazz->module_interface;
+
+      return (FT_Bool)svg_service->preset_slot( module, slot, FALSE );
+    }
+    else if ( slot->format != FT_GLYPH_FORMAT_OUTLINE )
+      return 1;
+
+    if ( origin )
+    {
+      x_shift = origin->x;
+      y_shift = origin->y;
+    }
+
+    /* compute the control box, and grid-fit it, */
+    /* taking into account the origin shift      */
+    FT_Outline_Get_CBox( outline, &cbox );
+
+    /* rough estimate of pixel box */
+    pbox.xMin = ( cbox.xMin >> 6 ) + ( x_shift >> 6 );
+    pbox.yMin = ( cbox.yMin >> 6 ) + ( y_shift >> 6 );
+    pbox.xMax = ( cbox.xMax >> 6 ) + ( x_shift >> 6 );
+    pbox.yMax = ( cbox.yMax >> 6 ) + ( y_shift >> 6 );
+
+    /* tiny remainder box */
+    cbox.xMin = ( cbox.xMin & 63 ) + ( x_shift & 63 );
+    cbox.yMin = ( cbox.yMin & 63 ) + ( y_shift & 63 );
+    cbox.xMax = ( cbox.xMax & 63 ) + ( x_shift & 63 );
+    cbox.yMax = ( cbox.yMax & 63 ) + ( y_shift & 63 );
+
+    switch ( mode )
+    {
+    case FT_RENDER_MODE_MONO:
+      pixel_mode = FT_PIXEL_MODE_MONO;
+#if 1
+      /* x */
+
+      /* undocumented but confirmed: bbox values get rounded;    */
+      /* we do asymmetric rounding so that the center of a pixel */
+      /* gets always included                                    */
+
+      pbox.xMin += ( cbox.xMin + 31 ) >> 6;
+      pbox.xMax += ( cbox.xMax + 32 ) >> 6;
+
+      /* if the bbox collapsed, we add a pixel based on the total */
+      /* rounding remainder to cover most of the original cbox    */
+
+      if ( pbox.xMin == pbox.xMax )
+      {
+        if ( ( ( cbox.xMin + 31 ) & 63 ) - 31 +
+             ( ( cbox.xMax + 32 ) & 63 ) - 32 < 0 )
+          pbox.xMin -= 1;
+        else
+          pbox.xMax += 1;
+      }
+
+      /* y */
+
+      pbox.yMin += ( cbox.yMin + 31 ) >> 6;
+      pbox.yMax += ( cbox.yMax + 32 ) >> 6;
+
+      if ( pbox.yMin == pbox.yMax )
+      {
+        if ( ( ( cbox.yMin + 31 ) & 63 ) - 31 +
+             ( ( cbox.yMax + 32 ) & 63 ) - 32 < 0 )
+          pbox.yMin -= 1;
+        else
+          pbox.yMax += 1;
+      }
+
+      break;
+#else
+      goto Adjust;
+#endif
+
+    case FT_RENDER_MODE_LCD:
+      pixel_mode = FT_PIXEL_MODE_LCD;
+      ft_lcd_padding( &cbox, slot, mode );
+      goto Adjust;
+
+    case FT_RENDER_MODE_LCD_V:
+      pixel_mode = FT_PIXEL_MODE_LCD_V;
+      ft_lcd_padding( &cbox, slot, mode );
+      goto Adjust;
+
+    case FT_RENDER_MODE_NORMAL:
+    case FT_RENDER_MODE_LIGHT:
+    default:
+      pixel_mode = FT_PIXEL_MODE_GRAY;
+    Adjust:
+      pbox.xMin += cbox.xMin >> 6;
+      pbox.yMin += cbox.yMin >> 6;
+      pbox.xMax += ( cbox.xMax + 63 ) >> 6;
+      pbox.yMax += ( cbox.yMax + 63 ) >> 6;
+    }
+
+    x_left = pbox.xMin;
+    y_top  = pbox.yMax;
+
+    width  = pbox.xMax - pbox.xMin;
+    height = pbox.yMax - pbox.yMin;
+
+    switch ( pixel_mode )
+    {
+    case FT_PIXEL_MODE_MONO:
+      pitch = ( ( width + 15 ) >> 4 ) << 1;
+      break;
+
+    case FT_PIXEL_MODE_LCD:
+      width *= 3;
+      pitch  = FT_PAD_CEIL( width, 4 );
+      break;
+
+    case FT_PIXEL_MODE_LCD_V:
+      height *= 3;
+      /* fall through */
+
+    case FT_PIXEL_MODE_GRAY:
+    default:
+      pitch = width;
+    }
+
+    slot->bitmap_left = (FT_Int)x_left;
+    slot->bitmap_top  = (FT_Int)y_top;
+
+    bitmap->pixel_mode = (unsigned char)pixel_mode;
+    bitmap->num_grays  = 256;
+    bitmap->width      = (unsigned int)width;
+    bitmap->rows       = (unsigned int)height;
+    bitmap->pitch      = pitch;
+
+    if ( pbox.xMin < -0x8000 || pbox.xMax > 0x7FFF ||
+         pbox.yMin < -0x8000 || pbox.yMax > 0x7FFF )
+    {
+      FT_TRACE3(( "ft_glyphslot_preset_bitmap: [%ld %ld %ld %ld]\n",
+                  pbox.xMin, pbox.yMin, pbox.xMax, pbox.yMax ));
+      return 1;
+    }
+
+    return 0;
+  }
+
+
+  FT_BASE_DEF( void )
+  ft_glyphslot_set_bitmap( FT_GlyphSlot  slot,
+                           FT_Byte*      buffer )
+  {
+    ft_glyphslot_free_bitmap( slot );
+
+    slot->bitmap.buffer = buffer;
+
+    FT_ASSERT( (slot->internal->flags & FT_GLYPH_OWN_BITMAP) == 0 );
+  }
+
+
+  FT_BASE_DEF( FT_Error )
+  ft_glyphslot_alloc_bitmap( FT_GlyphSlot  slot,
+                             FT_ULong      size )
+  {
+    FT_Memory  memory = FT_FACE_MEMORY( slot->face );
+    FT_Error   error;
+
+
+    if ( slot->internal->flags & FT_GLYPH_OWN_BITMAP )
+      FT_FREE( slot->bitmap.buffer );
+    else
+      slot->internal->flags |= FT_GLYPH_OWN_BITMAP;
+
+    FT_MEM_ALLOC( slot->bitmap.buffer, size );
+    return error;
+  }
+
+
+  static void
+  ft_glyphslot_clear( FT_GlyphSlot  slot )
+  {
+    /* free bitmap if needed */
+    ft_glyphslot_free_bitmap( slot );
+
+    /* clear all public fields in the glyph slot */
+    slot->glyph_index = 0;
+
+    FT_ZERO( &slot->metrics );
+    FT_ZERO( &slot->outline );
+
+    slot->bitmap.width      = 0;
+    slot->bitmap.rows       = 0;
+    slot->bitmap.pitch      = 0;
+    slot->bitmap.pixel_mode = 0;
+    /* `slot->bitmap.buffer' has been handled by ft_glyphslot_free_bitmap */
+
+    slot->bitmap_left   = 0;
+    slot->bitmap_top    = 0;
+    slot->num_subglyphs = 0;
+    slot->subglyphs     = NULL;
+    slot->control_data  = NULL;
+    slot->control_len   = 0;
+
+#ifndef FT_CONFIG_OPTION_SVG
+    slot->other = NULL;
+#else
+    if ( !( slot->face->face_flags & FT_FACE_FLAG_SVG ) )
+      slot->other = NULL;
+    else
+    {
+      if ( slot->internal->flags & FT_GLYPH_OWN_GZIP_SVG )
+      {
+        FT_Memory        memory = slot->face->memory;
+        FT_SVG_Document  doc    = (FT_SVG_Document)slot->other;
+
+
+        FT_FREE( doc->svg_document );
+        slot->internal->load_flags &= ~FT_GLYPH_OWN_GZIP_SVG;
+      }
+    }
+#endif
+
+    slot->format = FT_GLYPH_FORMAT_NONE;
+
+    slot->linearHoriAdvance = 0;
+    slot->linearVertAdvance = 0;
+    slot->advance.x         = 0;
+    slot->advance.y         = 0;
+    slot->lsb_delta         = 0;
+    slot->rsb_delta         = 0;
+  }
+
+
+  static void
+  ft_glyphslot_done( FT_GlyphSlot  slot )
+  {
+    FT_Driver        driver = slot->face->driver;
+    FT_Driver_Class  clazz  = driver->clazz;
+    FT_Memory        memory = driver->root.memory;
+
+#ifdef FT_CONFIG_OPTION_SVG
+    if ( slot->face->face_flags & FT_FACE_FLAG_SVG )
+    {
+      /* free memory in case SVG was there */
+      if ( slot->internal->flags & FT_GLYPH_OWN_GZIP_SVG )
+      {
+        FT_SVG_Document  doc = (FT_SVG_Document)slot->other;
+
+
+        FT_FREE( doc->svg_document );
+
+        slot->internal->flags &= ~FT_GLYPH_OWN_GZIP_SVG;
+      }
+
+      FT_FREE( slot->other );
+    }
+#endif
+
+    if ( clazz->done_slot )
+      clazz->done_slot( slot );
+
+    /* free bitmap buffer if needed */
+    ft_glyphslot_free_bitmap( slot );
+
+    /* slot->internal might be NULL in out-of-memory situations */
+    if ( slot->internal )
+    {
+      /* free glyph loader */
+      if ( FT_DRIVER_USES_OUTLINES( driver ) )
+      {
+        FT_GlyphLoader_Done( slot->internal->loader );
+        slot->internal->loader = NULL;
+      }
+
+      FT_FREE( slot->internal );
+    }
+  }
+
+
+  /* documentation is in ftobjs.h */
+
+  FT_BASE_DEF( FT_Error )
+  FT_New_GlyphSlot( FT_Face        face,
+                    FT_GlyphSlot  *aslot )
+  {
+    FT_Error         error;
+    FT_Driver        driver;
+    FT_Driver_Class  clazz;
+    FT_Memory        memory;
+    FT_GlyphSlot     slot = NULL;
+
+
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    if ( !face->driver )
+      return FT_THROW( Invalid_Argument );
+
+    driver = face->driver;
+    clazz  = driver->clazz;
+    memory = driver->root.memory;
+
+    FT_TRACE4(( "FT_New_GlyphSlot: Creating new slot object\n" ));
+    if ( !FT_ALLOC( slot, clazz->slot_object_size ) )
+    {
+      slot->
