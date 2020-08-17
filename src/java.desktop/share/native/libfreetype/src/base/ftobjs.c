@@ -975,4 +975,216 @@
            ( face->internal->transform_matrix.xx == 0 &&
              face->internal->transform_matrix.yx != 0 ) ) )
     {
-      if ( ( load_flags & FT_LOAD_
+      if ( ( load_flags & FT_LOAD_FORCE_AUTOHINT ) ||
+           !FT_DRIVER_HAS_HINTER( driver )         )
+        autohint = TRUE;
+      else
+      {
+        FT_Render_Mode  mode = FT_LOAD_TARGET_MODE( load_flags );
+        FT_Bool         is_light_type1;
+
+
+        /* only the new Adobe engine (for both CFF and Type 1) is `light'; */
+        /* we use `strstr' to catch both `Type 1' and `CID Type 1'         */
+        is_light_type1 =
+          ft_strstr( FT_Get_Font_Format( face ), "Type 1" ) != NULL &&
+          ((PS_Driver)driver)->hinting_engine == FT_HINTING_ADOBE;
+
+        /* the check for `num_locations' assures that we actually    */
+        /* test for instructions in a TTF and not in a CFF-based OTF */
+        /*                                                           */
+        /* since `maxSizeOfInstructions' might be unreliable, we     */
+        /* check the size of the `fpgm' and `prep' tables, too --    */
+        /* the assumption is that there don't exist real TTFs where  */
+        /* both `fpgm' and `prep' tables are missing                 */
+        if ( ( mode == FT_RENDER_MODE_LIGHT           &&
+               ( !FT_DRIVER_HINTS_LIGHTLY( driver ) &&
+                 !is_light_type1                    ) )         ||
+             ( FT_IS_SFNT( face )                             &&
+               ttface->num_locations                          &&
+               ttface->max_profile.maxSizeOfInstructions == 0 &&
+               ttface->font_program_size == 0                 &&
+               ttface->cvt_program_size == 0                  ) )
+          autohint = TRUE;
+      }
+    }
+
+    if ( autohint )
+    {
+      FT_AutoHinter_Interface  hinting;
+
+
+      /* XXX: The use of the `FT_LOAD_XXX_ONLY` flags is not very */
+      /*      elegant.                                            */
+
+      /* try to load SVG documents if available */
+      if ( FT_HAS_SVG( face ) )
+      {
+        error = driver->clazz->load_glyph( slot, face->size,
+                                           glyph_index,
+                                           load_flags | FT_LOAD_SVG_ONLY );
+
+        if ( !error && slot->format == FT_GLYPH_FORMAT_SVG )
+          goto Load_Ok;
+      }
+
+      /* try to load embedded bitmaps if available */
+      if ( FT_HAS_FIXED_SIZES( face )              &&
+           ( load_flags & FT_LOAD_NO_BITMAP ) == 0 )
+      {
+        error = driver->clazz->load_glyph( slot, face->size,
+                                           glyph_index,
+                                           load_flags | FT_LOAD_SBITS_ONLY );
+
+        if ( !error && slot->format == FT_GLYPH_FORMAT_BITMAP )
+          goto Load_Ok;
+      }
+
+      {
+        FT_Face_Internal  internal        = face->internal;
+        FT_Int            transform_flags = internal->transform_flags;
+
+
+        /* since the auto-hinter calls FT_Load_Glyph by itself, */
+        /* make sure that glyphs aren't transformed             */
+        internal->transform_flags = 0;
+
+        /* load auto-hinted outline */
+        hinting = (FT_AutoHinter_Interface)hinter->clazz->module_interface;
+
+        error   = hinting->load_glyph( (FT_AutoHinter)hinter,
+                                       slot, face->size,
+                                       glyph_index, load_flags );
+
+        internal->transform_flags = transform_flags;
+      }
+    }
+    else
+    {
+      error = driver->clazz->load_glyph( slot,
+                                         face->size,
+                                         glyph_index,
+                                         load_flags );
+      if ( error )
+        goto Exit;
+
+      if ( slot->format == FT_GLYPH_FORMAT_OUTLINE )
+      {
+        /* check that the loaded outline is correct */
+        error = FT_Outline_Check( &slot->outline );
+        if ( error )
+          goto Exit;
+
+#ifdef GRID_FIT_METRICS
+        if ( !( load_flags & FT_LOAD_NO_HINTING ) )
+          ft_glyphslot_grid_fit_metrics(
+            slot,
+            FT_BOOL( load_flags & FT_LOAD_VERTICAL_LAYOUT ) );
+#endif
+      }
+    }
+
+  Load_Ok:
+    /* compute the advance */
+    if ( load_flags & FT_LOAD_VERTICAL_LAYOUT )
+    {
+      slot->advance.x = 0;
+      slot->advance.y = slot->metrics.vertAdvance;
+    }
+    else
+    {
+      slot->advance.x = slot->metrics.horiAdvance;
+      slot->advance.y = 0;
+    }
+
+    /* compute the linear advance in 16.16 pixels */
+    if ( ( load_flags & FT_LOAD_LINEAR_DESIGN ) == 0 &&
+         FT_IS_SCALABLE( face )                      )
+    {
+      FT_Size_Metrics*  metrics = &face->size->metrics;
+
+
+      /* it's tricky! */
+      slot->linearHoriAdvance = FT_MulDiv( slot->linearHoriAdvance,
+                                           metrics->x_scale, 64 );
+
+      slot->linearVertAdvance = FT_MulDiv( slot->linearVertAdvance,
+                                           metrics->y_scale, 64 );
+    }
+
+    if ( ( load_flags & FT_LOAD_IGNORE_TRANSFORM ) == 0 )
+    {
+      FT_Face_Internal  internal = face->internal;
+
+
+      /* now, transform the glyph image if needed */
+      if ( internal->transform_flags )
+      {
+        /* get renderer */
+        FT_Renderer  renderer = ft_lookup_glyph_renderer( slot );
+
+
+        if ( renderer )
+          error = renderer->clazz->transform_glyph(
+                                     renderer, slot,
+                                     &internal->transform_matrix,
+                                     &internal->transform_delta );
+        else if ( slot->format == FT_GLYPH_FORMAT_OUTLINE )
+        {
+          /* apply `standard' transformation if no renderer is available */
+          if ( internal->transform_flags & 1 )
+            FT_Outline_Transform( &slot->outline,
+                                  &internal->transform_matrix );
+
+          if ( internal->transform_flags & 2 )
+            FT_Outline_Translate( &slot->outline,
+                                  internal->transform_delta.x,
+                                  internal->transform_delta.y );
+        }
+
+        /* transform advance */
+        FT_Vector_Transform( &slot->advance, &internal->transform_matrix );
+      }
+    }
+
+    slot->glyph_index          = glyph_index;
+    slot->internal->load_flags = load_flags;
+
+    /* do we need to render the image or preset the bitmap now? */
+    if ( !error                                    &&
+         ( load_flags & FT_LOAD_NO_SCALE ) == 0    &&
+         slot->format != FT_GLYPH_FORMAT_BITMAP    &&
+         slot->format != FT_GLYPH_FORMAT_COMPOSITE )
+    {
+      FT_Render_Mode  mode = FT_LOAD_TARGET_MODE( load_flags );
+
+
+      if ( mode == FT_RENDER_MODE_NORMAL   &&
+           load_flags & FT_LOAD_MONOCHROME )
+        mode = FT_RENDER_MODE_MONO;
+
+      if ( load_flags & FT_LOAD_RENDER )
+        error = FT_Render_Glyph( slot, mode );
+      else
+        ft_glyphslot_preset_bitmap( slot, mode, NULL );
+    }
+
+#ifdef FT_DEBUG_LEVEL_TRACE
+    FT_TRACE5(( "FT_Load_Glyph: index %d, flags 0x%x\n",
+                glyph_index, load_flags ));
+    FT_TRACE5(( "  bitmap %dx%d %s, %s (mode %d)\n",
+                slot->bitmap.width,
+                slot->bitmap.rows,
+                slot->outline.points ?
+                  slot->bitmap.buffer ? "rendered"
+                                      : "preset"
+                                     :
+                  slot->internal->flags & FT_GLYPH_OWN_BITMAP ? "owned"
+                                                              : "unowned",
+                pixel_modes[slot->bitmap.pixel_mode],
+                slot->bitmap.pixel_mode ));
+    FT_TRACE5(( "\n" ));
+    FT_TRACE5(( "  x advance: %f\n", slot->advance.x / 64.0 ));
+    FT_TRACE5(( "  y advance: %f\n", slot->advance.y / 64.0 ));
+    FT_TRACE5(( "  linear x advance: %f\n",
+                slot->line
