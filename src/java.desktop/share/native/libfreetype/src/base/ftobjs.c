@@ -1187,4 +1187,285 @@
     FT_TRACE5(( "  x advance: %f\n", slot->advance.x / 64.0 ));
     FT_TRACE5(( "  y advance: %f\n", slot->advance.y / 64.0 ));
     FT_TRACE5(( "  linear x advance: %f\n",
-                slot->line
+                slot->linearHoriAdvance / 65536.0 ));
+    FT_TRACE5(( "  linear y advance: %f\n",
+                slot->linearVertAdvance / 65536.0 ));
+
+    {
+      FT_Glyph_Metrics*  metrics = &slot->metrics;
+
+
+      FT_TRACE5(( "  metrics:\n" ));
+      FT_TRACE5(( "    width:  %f\n", metrics->width  / 64.0 ));
+      FT_TRACE5(( "    height: %f\n", metrics->height / 64.0 ));
+      FT_TRACE5(( "\n" ));
+      FT_TRACE5(( "    horiBearingX: %f\n", metrics->horiBearingX / 64.0 ));
+      FT_TRACE5(( "    horiBearingY: %f\n", metrics->horiBearingY / 64.0 ));
+      FT_TRACE5(( "    horiAdvance:  %f\n", metrics->horiAdvance  / 64.0 ));
+      FT_TRACE5(( "\n" ));
+      FT_TRACE5(( "    vertBearingX: %f\n", metrics->vertBearingX / 64.0 ));
+      FT_TRACE5(( "    vertBearingY: %f\n", metrics->vertBearingY / 64.0 ));
+      FT_TRACE5(( "    vertAdvance:  %f\n", metrics->vertAdvance  / 64.0 ));
+    }
+#endif
+
+  Exit:
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Load_Char( FT_Face   face,
+                FT_ULong  char_code,
+                FT_Int32  load_flags )
+  {
+    FT_UInt  glyph_index;
+
+
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    glyph_index = (FT_UInt)char_code;
+    if ( face->charmap )
+      glyph_index = FT_Get_Char_Index( face, char_code );
+
+    return FT_Load_Glyph( face, glyph_index, load_flags );
+  }
+
+
+  /* destructor for sizes list */
+  static void
+  destroy_size( FT_Memory  memory,
+                FT_Size    size,
+                FT_Driver  driver )
+  {
+    /* finalize client-specific data */
+    if ( size->generic.finalizer )
+      size->generic.finalizer( size );
+
+    /* finalize format-specific stuff */
+    if ( driver->clazz->done_size )
+      driver->clazz->done_size( size );
+
+    FT_FREE( size->internal );
+    FT_FREE( size );
+  }
+
+
+  static void
+  ft_cmap_done_internal( FT_CMap  cmap );
+
+
+  static void
+  destroy_charmaps( FT_Face    face,
+                    FT_Memory  memory )
+  {
+    FT_Int  n;
+
+
+    if ( !face )
+      return;
+
+    for ( n = 0; n < face->num_charmaps; n++ )
+    {
+      FT_CMap  cmap = FT_CMAP( face->charmaps[n] );
+
+
+      ft_cmap_done_internal( cmap );
+
+      face->charmaps[n] = NULL;
+    }
+
+    FT_FREE( face->charmaps );
+    face->num_charmaps = 0;
+  }
+
+
+  /* destructor for faces list */
+  static void
+  destroy_face( FT_Memory  memory,
+                FT_Face    face,
+                FT_Driver  driver )
+  {
+    FT_Driver_Class  clazz = driver->clazz;
+
+
+    /* discard auto-hinting data */
+    if ( face->autohint.finalizer )
+      face->autohint.finalizer( face->autohint.data );
+
+    /* Discard glyph slots for this face.                           */
+    /* Beware!  FT_Done_GlyphSlot() changes the field `face->glyph' */
+    while ( face->glyph )
+      FT_Done_GlyphSlot( face->glyph );
+
+    /* discard all sizes for this face */
+    FT_List_Finalize( &face->sizes_list,
+                      (FT_List_Destructor)destroy_size,
+                      memory,
+                      driver );
+    face->size = NULL;
+
+    /* now discard client data */
+    if ( face->generic.finalizer )
+      face->generic.finalizer( face );
+
+    /* discard charmaps */
+    destroy_charmaps( face, memory );
+
+    /* finalize format-specific stuff */
+    if ( clazz->done_face )
+      clazz->done_face( face );
+
+    /* close the stream for this face if needed */
+    FT_Stream_Free(
+      face->stream,
+      ( face->face_flags & FT_FACE_FLAG_EXTERNAL_STREAM ) != 0 );
+
+    face->stream = NULL;
+
+    /* get rid of it */
+    if ( face->internal )
+    {
+      FT_FREE( face->internal );
+    }
+    FT_FREE( face );
+  }
+
+
+  static void
+  Destroy_Driver( FT_Driver  driver )
+  {
+    FT_List_Finalize( &driver->faces_list,
+                      (FT_List_Destructor)destroy_face,
+                      driver->root.memory,
+                      driver );
+  }
+
+
+  /**************************************************************************
+   *
+   * @Function:
+   *   find_unicode_charmap
+   *
+   * @Description:
+   *   This function finds a Unicode charmap, if there is one.
+   *   And if there is more than one, it tries to favour the more
+   *   extensive one, i.e., one that supports UCS-4 against those which
+   *   are limited to the BMP (said UCS-2 encoding.)
+   *
+   *   This function is called from open_face() (just below), and also
+   *   from FT_Select_Charmap( ..., FT_ENCODING_UNICODE ).
+   */
+  static FT_Error
+  find_unicode_charmap( FT_Face  face )
+  {
+    FT_CharMap*  first;
+    FT_CharMap*  cur;
+
+
+    /* caller should have already checked that `face' is valid */
+    FT_ASSERT( face );
+
+    first = face->charmaps;
+
+    if ( !first )
+      return FT_THROW( Invalid_CharMap_Handle );
+
+    /*
+     * The original TrueType specification(s) only specified charmap
+     * formats that are capable of mapping 8 or 16 bit character codes to
+     * glyph indices.
+     *
+     * However, recent updates to the Apple and OpenType specifications
+     * introduced new formats that are capable of mapping 32-bit character
+     * codes as well.  And these are already used on some fonts, mainly to
+     * map non-BMP Asian ideographs as defined in Unicode.
+     *
+     * For compatibility purposes, these fonts generally come with
+     * *several* Unicode charmaps:
+     *
+     * - One of them in the "old" 16-bit format, that cannot access
+     *   all glyphs in the font.
+     *
+     * - Another one in the "new" 32-bit format, that can access all
+     *   the glyphs.
+     *
+     * This function has been written to always favor a 32-bit charmap
+     * when found.  Otherwise, a 16-bit one is returned when found.
+     */
+
+    /* Since the `interesting' table, with IDs (3,10), is normally the */
+    /* last one, we loop backwards.  This loses with type1 fonts with  */
+    /* non-BMP characters (<.0001%), this wins with .ttf with non-BMP  */
+    /* chars (.01% ?), and this is the same about 99.99% of the time!  */
+
+    cur = first + face->num_charmaps;  /* points after the last one */
+
+    for ( ; --cur >= first; )
+    {
+      if ( cur[0]->encoding == FT_ENCODING_UNICODE )
+      {
+        /* XXX If some new encodings to represent UCS-4 are added, */
+        /*     they should be added here.                          */
+        if ( ( cur[0]->platform_id == TT_PLATFORM_MICROSOFT &&
+               cur[0]->encoding_id == TT_MS_ID_UCS_4        )     ||
+             ( cur[0]->platform_id == TT_PLATFORM_APPLE_UNICODE &&
+               cur[0]->encoding_id == TT_APPLE_ID_UNICODE_32    ) )
+        {
+          face->charmap = cur[0];
+          return FT_Err_Ok;
+        }
+      }
+    }
+
+    /* We do not have any UCS-4 charmap.                */
+    /* Do the loop again and search for UCS-2 charmaps. */
+    cur = first + face->num_charmaps;
+
+    for ( ; --cur >= first; )
+    {
+      if ( cur[0]->encoding == FT_ENCODING_UNICODE )
+      {
+        face->charmap = cur[0];
+        return FT_Err_Ok;
+      }
+    }
+
+    return FT_THROW( Invalid_CharMap_Handle );
+  }
+
+
+  /**************************************************************************
+   *
+   * @Function:
+   *   find_variant_selector_charmap
+   *
+   * @Description:
+   *   This function finds the variant selector charmap, if there is one.
+   *   There can only be one (platform=0, specific=5, format=14).
+   */
+  static FT_CharMap
+  find_variant_selector_charmap( FT_Face  face )
+  {
+    FT_CharMap*  first;
+    FT_CharMap*  end;
+    FT_CharMap*  cur;
+
+
+    /* caller should have already checked that `face' is valid */
+    FT_ASSERT( face );
+
+    first = face->charmaps;
+
+    if ( !first )
+      return NULL;
+
+    end = first + face->num_charmaps;  /* points after the last one */
+
+    for ( cur = first; cur < end; cur++ )
+    {
+      if ( cur[0]->platform_id == TT_PLATFORM_APPLE_UNICODE    &&
+           cur[0]->encoding_id == TT_APPLE_I
