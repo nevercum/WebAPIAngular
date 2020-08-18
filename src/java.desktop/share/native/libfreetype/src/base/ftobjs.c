@@ -1468,4 +1468,251 @@
     for ( cur = first; cur < end; cur++ )
     {
       if ( cur[0]->platform_id == TT_PLATFORM_APPLE_UNICODE    &&
-           cur[0]->encoding_id == TT_APPLE_I
+           cur[0]->encoding_id == TT_APPLE_ID_VARIANT_SELECTOR &&
+           FT_Get_CMap_Format( cur[0] ) == 14                  )
+        return cur[0];
+    }
+
+    return NULL;
+  }
+
+
+  /**************************************************************************
+   *
+   * @Function:
+   *   open_face
+   *
+   * @Description:
+   *   This function does some work for FT_Open_Face().
+   */
+  static FT_Error
+  open_face( FT_Driver      driver,
+             FT_Stream      *astream,
+             FT_Bool        external_stream,
+             FT_Long        face_index,
+             FT_Int         num_params,
+             FT_Parameter*  params,
+             FT_Face       *aface )
+  {
+    FT_Memory         memory;
+    FT_Driver_Class   clazz;
+    FT_Face           face     = NULL;
+    FT_Face_Internal  internal = NULL;
+
+    FT_Error          error, error2;
+
+
+    clazz  = driver->clazz;
+    memory = driver->root.memory;
+
+    /* allocate the face object and perform basic initialization */
+    if ( FT_ALLOC( face, clazz->face_object_size ) )
+      goto Fail;
+
+    face->driver = driver;
+    face->memory = memory;
+    face->stream = *astream;
+
+    /* set the FT_FACE_FLAG_EXTERNAL_STREAM bit for FT_Done_Face */
+    if ( external_stream )
+      face->face_flags |= FT_FACE_FLAG_EXTERNAL_STREAM;
+
+    if ( FT_NEW( internal ) )
+      goto Fail;
+
+    face->internal = internal;
+
+#ifdef FT_CONFIG_OPTION_INCREMENTAL
+    {
+      int  i;
+
+
+      face->internal->incremental_interface = NULL;
+      for ( i = 0; i < num_params && !face->internal->incremental_interface;
+            i++ )
+        if ( params[i].tag == FT_PARAM_TAG_INCREMENTAL )
+          face->internal->incremental_interface =
+            (FT_Incremental_Interface)params[i].data;
+    }
+#endif
+
+    face->internal->random_seed = -1;
+
+    if ( clazz->init_face )
+      error = clazz->init_face( *astream,
+                                face,
+                                (FT_Int)face_index,
+                                num_params,
+                                params );
+    *astream = face->stream; /* Stream may have been changed. */
+    if ( error )
+      goto Fail;
+
+    /* select Unicode charmap by default */
+    error2 = find_unicode_charmap( face );
+
+    /* if no Unicode charmap can be found, FT_Err_Invalid_CharMap_Handle */
+    /* is returned.                                                      */
+
+    /* no error should happen, but we want to play safe */
+    if ( error2 && FT_ERR_NEQ( error2, Invalid_CharMap_Handle ) )
+    {
+      error = error2;
+      goto Fail;
+    }
+
+    *aface = face;
+
+  Fail:
+    if ( error )
+    {
+      destroy_charmaps( face, memory );
+      if ( clazz->done_face )
+        clazz->done_face( face );
+      FT_FREE( internal );
+      FT_FREE( face );
+      *aface = NULL;
+    }
+
+    return error;
+  }
+
+
+  /* there's a Mac-specific extended implementation of FT_New_Face() */
+  /* in src/base/ftmac.c                                             */
+
+#ifndef FT_MACINTOSH
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_New_Face( FT_Library   library,
+               const char*  pathname,
+               FT_Long      face_index,
+               FT_Face     *aface )
+  {
+    FT_Open_Args  args;
+
+
+    /* test for valid `library' and `aface' delayed to `FT_Open_Face' */
+    if ( !pathname )
+      return FT_THROW( Invalid_Argument );
+
+    args.flags    = FT_OPEN_PATHNAME;
+    args.pathname = (char*)pathname;
+    args.stream   = NULL;
+
+    return ft_open_face_internal( library, &args, face_index, aface, 1 );
+  }
+
+#endif
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_New_Memory_Face( FT_Library      library,
+                      const FT_Byte*  file_base,
+                      FT_Long         file_size,
+                      FT_Long         face_index,
+                      FT_Face        *aface )
+  {
+    FT_Open_Args  args;
+
+
+    /* test for valid `library' and `face' delayed to `FT_Open_Face' */
+    if ( !file_base )
+      return FT_THROW( Invalid_Argument );
+
+    args.flags       = FT_OPEN_MEMORY;
+    args.memory_base = file_base;
+    args.memory_size = file_size;
+    args.stream      = NULL;
+
+    return ft_open_face_internal( library, &args, face_index, aface, 1 );
+  }
+
+
+#ifdef FT_CONFIG_OPTION_MAC_FONTS
+
+  /* The behavior here is very similar to that in base/ftmac.c, but it     */
+  /* is designed to work on non-mac systems, so no mac specific calls.     */
+  /*                                                                       */
+  /* We look at the file and determine if it is a mac dfont file or a mac  */
+  /* resource file, or a macbinary file containing a mac resource file.    */
+  /*                                                                       */
+  /* Unlike ftmac I'm not going to look at a `FOND'.  I don't really see   */
+  /* the point, especially since there may be multiple `FOND' resources.   */
+  /* Instead I'll just look for `sfnt' and `POST' resources, ordered as    */
+  /* they occur in the file.                                               */
+  /*                                                                       */
+  /* Note that multiple `POST' resources do not mean multiple postscript   */
+  /* fonts; they all get jammed together to make what is essentially a     */
+  /* pfb file.                                                             */
+  /*                                                                       */
+  /* We aren't interested in `NFNT' or `FONT' bitmap resources.            */
+  /*                                                                       */
+  /* As soon as we get an `sfnt' load it into memory and pass it off to    */
+  /* FT_Open_Face.                                                         */
+  /*                                                                       */
+  /* If we have a (set of) `POST' resources, massage them into a (memory)  */
+  /* pfb file and pass that to FT_Open_Face.  (As with ftmac.c I'm not     */
+  /* going to try to save the kerning info.  After all that lives in the   */
+  /* `FOND' which isn't in the file containing the `POST' resources so     */
+  /* we don't really have access to it.                                    */
+
+
+  /* Finalizer for a memory stream; gets called by FT_Done_Face(). */
+  /* It frees the memory it uses.                                  */
+  /* From `ftmac.c'.                                               */
+  static void
+  memory_stream_close( FT_Stream  stream )
+  {
+    FT_Memory  memory = stream->memory;
+
+
+    FT_FREE( stream->base );
+
+    stream->size  = 0;
+    stream->close = NULL;
+  }
+
+
+  /* Create a new memory stream from a buffer and a size. */
+  /* From `ftmac.c'.                                      */
+  static FT_Error
+  new_memory_stream( FT_Library           library,
+                     FT_Byte*             base,
+                     FT_ULong             size,
+                     FT_Stream_CloseFunc  close,
+                     FT_Stream           *astream )
+  {
+    FT_Error   error;
+    FT_Memory  memory;
+    FT_Stream  stream = NULL;
+
+
+    if ( !library )
+      return FT_THROW( Invalid_Library_Handle );
+
+    if ( !base )
+      return FT_THROW( Invalid_Argument );
+
+    *astream = NULL;
+    memory   = library->memory;
+    if ( FT_NEW( stream ) )
+      goto Exit;
+
+    FT_Stream_OpenMemory( stream, base, size );
+
+    stream->close = close;
+
+    *astream = stream;
+
+  Exit:
+    return error;
+  }
+
+
+  /* Create a new FT_Face given a buffer and a driver name. */
+  /* From `ftmac.c'. 
