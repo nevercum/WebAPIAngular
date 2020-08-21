@@ -1978,4 +1978,251 @@
         goto Exit;
 
       /* FT2 allocator takes signed long buffer length,
-       * too large value causing overflow
+       * too large value causing overflow should be checked
+       */
+      FT_TRACE4(( "                 POST fragment #%d: length=0x%08lx"
+                  " total pfb_len=0x%08lx\n",
+                  i, temp, pfb_len + temp + 6 ));
+
+      if ( FT_MAC_RFORK_MAX_LEN < temp               ||
+           FT_MAC_RFORK_MAX_LEN - temp < pfb_len + 6 )
+      {
+        FT_TRACE2(( "             MacOS resource length cannot exceed"
+                    " 0x%08lx\n",
+                    FT_MAC_RFORK_MAX_LEN ));
+
+        error = FT_THROW( Invalid_Offset );
+        goto Exit;
+      }
+
+      pfb_len += temp + 6;
+    }
+
+    FT_TRACE2(( "             total buffer size to concatenate"
+                " %ld POST fragments: 0x%08lx\n",
+                 resource_cnt, pfb_len + 2 ));
+
+    if ( pfb_len + 2 < 6 )
+    {
+      FT_TRACE2(( "             too long fragment length makes"
+                  " pfb_len confused: pfb_len=0x%08lx\n",
+                  pfb_len ));
+
+      error = FT_THROW( Array_Too_Large );
+      goto Exit;
+    }
+
+    if ( FT_QALLOC( pfb_data, (FT_Long)pfb_len + 2 ) )
+      goto Exit;
+
+    pfb_data[0] = 0x80;
+    pfb_data[1] = 1;            /* Ascii section */
+    pfb_data[2] = 0;            /* 4-byte length, fill in later */
+    pfb_data[3] = 0;
+    pfb_data[4] = 0;
+    pfb_data[5] = 0;
+    pfb_pos     = 6;
+    pfb_lenpos  = 2;
+
+    len  = 0;
+    type = 1;
+
+    for ( i = 0; i < resource_cnt; i++ )
+    {
+      error = FT_Stream_Seek( stream, (FT_ULong)offsets[i] );
+      if ( error )
+        goto Exit2;
+      if ( FT_READ_ULONG( rlen ) )
+        goto Exit2;
+
+      /* FT2 allocator takes signed long buffer length,
+       * too large fragment length causing overflow should be checked
+       */
+      if ( 0x7FFFFFFFUL < rlen )
+      {
+        error = FT_THROW( Invalid_Offset );
+        goto Exit2;
+      }
+
+      if ( FT_READ_USHORT( flags ) )
+        goto Exit2;
+
+      FT_TRACE3(( "POST fragment[%d]:"
+                  " offsets=0x%08lx, rlen=0x%08lx, flags=0x%04x\n",
+                  i, offsets[i], rlen, flags ));
+
+      error = FT_ERR( Array_Too_Large );
+
+      /* postpone the check of `rlen longer than buffer' */
+      /* until `FT_Stream_Read'                          */
+
+      if ( ( flags >> 8 ) == 0 )        /* Comment, should not be loaded */
+      {
+        FT_TRACE3(( "    Skip POST fragment #%d because it is a comment\n",
+                    i ));
+        continue;
+      }
+
+      /* the flags are part of the resource, so rlen >= 2,  */
+      /* but some fonts declare rlen = 0 for empty fragment */
+      if ( rlen > 2 )
+        rlen -= 2;
+      else
+        rlen = 0;
+
+      if ( ( flags >> 8 ) == type )
+        len += rlen;
+      else
+      {
+        FT_TRACE3(( "    Write POST fragment #%d header (4-byte) to buffer"
+                    " %p + 0x%08lx\n",
+                    i, (void*)pfb_data, pfb_lenpos ));
+
+        if ( pfb_lenpos + 3 > pfb_len + 2 )
+          goto Exit2;
+
+        pfb_data[pfb_lenpos    ] = (FT_Byte)( len );
+        pfb_data[pfb_lenpos + 1] = (FT_Byte)( len >> 8 );
+        pfb_data[pfb_lenpos + 2] = (FT_Byte)( len >> 16 );
+        pfb_data[pfb_lenpos + 3] = (FT_Byte)( len >> 24 );
+
+        if ( ( flags >> 8 ) == 5 )      /* End of font mark */
+          break;
+
+        FT_TRACE3(( "    Write POST fragment #%d header (6-byte) to buffer"
+                    " %p + 0x%08lx\n",
+                    i, (void*)pfb_data, pfb_pos ));
+
+        if ( pfb_pos + 6 > pfb_len + 2 )
+          goto Exit2;
+
+        pfb_data[pfb_pos++] = 0x80;
+
+        type = flags >> 8;
+        len  = rlen;
+
+        pfb_data[pfb_pos++] = (FT_Byte)type;
+        pfb_lenpos          = pfb_pos;
+        pfb_data[pfb_pos++] = 0;        /* 4-byte length, fill in later */
+        pfb_data[pfb_pos++] = 0;
+        pfb_data[pfb_pos++] = 0;
+        pfb_data[pfb_pos++] = 0;
+      }
+
+      if ( pfb_pos > pfb_len || pfb_pos + rlen > pfb_len )
+        goto Exit2;
+
+      FT_TRACE3(( "    Load POST fragment #%d (%ld byte) to buffer"
+                  " %p + 0x%08lx\n",
+                  i, rlen, (void*)pfb_data, pfb_pos ));
+
+      error = FT_Stream_Read( stream, (FT_Byte *)pfb_data + pfb_pos, rlen );
+      if ( error )
+        goto Exit2;
+
+      pfb_pos += rlen;
+    }
+
+    error = FT_ERR( Array_Too_Large );
+
+    if ( pfb_pos + 2 > pfb_len + 2 )
+      goto Exit2;
+    pfb_data[pfb_pos++] = 0x80;
+    pfb_data[pfb_pos++] = 3;
+
+    if ( pfb_lenpos + 3 > pfb_len + 2 )
+      goto Exit2;
+    pfb_data[pfb_lenpos    ] = (FT_Byte)( len );
+    pfb_data[pfb_lenpos + 1] = (FT_Byte)( len >> 8 );
+    pfb_data[pfb_lenpos + 2] = (FT_Byte)( len >> 16 );
+    pfb_data[pfb_lenpos + 3] = (FT_Byte)( len >> 24 );
+
+    return open_face_from_buffer( library,
+                                  pfb_data,
+                                  pfb_pos,
+                                  face_index,
+                                  "type1",
+                                  aface );
+
+  Exit2:
+    if ( FT_ERR_EQ( error, Array_Too_Large ) )
+      FT_TRACE2(( "  Abort due to too-short buffer to store"
+                  " all POST fragments\n" ));
+    else if ( FT_ERR_EQ( error, Invalid_Offset ) )
+      FT_TRACE2(( "  Abort due to invalid offset in a POST fragment\n" ));
+
+    if ( error )
+      error = FT_ERR( Cannot_Open_Resource );
+    FT_FREE( pfb_data );
+
+  Exit:
+    return error;
+  }
+
+
+  /* The resource header says we've got resource_cnt `sfnt'      */
+  /* (TrueType/OpenType) resources in this file.  Look through   */
+  /* them for the one indicated by face_index, load it into mem, */
+  /* pass it on to the truetype driver, and return it.           */
+  /*                                                             */
+  static FT_Error
+  Mac_Read_sfnt_Resource( FT_Library  library,
+                          FT_Stream   stream,
+                          FT_Long    *offsets,
+                          FT_Long     resource_cnt,
+                          FT_Long     face_index,
+                          FT_Face    *aface )
+  {
+    FT_Memory  memory = library->memory;
+    FT_Byte*   sfnt_data = NULL;
+    FT_Error   error;
+    FT_ULong   flag_offset;
+    FT_Long    rlen;
+    int        is_cff;
+    FT_Long    face_index_in_resource = 0;
+
+
+    if ( face_index < 0 )
+      face_index = -face_index - 1;
+    if ( face_index >= resource_cnt )
+      return FT_THROW( Cannot_Open_Resource );
+
+    flag_offset = (FT_ULong)offsets[face_index];
+    error = FT_Stream_Seek( stream, flag_offset );
+    if ( error )
+      goto Exit;
+
+    if ( FT_READ_LONG( rlen ) )
+      goto Exit;
+    if ( rlen < 1 )
+      return FT_THROW( Cannot_Open_Resource );
+    if ( (FT_ULong)rlen > FT_MAC_RFORK_MAX_LEN )
+      return FT_THROW( Invalid_Offset );
+
+    error = open_face_PS_from_sfnt_stream( library,
+                                           stream,
+                                           face_index,
+                                           0, NULL,
+                                           aface );
+    if ( !error )
+      goto Exit;
+
+    /* rewind sfnt stream before open_face_PS_from_sfnt_stream() */
+    error = FT_Stream_Seek( stream, flag_offset + 4 );
+    if ( error )
+      goto Exit;
+
+    if ( FT_QALLOC( sfnt_data, rlen ) )
+      return error;
+    error = FT_Stream_Read( stream, (FT_Byte *)sfnt_data, (FT_ULong)rlen );
+    if ( error ) {
+      FT_FREE( sfnt_data );
+      goto Exit;
+    }
+
+    is_cff = rlen > 4 && !ft_memcmp( sfnt_data, "OTTO", 4 );
+    error = open_face_from_buffer( library,
+                                   sfnt_data,
+                                   (FT_ULong)rlen,
+                                   face_index_in_resource,
+                                   is_cff ? "cff" : "tru
