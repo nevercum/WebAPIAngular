@@ -2472,4 +2472,265 @@
         FT_TRACE3(( "%s ...", args->pathname ));
 #endif
 
-  
+      error = IsMacResource( library, stream, 0, face_index, aface );
+
+      FT_TRACE3(( "%s\n", error ? "failed" : "successful" ));
+
+#undef  FT_COMPONENT
+#define FT_COMPONENT  objs
+
+    }
+
+    if ( ( FT_ERR_EQ( error, Unknown_File_Format )      ||
+           FT_ERR_EQ( error, Invalid_Stream_Operation ) ) &&
+         ( args->flags & FT_OPEN_PATHNAME )               )
+      error = load_face_in_embedded_rfork( library, stream,
+                                           face_index, aface, args );
+    return error;
+  }
+#endif
+
+#endif  /* !FT_MACINTOSH && FT_CONFIG_OPTION_MAC_FONTS */
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Open_Face( FT_Library           library,
+                const FT_Open_Args*  args,
+                FT_Long              face_index,
+                FT_Face             *aface )
+  {
+    return ft_open_face_internal( library, args, face_index, aface, 1 );
+  }
+
+
+  static FT_Error
+  ft_open_face_internal( FT_Library           library,
+                         const FT_Open_Args*  args,
+                         FT_Long              face_index,
+                         FT_Face             *aface,
+                         FT_Bool              test_mac_fonts )
+  {
+    FT_Error     error;
+    FT_Driver    driver = NULL;
+    FT_Memory    memory = NULL;
+    FT_Stream    stream = NULL;
+    FT_Face      face   = NULL;
+    FT_ListNode  node   = NULL;
+    FT_Bool      external_stream;
+    FT_Module*   cur;
+    FT_Module*   limit;
+
+#ifndef FT_CONFIG_OPTION_MAC_FONTS
+    FT_UNUSED( test_mac_fonts );
+#endif
+
+
+    /* only use lower 31 bits together with sign bit */
+    if ( face_index > 0 )
+      face_index &= 0x7FFFFFFFL;
+    else
+    {
+      face_index  = -face_index;
+      face_index &= 0x7FFFFFFFL;
+      face_index  = -face_index;
+    }
+
+#ifdef FT_DEBUG_LEVEL_TRACE
+    FT_TRACE3(( "FT_Open_Face: " ));
+    if ( face_index < 0 )
+      FT_TRACE3(( "Requesting number of faces and named instances\n"));
+    else
+    {
+      FT_TRACE3(( "Requesting face %ld", face_index & 0xFFFFL ));
+      if ( face_index & 0x7FFF0000L )
+        FT_TRACE3(( ", named instance %ld", face_index >> 16 ));
+      FT_TRACE3(( "\n" ));
+    }
+#endif
+
+    /* test for valid `library' delayed to `FT_Stream_New' */
+
+    if ( ( !aface && face_index >= 0 ) || !args )
+      return FT_THROW( Invalid_Argument );
+
+    external_stream = FT_BOOL( ( args->flags & FT_OPEN_STREAM ) &&
+                               args->stream                     );
+
+    /* create input stream */
+    error = FT_Stream_New( library, args, &stream );
+    if ( error )
+      goto Fail3;
+
+    memory = library->memory;
+
+    /* If the font driver is specified in the `args' structure, use */
+    /* it.  Otherwise, we scan the list of registered drivers.      */
+    if ( ( args->flags & FT_OPEN_DRIVER ) && args->driver )
+    {
+      driver = FT_DRIVER( args->driver );
+
+      /* not all modules are drivers, so check... */
+      if ( FT_MODULE_IS_DRIVER( driver ) )
+      {
+        FT_Int         num_params = 0;
+        FT_Parameter*  params     = NULL;
+
+
+        if ( args->flags & FT_OPEN_PARAMS )
+        {
+          num_params = args->num_params;
+          params     = args->params;
+        }
+
+        error = open_face( driver, &stream, external_stream, face_index,
+                           num_params, params, &face );
+        if ( !error )
+          goto Success;
+      }
+      else
+        error = FT_THROW( Invalid_Handle );
+
+      FT_Stream_Free( stream, external_stream );
+      goto Fail;
+    }
+    else
+    {
+      error = FT_ERR( Missing_Module );
+
+      /* check each font driver for an appropriate format */
+      cur   = library->modules;
+      limit = cur + library->num_modules;
+
+      for ( ; cur < limit; cur++ )
+      {
+        /* not all modules are font drivers, so check... */
+        if ( FT_MODULE_IS_DRIVER( cur[0] ) )
+        {
+          FT_Int         num_params = 0;
+          FT_Parameter*  params     = NULL;
+
+
+          driver = FT_DRIVER( cur[0] );
+
+          if ( args->flags & FT_OPEN_PARAMS )
+          {
+            num_params = args->num_params;
+            params     = args->params;
+          }
+
+          error = open_face( driver, &stream, external_stream, face_index,
+                             num_params, params, &face );
+          if ( !error )
+            goto Success;
+
+#ifdef FT_CONFIG_OPTION_MAC_FONTS
+          if ( test_mac_fonts                                           &&
+               ft_strcmp( cur[0]->clazz->module_name, "truetype" ) == 0 &&
+               FT_ERR_EQ( error, Table_Missing )                        )
+          {
+            /* TrueType but essential tables are missing */
+            error = FT_Stream_Seek( stream, 0 );
+            if ( error )
+              break;
+
+            error = open_face_PS_from_sfnt_stream( library,
+                                                   stream,
+                                                   face_index,
+                                                   num_params,
+                                                   params,
+                                                   aface );
+            if ( !error )
+            {
+              FT_Stream_Free( stream, external_stream );
+              return error;
+            }
+          }
+#endif
+
+          if ( FT_ERR_NEQ( error, Unknown_File_Format ) )
+            goto Fail3;
+        }
+      }
+
+    Fail3:
+      /* If we are on the mac, and we get an                          */
+      /* FT_Err_Invalid_Stream_Operation it may be because we have an */
+      /* empty data fork, so we need to check the resource fork.      */
+      if ( FT_ERR_NEQ( error, Cannot_Open_Stream )       &&
+           FT_ERR_NEQ( error, Unknown_File_Format )      &&
+           FT_ERR_NEQ( error, Invalid_Stream_Operation ) )
+        goto Fail2;
+
+#if !defined( FT_MACINTOSH ) && defined( FT_CONFIG_OPTION_MAC_FONTS )
+      if ( test_mac_fonts )
+      {
+        error = load_mac_face( library, stream, face_index, aface, args );
+        if ( !error )
+        {
+          /* We don't want to go to Success here.  We've already done   */
+          /* that.  On the other hand, if we succeeded we still need to */
+          /* close this stream (we opened a different stream which      */
+          /* extracted the interesting information out of this stream   */
+          /* here.  That stream will still be open and the face will    */
+          /* point to it).                                              */
+          FT_Stream_Free( stream, external_stream );
+          return error;
+        }
+      }
+
+      if ( FT_ERR_NEQ( error, Unknown_File_Format ) )
+        goto Fail2;
+#endif  /* !FT_MACINTOSH && FT_CONFIG_OPTION_MAC_FONTS */
+
+      /* no driver is able to handle this format */
+      error = FT_THROW( Unknown_File_Format );
+
+  Fail2:
+      FT_Stream_Free( stream, external_stream );
+      goto Fail;
+    }
+
+  Success:
+    FT_TRACE4(( "FT_Open_Face: New face object, adding to list\n" ));
+
+    /* add the face object to its driver's list */
+    if ( FT_QNEW( node ) )
+      goto Fail;
+
+    node->data = face;
+    /* don't assume driver is the same as face->driver, so use */
+    /* face->driver instead.                                   */
+    FT_List_Add( &face->driver->faces_list, node );
+
+    /* now allocate a glyph slot object for the face */
+    FT_TRACE4(( "FT_Open_Face: Creating glyph slot\n" ));
+
+    if ( face_index >= 0 )
+    {
+      error = FT_New_GlyphSlot( face, NULL );
+      if ( error )
+        goto Fail;
+
+      /* finally, allocate a size object for the face */
+      {
+        FT_Size  size;
+
+
+        FT_TRACE4(( "FT_Open_Face: Creating size object\n" ));
+
+        error = FT_New_Size( face, &size );
+        if ( error )
+          goto Fail;
+
+        face->size = size;
+      }
+    }
+
+    /* some checks */
+
+    if ( FT_IS_SCALABLE( face ) )
+    {
+      if ( face->height < 0 )
+ 
