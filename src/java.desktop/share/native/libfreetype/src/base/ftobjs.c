@@ -2225,4 +2225,251 @@
                                    sfnt_data,
                                    (FT_ULong)rlen,
                                    face_index_in_resource,
-                                   is_cff ? "cff" : "tru
+                                   is_cff ? "cff" : "truetype",
+                                   aface );
+
+  Exit:
+    return error;
+  }
+
+
+  /* Check for a valid resource fork header, or a valid dfont    */
+  /* header.  In a resource fork the first 16 bytes are repeated */
+  /* at the location specified by bytes 4-7.  In a dfont bytes   */
+  /* 4-7 point to 16 bytes of zeroes instead.                    */
+  /*                                                             */
+  static FT_Error
+  IsMacResource( FT_Library  library,
+                 FT_Stream   stream,
+                 FT_Long     resource_offset,
+                 FT_Long     face_index,
+                 FT_Face    *aface )
+  {
+    FT_Memory  memory = library->memory;
+    FT_Error   error;
+    FT_Long    map_offset, rdata_pos;
+    FT_Long    *data_offsets;
+    FT_Long    count;
+
+
+    error = FT_Raccess_Get_HeaderInfo( library, stream, resource_offset,
+                                       &map_offset, &rdata_pos );
+    if ( error )
+      return error;
+
+    /* POST resources must be sorted to concatenate properly */
+    error = FT_Raccess_Get_DataOffsets( library, stream,
+                                        map_offset, rdata_pos,
+                                        TTAG_POST, TRUE,
+                                        &data_offsets, &count );
+    if ( !error )
+    {
+      error = Mac_Read_POST_Resource( library, stream, data_offsets, count,
+                                      face_index, aface );
+      FT_FREE( data_offsets );
+      /* POST exists in an LWFN providing a single face */
+      if ( !error )
+        (*aface)->num_faces = 1;
+      return error;
+    }
+
+    /* sfnt resources should not be sorted to preserve the face order by
+       QuickDraw API */
+    error = FT_Raccess_Get_DataOffsets( library, stream,
+                                        map_offset, rdata_pos,
+                                        TTAG_sfnt, FALSE,
+                                        &data_offsets, &count );
+    if ( !error )
+    {
+      FT_Long  face_index_internal = face_index % count;
+
+
+      error = Mac_Read_sfnt_Resource( library, stream, data_offsets, count,
+                                      face_index_internal, aface );
+      FT_FREE( data_offsets );
+      if ( !error )
+        (*aface)->num_faces = count;
+    }
+
+    return error;
+  }
+
+
+  /* Check for a valid macbinary header, and if we find one   */
+  /* check that the (flattened) resource fork in it is valid. */
+  /*                                                          */
+  static FT_Error
+  IsMacBinary( FT_Library  library,
+               FT_Stream   stream,
+               FT_Long     face_index,
+               FT_Face    *aface )
+  {
+    unsigned char  header[128];
+    FT_Error       error;
+    FT_Long        dlen, offset;
+
+
+    if ( !stream )
+      return FT_THROW( Invalid_Stream_Operation );
+
+    error = FT_Stream_Seek( stream, 0 );
+    if ( error )
+      goto Exit;
+
+    error = FT_Stream_Read( stream, (FT_Byte*)header, 128 );
+    if ( error )
+      goto Exit;
+
+    if (            header[ 0] !=   0 ||
+                    header[74] !=   0 ||
+                    header[82] !=   0 ||
+                    header[ 1] ==   0 ||
+                    header[ 1] >   33 ||
+                    header[63] !=   0 ||
+         header[2 + header[1]] !=   0 ||
+                  header[0x53] > 0x7F )
+      return FT_THROW( Unknown_File_Format );
+
+    dlen = ( header[0x53] << 24 ) |
+           ( header[0x54] << 16 ) |
+           ( header[0x55] <<  8 ) |
+             header[0x56];
+#if 0
+    rlen = ( header[0x57] << 24 ) |
+           ( header[0x58] << 16 ) |
+           ( header[0x59] <<  8 ) |
+             header[0x5A];
+#endif /* 0 */
+    offset = 128 + ( ( dlen + 127 ) & ~127 );
+
+    return IsMacResource( library, stream, offset, face_index, aface );
+
+  Exit:
+    return error;
+  }
+
+
+  static FT_Error
+  load_face_in_embedded_rfork( FT_Library           library,
+                               FT_Stream            stream,
+                               FT_Long              face_index,
+                               FT_Face             *aface,
+                               const FT_Open_Args  *args )
+  {
+
+#undef  FT_COMPONENT
+#define FT_COMPONENT  raccess
+
+    FT_Memory  memory = library->memory;
+    FT_Error   error  = FT_ERR( Unknown_File_Format );
+    FT_UInt    i;
+
+    char*      file_names[FT_RACCESS_N_RULES];
+    FT_Long    offsets[FT_RACCESS_N_RULES];
+    FT_Error   errors[FT_RACCESS_N_RULES];
+    FT_Bool    is_darwin_vfs, vfs_rfork_has_no_font = FALSE; /* not tested */
+
+    FT_Open_Args  args2;
+    FT_Stream     stream2 = NULL;
+
+
+    FT_Raccess_Guess( library, stream,
+                      args->pathname, file_names, offsets, errors );
+
+    for ( i = 0; i < FT_RACCESS_N_RULES; i++ )
+    {
+      is_darwin_vfs = ft_raccess_rule_by_darwin_vfs( library, i );
+      if ( is_darwin_vfs && vfs_rfork_has_no_font )
+      {
+        FT_TRACE3(( "Skip rule %d: darwin vfs resource fork"
+                    " is already checked and"
+                    " no font is found\n",
+                    i ));
+        continue;
+      }
+
+      if ( errors[i] )
+      {
+        FT_TRACE3(( "Error 0x%x has occurred in rule %d\n",
+                    errors[i], i ));
+        continue;
+      }
+
+      args2.flags    = FT_OPEN_PATHNAME;
+      args2.pathname = file_names[i] ? file_names[i] : args->pathname;
+
+      FT_TRACE3(( "Try rule %d: %s (offset=%ld) ...",
+                  i, args2.pathname, offsets[i] ));
+
+      error = FT_Stream_New( library, &args2, &stream2 );
+      if ( is_darwin_vfs && FT_ERR_EQ( error, Cannot_Open_Stream ) )
+        vfs_rfork_has_no_font = TRUE;
+
+      if ( error )
+      {
+        FT_TRACE3(( "failed\n" ));
+        continue;
+      }
+
+      error = IsMacResource( library, stream2, offsets[i],
+                             face_index, aface );
+      FT_Stream_Free( stream2, 0 );
+
+      FT_TRACE3(( "%s\n", error ? "failed": "successful" ));
+
+      if ( !error )
+          break;
+      else if ( is_darwin_vfs )
+          vfs_rfork_has_no_font = TRUE;
+    }
+
+    for (i = 0; i < FT_RACCESS_N_RULES; i++)
+    {
+      if ( file_names[i] )
+        FT_FREE( file_names[i] );
+    }
+
+    /* Caller (load_mac_face) requires FT_Err_Unknown_File_Format. */
+    if ( error )
+      error = FT_ERR( Unknown_File_Format );
+
+    return error;
+
+#undef  FT_COMPONENT
+#define FT_COMPONENT  objs
+
+  }
+
+
+  /* Check for some macintosh formats without Carbon framework.    */
+  /* Is this a macbinary file?  If so look at the resource fork.   */
+  /* Is this a mac dfont file?                                     */
+  /* Is this an old style resource fork? (in data)                 */
+  /* Else call load_face_in_embedded_rfork to try extra rules      */
+  /* (defined in `ftrfork.c').                                     */
+  /*                                                               */
+  static FT_Error
+  load_mac_face( FT_Library           library,
+                 FT_Stream            stream,
+                 FT_Long              face_index,
+                 FT_Face             *aface,
+                 const FT_Open_Args  *args )
+  {
+    FT_Error error;
+    FT_UNUSED( args );
+
+
+    error = IsMacBinary( library, stream, face_index, aface );
+    if ( FT_ERR_EQ( error, Unknown_File_Format ) )
+    {
+
+#undef  FT_COMPONENT
+#define FT_COMPONENT  raccess
+
+#ifdef FT_DEBUG_LEVEL_TRACE
+      FT_TRACE3(( "Try as dfont: " ));
+      if ( !( args->flags & FT_OPEN_MEMORY ) )
+        FT_TRACE3(( "%s ...", args->pathname ));
+#endif
+
+  
