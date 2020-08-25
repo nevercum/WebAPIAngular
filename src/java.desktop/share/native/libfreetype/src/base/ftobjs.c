@@ -2733,4 +2733,338 @@
     if ( FT_IS_SCALABLE( face ) )
     {
       if ( face->height < 0 )
- 
+        face->height = (FT_Short)-face->height;
+
+      if ( !FT_HAS_VERTICAL( face ) )
+        face->max_advance_height = (FT_Short)face->height;
+    }
+
+    if ( FT_HAS_FIXED_SIZES( face ) )
+    {
+      FT_Int  i;
+
+
+      for ( i = 0; i < face->num_fixed_sizes; i++ )
+      {
+        FT_Bitmap_Size*  bsize = face->available_sizes + i;
+
+
+        if ( bsize->height < 0 )
+          bsize->height = -bsize->height;
+        if ( bsize->x_ppem < 0 )
+          bsize->x_ppem = -bsize->x_ppem;
+        if ( bsize->y_ppem < 0 )
+          bsize->y_ppem = -bsize->y_ppem;
+
+        /* check whether negation actually has worked */
+        if ( bsize->height < 0 || bsize->x_ppem < 0 || bsize->y_ppem < 0 )
+        {
+          FT_TRACE0(( "FT_Open_Face:"
+                      " Invalid bitmap dimensions for strike %d,"
+                      " now disabled\n", i ));
+          bsize->width  = 0;
+          bsize->height = 0;
+          bsize->size   = 0;
+          bsize->x_ppem = 0;
+          bsize->y_ppem = 0;
+        }
+      }
+    }
+
+    /* initialize internal face data */
+    {
+      FT_Face_Internal  internal = face->internal;
+
+
+      internal->transform_matrix.xx = 0x10000L;
+      internal->transform_matrix.xy = 0;
+      internal->transform_matrix.yx = 0;
+      internal->transform_matrix.yy = 0x10000L;
+
+      internal->transform_delta.x = 0;
+      internal->transform_delta.y = 0;
+
+      internal->refcount = 1;
+
+      internal->no_stem_darkening = -1;
+
+#ifdef FT_CONFIG_OPTION_SUBPIXEL_RENDERING
+      /* Per-face filtering can only be set up by FT_Face_Properties */
+      internal->lcd_filter_func = NULL;
+#endif
+    }
+
+    if ( aface )
+      *aface = face;
+    else
+      FT_Done_Face( face );
+
+    goto Exit;
+
+  Fail:
+    if ( node )
+      FT_Done_Face( face );    /* face must be in the driver's list */
+    else if ( face )
+      destroy_face( memory, face, driver );
+
+  Exit:
+#ifdef FT_DEBUG_LEVEL_TRACE
+    if ( !error && face_index < 0 )
+    {
+      FT_TRACE3(( "FT_Open_Face: The font has %ld face%s\n",
+                  face->num_faces,
+                  face->num_faces == 1 ? "" : "s" ));
+      FT_TRACE3(( "              and %ld named instance%s for face %ld\n",
+                  face->style_flags >> 16,
+                  ( face->style_flags >> 16 ) == 1 ? "" : "s",
+                  -face_index - 1 ));
+    }
+#endif
+
+    FT_TRACE4(( "FT_Open_Face: Return 0x%x\n", error ));
+
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Attach_File( FT_Face      face,
+                  const char*  filepathname )
+  {
+    FT_Open_Args  open;
+
+
+    /* test for valid `face' delayed to `FT_Attach_Stream' */
+
+    if ( !filepathname )
+      return FT_THROW( Invalid_Argument );
+
+    open.stream   = NULL;
+    open.flags    = FT_OPEN_PATHNAME;
+    open.pathname = (char*)filepathname;
+
+    return FT_Attach_Stream( face, &open );
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Attach_Stream( FT_Face        face,
+                    FT_Open_Args*  parameters )
+  {
+    FT_Stream  stream;
+    FT_Error   error;
+    FT_Driver  driver;
+
+    FT_Driver_Class  clazz;
+
+
+    /* test for valid `parameters' delayed to `FT_Stream_New' */
+
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    driver = face->driver;
+    if ( !driver )
+      return FT_THROW( Invalid_Driver_Handle );
+
+    error = FT_Stream_New( driver->root.library, parameters, &stream );
+    if ( error )
+      goto Exit;
+
+    /* we implement FT_Attach_Stream in each driver through the */
+    /* `attach_file' interface                                  */
+
+    error = FT_ERR( Unimplemented_Feature );
+    clazz = driver->clazz;
+    if ( clazz->attach_file )
+      error = clazz->attach_file( face, stream );
+
+    /* close the attached stream */
+    FT_Stream_Free( stream,
+                    FT_BOOL( parameters->stream                     &&
+                             ( parameters->flags & FT_OPEN_STREAM ) ) );
+
+  Exit:
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Reference_Face( FT_Face  face )
+  {
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    face->internal->refcount++;
+
+    return FT_Err_Ok;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Done_Face( FT_Face  face )
+  {
+    FT_Error     error;
+    FT_Driver    driver;
+    FT_Memory    memory;
+    FT_ListNode  node;
+
+
+    error = FT_ERR( Invalid_Face_Handle );
+    if ( face && face->driver )
+    {
+      face->internal->refcount--;
+      if ( face->internal->refcount > 0 )
+        error = FT_Err_Ok;
+      else
+      {
+        driver = face->driver;
+        memory = driver->root.memory;
+
+        /* find face in driver's list */
+        node = FT_List_Find( &driver->faces_list, face );
+        if ( node )
+        {
+          /* remove face object from the driver's list */
+          FT_List_Remove( &driver->faces_list, node );
+          FT_FREE( node );
+
+          /* now destroy the object proper */
+          destroy_face( memory, face, driver );
+          error = FT_Err_Ok;
+        }
+      }
+    }
+
+    return error;
+  }
+
+
+  /* documentation is in ftobjs.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_New_Size( FT_Face   face,
+               FT_Size  *asize )
+  {
+    FT_Error         error;
+    FT_Memory        memory;
+    FT_Driver        driver;
+    FT_Driver_Class  clazz;
+
+    FT_Size          size = NULL;
+    FT_ListNode      node = NULL;
+
+    FT_Size_Internal  internal = NULL;
+
+
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    if ( !asize )
+      return FT_THROW( Invalid_Argument );
+
+    if ( !face->driver )
+      return FT_THROW( Invalid_Driver_Handle );
+
+    *asize = NULL;
+
+    driver = face->driver;
+    clazz  = driver->clazz;
+    memory = face->memory;
+
+    /* Allocate new size object and perform basic initialisation */
+    if ( FT_ALLOC( size, clazz->size_object_size ) || FT_QNEW( node ) )
+      goto Exit;
+
+    size->face = face;
+
+    if ( FT_NEW( internal ) )
+      goto Exit;
+
+    size->internal = internal;
+
+    if ( clazz->init_size )
+      error = clazz->init_size( size );
+
+    /* in case of success, add to the face's list */
+    if ( !error )
+    {
+      *asize     = size;
+      node->data = size;
+      FT_List_Add( &face->sizes_list, node );
+    }
+
+  Exit:
+    if ( error )
+    {
+      FT_FREE( node );
+      if ( size )
+        FT_FREE( size->internal );
+      FT_FREE( size );
+    }
+
+    return error;
+  }
+
+
+  /* documentation is in ftobjs.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Done_Size( FT_Size  size )
+  {
+    FT_Error     error;
+    FT_Driver    driver;
+    FT_Memory    memory;
+    FT_Face      face;
+    FT_ListNode  node;
+
+
+    if ( !size )
+      return FT_THROW( Invalid_Size_Handle );
+
+    face = size->face;
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    driver = face->driver;
+    if ( !driver )
+      return FT_THROW( Invalid_Driver_Handle );
+
+    memory = driver->root.memory;
+
+    error = FT_Err_Ok;
+    node  = FT_List_Find( &face->sizes_list, size );
+    if ( node )
+    {
+      FT_List_Remove( &face->sizes_list, node );
+      FT_FREE( node );
+
+      if ( face->size == size )
+      {
+        face->size = NULL;
+        if ( face->sizes_list.head )
+          face->size = (FT_Size)(face->sizes_list.head->data);
+      }
+
+      destroy_size( memory, size, driver );
+    }
+    else
+      error = FT_THROW( Invalid_Size_Handle );
+
+    return error;
+  }
+
+
+  /* documentation is in ftobjs.h */
+
+  FT_BASE_DEF( FT_Error )
+  FT_Match_Size( FT_Face          face,
+                 FT_Size_Request 
