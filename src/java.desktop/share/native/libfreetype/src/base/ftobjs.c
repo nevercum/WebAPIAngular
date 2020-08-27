@@ -3067,4 +3067,289 @@
 
   FT_BASE_DEF( FT_Error )
   FT_Match_Size( FT_Face          face,
-                 FT_Size_Request 
+                 FT_Size_Request  req,
+                 FT_Bool          ignore_width,
+                 FT_ULong*        size_index )
+  {
+    FT_Int   i;
+    FT_Long  w, h;
+
+
+    if ( !FT_HAS_FIXED_SIZES( face ) )
+      return FT_THROW( Invalid_Face_Handle );
+
+    /* FT_Bitmap_Size doesn't provide enough info... */
+    if ( req->type != FT_SIZE_REQUEST_TYPE_NOMINAL )
+      return FT_THROW( Unimplemented_Feature );
+
+    w = FT_REQUEST_WIDTH ( req );
+    h = FT_REQUEST_HEIGHT( req );
+
+    if ( req->width && !req->height )
+      h = w;
+    else if ( !req->width && req->height )
+      w = h;
+
+    w = FT_PIX_ROUND( w );
+    h = FT_PIX_ROUND( h );
+
+    if ( !w || !h )
+      return FT_THROW( Invalid_Pixel_Size );
+
+    for ( i = 0; i < face->num_fixed_sizes; i++ )
+    {
+      FT_Bitmap_Size*  bsize = face->available_sizes + i;
+
+
+      if ( h != FT_PIX_ROUND( bsize->y_ppem ) )
+        continue;
+
+      if ( w == FT_PIX_ROUND( bsize->x_ppem ) || ignore_width )
+      {
+        FT_TRACE3(( "FT_Match_Size: bitmap strike %d matches\n", i ));
+
+        if ( size_index )
+          *size_index = (FT_ULong)i;
+
+        return FT_Err_Ok;
+      }
+    }
+
+    FT_TRACE3(( "FT_Match_Size: no matching bitmap strike\n" ));
+
+    return FT_THROW( Invalid_Pixel_Size );
+  }
+
+
+  /* documentation is in ftobjs.h */
+
+  FT_BASE_DEF( void )
+  ft_synthesize_vertical_metrics( FT_Glyph_Metrics*  metrics,
+                                  FT_Pos             advance )
+  {
+    FT_Pos  height = metrics->height;
+
+
+    /* compensate for glyph with bbox above/below the baseline */
+    if ( metrics->horiBearingY < 0 )
+    {
+      if ( height < metrics->horiBearingY )
+        height = metrics->horiBearingY;
+    }
+    else if ( metrics->horiBearingY > 0 )
+      height -= metrics->horiBearingY;
+
+    /* the factor 1.2 is a heuristical value */
+    if ( !advance )
+      advance = height * 12 / 10;
+
+    metrics->vertBearingX = metrics->horiBearingX - metrics->horiAdvance / 2;
+    metrics->vertBearingY = ( advance - height ) / 2;
+    metrics->vertAdvance  = advance;
+  }
+
+
+  static void
+  ft_recompute_scaled_metrics( FT_Face           face,
+                               FT_Size_Metrics*  metrics )
+  {
+    /* Compute root ascender, descender, test height, and max_advance */
+
+#ifdef GRID_FIT_METRICS
+    metrics->ascender    = FT_PIX_CEIL( FT_MulFix( face->ascender,
+                                                   metrics->y_scale ) );
+
+    metrics->descender   = FT_PIX_FLOOR( FT_MulFix( face->descender,
+                                                    metrics->y_scale ) );
+
+    metrics->height      = FT_PIX_ROUND( FT_MulFix( face->height,
+                                                    metrics->y_scale ) );
+
+    metrics->max_advance = FT_PIX_ROUND( FT_MulFix( face->max_advance_width,
+                                                    metrics->x_scale ) );
+#else /* !GRID_FIT_METRICS */
+    metrics->ascender    = FT_MulFix( face->ascender,
+                                      metrics->y_scale );
+
+    metrics->descender   = FT_MulFix( face->descender,
+                                      metrics->y_scale );
+
+    metrics->height      = FT_MulFix( face->height,
+                                      metrics->y_scale );
+
+    metrics->max_advance = FT_MulFix( face->max_advance_width,
+                                      metrics->x_scale );
+#endif /* !GRID_FIT_METRICS */
+  }
+
+
+  FT_BASE_DEF( void )
+  FT_Select_Metrics( FT_Face   face,
+                     FT_ULong  strike_index )
+  {
+    FT_Size_Metrics*  metrics;
+    FT_Bitmap_Size*   bsize;
+
+
+    metrics = &face->size->metrics;
+    bsize   = face->available_sizes + strike_index;
+
+    metrics->x_ppem = (FT_UShort)( ( bsize->x_ppem + 32 ) >> 6 );
+    metrics->y_ppem = (FT_UShort)( ( bsize->y_ppem + 32 ) >> 6 );
+
+    if ( FT_IS_SCALABLE( face ) )
+    {
+      metrics->x_scale = FT_DivFix( bsize->x_ppem,
+                                    face->units_per_EM );
+      metrics->y_scale = FT_DivFix( bsize->y_ppem,
+                                    face->units_per_EM );
+
+      ft_recompute_scaled_metrics( face, metrics );
+    }
+    else
+    {
+      metrics->x_scale     = 1L << 16;
+      metrics->y_scale     = 1L << 16;
+      metrics->ascender    = bsize->y_ppem;
+      metrics->descender   = 0;
+      metrics->height      = bsize->height << 6;
+      metrics->max_advance = bsize->x_ppem;
+    }
+  }
+
+
+  FT_BASE_DEF( FT_Error )
+  FT_Request_Metrics( FT_Face          face,
+                      FT_Size_Request  req )
+  {
+    FT_Error  error = FT_Err_Ok;
+
+    FT_Size_Metrics*  metrics;
+
+
+    metrics = &face->size->metrics;
+
+    if ( FT_IS_SCALABLE( face ) )
+    {
+      FT_Long  w = 0, h = 0, scaled_w = 0, scaled_h = 0;
+
+
+      switch ( req->type )
+      {
+      case FT_SIZE_REQUEST_TYPE_NOMINAL:
+        w = h = face->units_per_EM;
+        break;
+
+      case FT_SIZE_REQUEST_TYPE_REAL_DIM:
+        w = h = face->ascender - face->descender;
+        break;
+
+      case FT_SIZE_REQUEST_TYPE_BBOX:
+        w = face->bbox.xMax - face->bbox.xMin;
+        h = face->bbox.yMax - face->bbox.yMin;
+        break;
+
+      case FT_SIZE_REQUEST_TYPE_CELL:
+        w = face->max_advance_width;
+        h = face->ascender - face->descender;
+        break;
+
+      case FT_SIZE_REQUEST_TYPE_SCALES:
+        metrics->x_scale = (FT_Fixed)req->width;
+        metrics->y_scale = (FT_Fixed)req->height;
+        if ( !metrics->x_scale )
+          metrics->x_scale = metrics->y_scale;
+        else if ( !metrics->y_scale )
+          metrics->y_scale = metrics->x_scale;
+        goto Calculate_Ppem;
+
+      case FT_SIZE_REQUEST_TYPE_MAX:
+        break;
+      }
+
+      /* to be on the safe side */
+      if ( w < 0 )
+        w = -w;
+
+      if ( h < 0 )
+        h = -h;
+
+      scaled_w = FT_REQUEST_WIDTH ( req );
+      scaled_h = FT_REQUEST_HEIGHT( req );
+
+      /* determine scales */
+      if ( req->width )
+      {
+        metrics->x_scale = FT_DivFix( scaled_w, w );
+
+        if ( req->height )
+        {
+          metrics->y_scale = FT_DivFix( scaled_h, h );
+
+          if ( req->type == FT_SIZE_REQUEST_TYPE_CELL )
+          {
+            if ( metrics->y_scale > metrics->x_scale )
+              metrics->y_scale = metrics->x_scale;
+            else
+              metrics->x_scale = metrics->y_scale;
+          }
+        }
+        else
+        {
+          metrics->y_scale = metrics->x_scale;
+          scaled_h = FT_MulDiv( scaled_w, h, w );
+        }
+      }
+      else
+      {
+        metrics->x_scale = metrics->y_scale = FT_DivFix( scaled_h, h );
+        scaled_w = FT_MulDiv( scaled_h, w, h );
+      }
+
+  Calculate_Ppem:
+      /* calculate the ppems */
+      if ( req->type != FT_SIZE_REQUEST_TYPE_NOMINAL )
+      {
+        scaled_w = FT_MulFix( face->units_per_EM, metrics->x_scale );
+        scaled_h = FT_MulFix( face->units_per_EM, metrics->y_scale );
+      }
+
+      scaled_w = ( scaled_w + 32 ) >> 6;
+      scaled_h = ( scaled_h + 32 ) >> 6;
+      if ( scaled_w > (FT_Long)FT_USHORT_MAX ||
+           scaled_h > (FT_Long)FT_USHORT_MAX )
+      {
+        FT_ERROR(( "FT_Request_Metrics: Resulting ppem size too large\n" ));
+        error = FT_ERR( Invalid_Pixel_Size );
+        goto Exit;
+      }
+
+      metrics->x_ppem = (FT_UShort)scaled_w;
+      metrics->y_ppem = (FT_UShort)scaled_h;
+
+      ft_recompute_scaled_metrics( face, metrics );
+    }
+    else
+    {
+      FT_ZERO( metrics );
+      metrics->x_scale = 1L << 16;
+      metrics->y_scale = 1L << 16;
+    }
+
+  Exit:
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Select_Size( FT_Face  face,
+                  FT_Int   strike_index )
+  {
+    FT_Error         error = FT_Err_Ok;
+    FT_Driver_Class  clazz;
+
+
+    if ( !face || !FT_HAS_FIXED_SIZES( face ) )
+      return FT_THROW
