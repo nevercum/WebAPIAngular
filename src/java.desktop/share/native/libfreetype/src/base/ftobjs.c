@@ -3610,4 +3610,343 @@
                                        face->size->metrics.y_ppem, 25 );
 
             akerning->x = FT_PIX_ROUND( akerning->x );
-            akerning->y = FT_PIX_ROUND( aker
+            akerning->y = FT_PIX_ROUND( akerning->y );
+
+#ifdef FT_DEBUG_LEVEL_TRACE
+            {
+              FT_Pos  orig_x_rounded = FT_PIX_ROUND( orig_x );
+              FT_Pos  orig_y_rounded = FT_PIX_ROUND( orig_y );
+
+
+              if ( akerning->x != orig_x_rounded ||
+                   akerning->y != orig_y_rounded )
+                FT_TRACE5(( "FT_Get_Kerning: horizontal kerning"
+                            " (%ld, %ld) scaled down to (%ld, %ld) pixels\n",
+                            orig_x_rounded / 64, orig_y_rounded / 64,
+                            akerning->x / 64, akerning->y / 64 ));
+            }
+#endif
+          }
+        }
+      }
+    }
+
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Get_Track_Kerning( FT_Face    face,
+                        FT_Fixed   point_size,
+                        FT_Int     degree,
+                        FT_Fixed*  akerning )
+  {
+    FT_Service_Kerning  service;
+    FT_Error            error = FT_Err_Ok;
+
+
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    if ( !akerning )
+      return FT_THROW( Invalid_Argument );
+
+    FT_FACE_FIND_SERVICE( face, service, KERNING );
+    if ( !service )
+      return FT_THROW( Unimplemented_Feature );
+
+    error = service->get_track( face,
+                                point_size,
+                                degree,
+                                akerning );
+
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Select_Charmap( FT_Face      face,
+                     FT_Encoding  encoding )
+  {
+    FT_CharMap*  cur;
+    FT_CharMap*  limit;
+
+
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    /* FT_ENCODING_NONE is a valid encoding for BDF, PCF, and Windows FNT */
+    if ( encoding == FT_ENCODING_NONE && !face->num_charmaps )
+      return FT_THROW( Invalid_Argument );
+
+    /* FT_ENCODING_UNICODE is special.  We try to find the `best' Unicode */
+    /* charmap available, i.e., one with UCS-4 characters, if possible.   */
+    /*                                                                    */
+    /* This is done by find_unicode_charmap() above, to share code.       */
+    if ( encoding == FT_ENCODING_UNICODE )
+      return find_unicode_charmap( face );
+
+    cur = face->charmaps;
+    if ( !cur )
+      return FT_THROW( Invalid_CharMap_Handle );
+
+    limit = cur + face->num_charmaps;
+
+    for ( ; cur < limit; cur++ )
+    {
+      if ( cur[0]->encoding == encoding )
+      {
+        face->charmap = cur[0];
+        return FT_Err_Ok;
+      }
+    }
+
+    return FT_THROW( Invalid_Argument );
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Set_Charmap( FT_Face     face,
+                  FT_CharMap  charmap )
+  {
+    FT_CharMap*  cur;
+    FT_CharMap*  limit;
+
+
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    cur = face->charmaps;
+    if ( !cur || !charmap )
+      return FT_THROW( Invalid_CharMap_Handle );
+
+    limit = cur + face->num_charmaps;
+
+    for ( ; cur < limit; cur++ )
+    {
+      if ( cur[0] == charmap                    &&
+           FT_Get_CMap_Format ( charmap ) != 14 )
+      {
+        face->charmap = cur[0];
+        return FT_Err_Ok;
+      }
+    }
+
+    return FT_THROW( Invalid_Argument );
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Int )
+  FT_Get_Charmap_Index( FT_CharMap  charmap )
+  {
+    FT_Int  i;
+
+
+    if ( !charmap || !charmap->face )
+      return -1;
+
+    for ( i = 0; i < charmap->face->num_charmaps; i++ )
+      if ( charmap->face->charmaps[i] == charmap )
+        break;
+
+    FT_ASSERT( i < charmap->face->num_charmaps );
+
+    return i;
+  }
+
+
+  static void
+  ft_cmap_done_internal( FT_CMap  cmap )
+  {
+    FT_CMap_Class  clazz  = cmap->clazz;
+    FT_Face        face   = cmap->charmap.face;
+    FT_Memory      memory = FT_FACE_MEMORY( face );
+
+
+    if ( clazz->done )
+      clazz->done( cmap );
+
+    FT_FREE( cmap );
+  }
+
+
+  FT_BASE_DEF( void )
+  FT_CMap_Done( FT_CMap  cmap )
+  {
+    if ( cmap )
+    {
+      FT_Face    face   = cmap->charmap.face;
+      FT_Memory  memory = FT_FACE_MEMORY( face );
+      FT_Error   error;
+      FT_Int     i, j;
+
+
+      for ( i = 0; i < face->num_charmaps; i++ )
+      {
+        if ( (FT_CMap)face->charmaps[i] == cmap )
+        {
+          FT_CharMap  last_charmap = face->charmaps[face->num_charmaps - 1];
+
+
+          if ( FT_QRENEW_ARRAY( face->charmaps,
+                                face->num_charmaps,
+                                face->num_charmaps - 1 ) )
+            return;
+
+          /* remove it from our list of charmaps */
+          for ( j = i + 1; j < face->num_charmaps; j++ )
+          {
+            if ( j == face->num_charmaps - 1 )
+              face->charmaps[j - 1] = last_charmap;
+            else
+              face->charmaps[j - 1] = face->charmaps[j];
+          }
+
+          face->num_charmaps--;
+
+          if ( (FT_CMap)face->charmap == cmap )
+            face->charmap = NULL;
+
+          ft_cmap_done_internal( cmap );
+
+          break;
+        }
+      }
+    }
+  }
+
+
+  FT_BASE_DEF( FT_Error )
+  FT_CMap_New( FT_CMap_Class  clazz,
+               FT_Pointer     init_data,
+               FT_CharMap     charmap,
+               FT_CMap       *acmap )
+  {
+    FT_Error   error;
+    FT_Face    face;
+    FT_Memory  memory;
+    FT_CMap    cmap = NULL;
+
+
+    if ( !clazz || !charmap || !charmap->face )
+      return FT_THROW( Invalid_Argument );
+
+    face   = charmap->face;
+    memory = FT_FACE_MEMORY( face );
+
+    if ( !FT_ALLOC( cmap, clazz->size ) )
+    {
+      cmap->charmap = *charmap;
+      cmap->clazz   = clazz;
+
+      if ( clazz->init )
+      {
+        error = clazz->init( cmap, init_data );
+        if ( error )
+          goto Fail;
+      }
+
+      /* add it to our list of charmaps */
+      if ( FT_QRENEW_ARRAY( face->charmaps,
+                            face->num_charmaps,
+                            face->num_charmaps + 1 ) )
+        goto Fail;
+
+      face->charmaps[face->num_charmaps++] = (FT_CharMap)cmap;
+    }
+
+  Exit:
+    if ( acmap )
+      *acmap = cmap;
+
+    return error;
+
+  Fail:
+    ft_cmap_done_internal( cmap );
+    cmap = NULL;
+    goto Exit;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_UInt )
+  FT_Get_Char_Index( FT_Face   face,
+                     FT_ULong  charcode )
+  {
+    FT_UInt  result = 0;
+
+
+    if ( face && face->charmap )
+    {
+      FT_CMap  cmap = FT_CMAP( face->charmap );
+
+
+      if ( charcode > 0xFFFFFFFFUL )
+      {
+        FT_TRACE1(( "FT_Get_Char_Index: too large charcode" ));
+        FT_TRACE1(( " 0x%lx is truncated\n", charcode ));
+      }
+
+      result = cmap->clazz->char_index( cmap, (FT_UInt32)charcode );
+      if ( result >= (FT_UInt)face->num_glyphs )
+        result = 0;
+    }
+
+    return result;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_ULong )
+  FT_Get_First_Char( FT_Face   face,
+                     FT_UInt  *agindex )
+  {
+    FT_ULong  result = 0;
+    FT_UInt   gindex = 0;
+
+
+    /* only do something if we have a charmap, and we have glyphs at all */
+    if ( face && face->charmap && face->num_glyphs )
+    {
+      gindex = FT_Get_Char_Index( face, 0 );
+      if ( gindex == 0 )
+        result = FT_Get_Next_Char( face, 0, &gindex );
+    }
+
+    if ( agindex )
+      *agindex = gindex;
+
+    return result;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_ULong )
+  FT_Get_Next_Char( FT_Face   face,
+                    FT_ULong  charcode,
+                    FT_UInt  *agindex )
+  {
+    FT_ULong  result = 0;
+    FT_UInt   gindex = 0;
+
+
+    if ( face && face->charmap && face->num_glyphs )
+    {
+      FT_UInt32  code = (FT_UInt32)charcode;
+      FT_CMap    cmap = FT_CMAP( face->charmap );
+
+
+      do
+      {
+    
