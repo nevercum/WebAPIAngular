@@ -3352,4 +3352,262 @@
 
 
     if ( !face || !FT_HAS_FIXED_SIZES( face ) )
-      return FT_THROW
+      return FT_THROW( Invalid_Face_Handle );
+
+    if ( strike_index < 0 || strike_index >= face->num_fixed_sizes )
+      return FT_THROW( Invalid_Argument );
+
+    clazz = face->driver->clazz;
+
+    if ( clazz->select_size )
+    {
+      error = clazz->select_size( face->size, (FT_ULong)strike_index );
+
+      FT_TRACE5(( "FT_Select_Size (%s driver):\n",
+                  face->driver->root.clazz->module_name ));
+    }
+    else
+    {
+      FT_Select_Metrics( face, (FT_ULong)strike_index );
+
+      FT_TRACE5(( "FT_Select_Size:\n" ));
+    }
+
+#ifdef FT_DEBUG_LEVEL_TRACE
+    {
+      FT_Size_Metrics*  metrics = &face->size->metrics;
+
+
+      FT_TRACE5(( "  x scale: %ld (%f)\n",
+                  metrics->x_scale, metrics->x_scale / 65536.0 ));
+      FT_TRACE5(( "  y scale: %ld (%f)\n",
+                  metrics->y_scale, metrics->y_scale / 65536.0 ));
+      FT_TRACE5(( "  ascender: %f\n",    metrics->ascender / 64.0 ));
+      FT_TRACE5(( "  descender: %f\n",   metrics->descender / 64.0 ));
+      FT_TRACE5(( "  height: %f\n",      metrics->height / 64.0 ));
+      FT_TRACE5(( "  max advance: %f\n", metrics->max_advance / 64.0 ));
+      FT_TRACE5(( "  x ppem: %d\n",      metrics->x_ppem ));
+      FT_TRACE5(( "  y ppem: %d\n",      metrics->y_ppem ));
+    }
+#endif
+
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Request_Size( FT_Face          face,
+                   FT_Size_Request  req )
+  {
+    FT_Error         error;
+    FT_Driver_Class  clazz;
+    FT_ULong         strike_index;
+
+
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    if ( !face->size )
+      return FT_THROW( Invalid_Size_Handle );
+
+    if ( !req || req->width < 0 || req->height < 0 ||
+         req->type >= FT_SIZE_REQUEST_TYPE_MAX )
+      return FT_THROW( Invalid_Argument );
+
+    /* signal the auto-hinter to recompute its size metrics */
+    /* (if requested)                                       */
+    face->size->internal->autohint_metrics.x_scale = 0;
+
+    clazz = face->driver->clazz;
+
+    if ( clazz->request_size )
+    {
+      error = clazz->request_size( face->size, req );
+
+      FT_TRACE5(( "FT_Request_Size (%s driver):\n",
+                  face->driver->root.clazz->module_name ));
+    }
+    else if ( !FT_IS_SCALABLE( face ) && FT_HAS_FIXED_SIZES( face ) )
+    {
+      /*
+       * The reason that a driver doesn't have `request_size' defined is
+       * either that the scaling here suffices or that the supported formats
+       * are bitmap-only and size matching is not implemented.
+       *
+       * In the latter case, a simple size matching is done.
+       */
+      error = FT_Match_Size( face, req, 0, &strike_index );
+      if ( error )
+        goto Exit;
+
+      return FT_Select_Size( face, (FT_Int)strike_index );
+    }
+    else
+    {
+      error = FT_Request_Metrics( face, req );
+      if ( error )
+        goto Exit;
+
+      FT_TRACE5(( "FT_Request_Size:\n" ));
+    }
+
+#ifdef FT_DEBUG_LEVEL_TRACE
+    {
+      FT_Size_Metrics*  metrics = &face->size->metrics;
+
+
+      FT_TRACE5(( "  x scale: %ld (%f)\n",
+                  metrics->x_scale, metrics->x_scale / 65536.0 ));
+      FT_TRACE5(( "  y scale: %ld (%f)\n",
+                  metrics->y_scale, metrics->y_scale / 65536.0 ));
+      FT_TRACE5(( "  ascender: %f\n",    metrics->ascender / 64.0 ));
+      FT_TRACE5(( "  descender: %f\n",   metrics->descender / 64.0 ));
+      FT_TRACE5(( "  height: %f\n",      metrics->height / 64.0 ));
+      FT_TRACE5(( "  max advance: %f\n", metrics->max_advance / 64.0 ));
+      FT_TRACE5(( "  x ppem: %d\n",      metrics->x_ppem ));
+      FT_TRACE5(( "  y ppem: %d\n",      metrics->y_ppem ));
+    }
+#endif
+
+  Exit:
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Set_Char_Size( FT_Face     face,
+                    FT_F26Dot6  char_width,
+                    FT_F26Dot6  char_height,
+                    FT_UInt     horz_resolution,
+                    FT_UInt     vert_resolution )
+  {
+    FT_Size_RequestRec  req;
+
+
+    /* check of `face' delayed to `FT_Request_Size' */
+
+    if ( !char_width )
+      char_width = char_height;
+    else if ( !char_height )
+      char_height = char_width;
+
+    if ( !horz_resolution )
+      horz_resolution = vert_resolution;
+    else if ( !vert_resolution )
+      vert_resolution = horz_resolution;
+
+    if ( char_width  < 1 * 64 )
+      char_width  = 1 * 64;
+    if ( char_height < 1 * 64 )
+      char_height = 1 * 64;
+
+    if ( !horz_resolution )
+      horz_resolution = vert_resolution = 72;
+
+    req.type           = FT_SIZE_REQUEST_TYPE_NOMINAL;
+    req.width          = char_width;
+    req.height         = char_height;
+    req.horiResolution = horz_resolution;
+    req.vertResolution = vert_resolution;
+
+    return FT_Request_Size( face, &req );
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Set_Pixel_Sizes( FT_Face  face,
+                      FT_UInt  pixel_width,
+                      FT_UInt  pixel_height )
+  {
+    FT_Size_RequestRec  req;
+
+
+    /* check of `face' delayed to `FT_Request_Size' */
+
+    if ( pixel_width == 0 )
+      pixel_width = pixel_height;
+    else if ( pixel_height == 0 )
+      pixel_height = pixel_width;
+
+    if ( pixel_width  < 1 )
+      pixel_width  = 1;
+    if ( pixel_height < 1 )
+      pixel_height = 1;
+
+    /* use `>=' to avoid potential compiler warning on 16bit platforms */
+    if ( pixel_width >= 0xFFFFU )
+      pixel_width = 0xFFFFU;
+    if ( pixel_height >= 0xFFFFU )
+      pixel_height = 0xFFFFU;
+
+    req.type           = FT_SIZE_REQUEST_TYPE_NOMINAL;
+    req.width          = (FT_Long)( pixel_width << 6 );
+    req.height         = (FT_Long)( pixel_height << 6 );
+    req.horiResolution = 0;
+    req.vertResolution = 0;
+
+    return FT_Request_Size( face, &req );
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Get_Kerning( FT_Face     face,
+                  FT_UInt     left_glyph,
+                  FT_UInt     right_glyph,
+                  FT_UInt     kern_mode,
+                  FT_Vector  *akerning )
+  {
+    FT_Error   error = FT_Err_Ok;
+    FT_Driver  driver;
+
+
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    if ( !akerning )
+      return FT_THROW( Invalid_Argument );
+
+    driver = face->driver;
+
+    akerning->x = 0;
+    akerning->y = 0;
+
+    if ( driver->clazz->get_kerning )
+    {
+      error = driver->clazz->get_kerning( face,
+                                          left_glyph,
+                                          right_glyph,
+                                          akerning );
+      if ( !error )
+      {
+        if ( kern_mode != FT_KERNING_UNSCALED )
+        {
+          akerning->x = FT_MulFix( akerning->x, face->size->metrics.x_scale );
+          akerning->y = FT_MulFix( akerning->y, face->size->metrics.y_scale );
+
+          if ( kern_mode != FT_KERNING_UNFITTED )
+          {
+            FT_Pos  orig_x = akerning->x;
+            FT_Pos  orig_y = akerning->y;
+
+
+            /* we scale down kerning values for small ppem values */
+            /* to avoid that rounding makes them too big.         */
+            /* `25' has been determined heuristically.            */
+            if ( face->size->metrics.x_ppem < 25 )
+              akerning->x = FT_MulDiv( orig_x,
+                                       face->size->metrics.x_ppem, 25 );
+            if ( face->size->metrics.y_ppem < 25 )
+              akerning->y = FT_MulDiv( orig_y,
+                                       face->size->metrics.y_ppem, 25 );
+
+            akerning->x = FT_PIX_ROUND( akerning->x );
+            akerning->y = FT_PIX_ROUND( aker
