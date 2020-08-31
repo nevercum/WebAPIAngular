@@ -3949,4 +3949,326 @@
 
       do
       {
-    
+        gindex = cmap->clazz->char_next( cmap, &code );
+
+      } while ( gindex >= (FT_UInt)face->num_glyphs );
+
+      result = ( gindex == 0 ) ? 0 : code;
+    }
+
+    if ( agindex )
+      *agindex = gindex;
+
+    return result;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Face_Properties( FT_Face        face,
+                      FT_UInt        num_properties,
+                      FT_Parameter*  properties )
+  {
+    FT_Error  error = FT_Err_Ok;
+
+
+    if ( num_properties > 0 && !properties )
+    {
+      error = FT_THROW( Invalid_Argument );
+      goto Exit;
+    }
+
+    for ( ; num_properties > 0; num_properties-- )
+    {
+      if ( properties->tag == FT_PARAM_TAG_STEM_DARKENING )
+      {
+        if ( properties->data )
+        {
+          if ( *( (FT_Bool*)properties->data ) == TRUE )
+            face->internal->no_stem_darkening = FALSE;
+          else
+            face->internal->no_stem_darkening = TRUE;
+        }
+        else
+        {
+          /* use module default */
+          face->internal->no_stem_darkening = -1;
+        }
+      }
+      else if ( properties->tag == FT_PARAM_TAG_LCD_FILTER_WEIGHTS )
+      {
+#ifdef FT_CONFIG_OPTION_SUBPIXEL_RENDERING
+        if ( properties->data )
+        {
+          ft_memcpy( face->internal->lcd_weights,
+                     properties->data,
+                     FT_LCD_FILTER_FIVE_TAPS );
+          face->internal->lcd_filter_func = ft_lcd_filter_fir;
+        }
+#else
+        error = FT_THROW( Unimplemented_Feature );
+        goto Exit;
+#endif
+      }
+      else if ( properties->tag == FT_PARAM_TAG_RANDOM_SEED )
+      {
+        if ( properties->data )
+        {
+          face->internal->random_seed = *( (FT_Int32*)properties->data );
+          if ( face->internal->random_seed < 0 )
+            face->internal->random_seed = 0;
+        }
+        else
+        {
+          /* use module default */
+          face->internal->random_seed = -1;
+        }
+      }
+      else
+      {
+        error = FT_THROW( Invalid_Argument );
+        goto Exit;
+      }
+
+      if ( error )
+        break;
+
+      properties++;
+    }
+
+  Exit:
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_UInt )
+  FT_Face_GetCharVariantIndex( FT_Face   face,
+                               FT_ULong  charcode,
+                               FT_ULong  variantSelector )
+  {
+    FT_UInt  result = 0;
+
+
+    if ( face                                           &&
+         face->charmap                                  &&
+         face->charmap->encoding == FT_ENCODING_UNICODE )
+    {
+      FT_CharMap  charmap = find_variant_selector_charmap( face );
+      FT_CMap     ucmap = FT_CMAP( face->charmap );
+
+
+      if ( charmap )
+      {
+        FT_CMap  vcmap = FT_CMAP( charmap );
+
+
+        if ( charcode > 0xFFFFFFFFUL )
+        {
+          FT_TRACE1(( "FT_Face_GetCharVariantIndex:"
+                      " too large charcode" ));
+          FT_TRACE1(( " 0x%lx is truncated\n", charcode ));
+        }
+        if ( variantSelector > 0xFFFFFFFFUL )
+        {
+          FT_TRACE1(( "FT_Face_GetCharVariantIndex:"
+                      " too large variantSelector" ));
+          FT_TRACE1(( " 0x%lx is truncated\n", variantSelector ));
+        }
+
+        result = vcmap->clazz->char_var_index( vcmap, ucmap,
+                                               (FT_UInt32)charcode,
+                                               (FT_UInt32)variantSelector );
+      }
+    }
+
+    return result;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Int )
+  FT_Face_GetCharVariantIsDefault( FT_Face   face,
+                                   FT_ULong  charcode,
+                                   FT_ULong  variantSelector )
+  {
+    FT_Int  result = -1;
+
+
+    if ( face )
+    {
+      FT_CharMap  charmap = find_variant_selector_charmap( face );
+
+
+      if ( charmap )
+      {
+        FT_CMap  vcmap = FT_CMAP( charmap );
+
+
+        if ( charcode > 0xFFFFFFFFUL )
+        {
+          FT_TRACE1(( "FT_Face_GetCharVariantIsDefault:"
+                      " too large charcode" ));
+          FT_TRACE1(( " 0x%lx is truncated\n", charcode ));
+        }
+        if ( variantSelector > 0xFFFFFFFFUL )
+        {
+          FT_TRACE1(( "FT_Face_GetCharVariantIsDefault:"
+                      " too large variantSelector" ));
+          FT_TRACE1(( " 0x%lx is truncated\n", variantSelector ));
+        }
+
+        result = vcmap->clazz->char_var_default( vcmap,
+                                                 (FT_UInt32)charcode,
+                                                 (FT_UInt32)variantSelector );
+      }
+    }
+
+    return result;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_UInt32* )
+  FT_Face_GetVariantSelectors( FT_Face  face )
+  {
+    FT_UInt32  *result = NULL;
+
+
+    if ( face )
+    {
+      FT_CharMap  charmap = find_variant_selector_charmap( face );
+
+
+      if ( charmap )
+      {
+        FT_CMap    vcmap  = FT_CMAP( charmap );
+        FT_Memory  memory = FT_FACE_MEMORY( face );
+
+
+        result = vcmap->clazz->variant_list( vcmap, memory );
+      }
+    }
+
+    return result;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_UInt32* )
+  FT_Face_GetVariantsOfChar( FT_Face   face,
+                             FT_ULong  charcode )
+  {
+    FT_UInt32  *result = NULL;
+
+
+    if ( face )
+    {
+      FT_CharMap  charmap = find_variant_selector_charmap( face );
+
+
+      if ( charmap )
+      {
+        FT_CMap    vcmap  = FT_CMAP( charmap );
+        FT_Memory  memory = FT_FACE_MEMORY( face );
+
+
+        if ( charcode > 0xFFFFFFFFUL )
+        {
+          FT_TRACE1(( "FT_Face_GetVariantsOfChar: too large charcode" ));
+          FT_TRACE1(( " 0x%lx is truncated\n", charcode ));
+        }
+
+        result = vcmap->clazz->charvariant_list( vcmap, memory,
+                                                 (FT_UInt32)charcode );
+      }
+    }
+    return result;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_UInt32* )
+  FT_Face_GetCharsOfVariant( FT_Face   face,
+                             FT_ULong  variantSelector )
+  {
+    FT_UInt32  *result = NULL;
+
+
+    if ( face )
+    {
+      FT_CharMap  charmap = find_variant_selector_charmap( face );
+
+
+      if ( charmap )
+      {
+        FT_CMap    vcmap  = FT_CMAP( charmap );
+        FT_Memory  memory = FT_FACE_MEMORY( face );
+
+
+        if ( variantSelector > 0xFFFFFFFFUL )
+        {
+          FT_TRACE1(( "FT_Get_Char_Index: too large variantSelector" ));
+          FT_TRACE1(( " 0x%lx is truncated\n", variantSelector ));
+        }
+
+        result = vcmap->clazz->variantchar_list( vcmap, memory,
+                                                 (FT_UInt32)variantSelector );
+      }
+    }
+
+    return result;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_UInt )
+  FT_Get_Name_Index( FT_Face           face,
+                     const FT_String*  glyph_name )
+  {
+    FT_UInt  result = 0;
+
+
+    if ( face                       &&
+         FT_HAS_GLYPH_NAMES( face ) &&
+         glyph_name                 )
+    {
+      FT_Service_GlyphDict  service;
+
+
+      FT_FACE_LOOKUP_SERVICE( face,
+                              service,
+                              GLYPH_DICT );
+
+      if ( service && service->name_index )
+        result = service->name_index( face, glyph_name );
+    }
+
+    return result;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Get_Glyph_Name( FT_Face     face,
+                     FT_UInt     glyph_index,
+                     FT_Pointer  buffer,
+                     FT_UInt     buffer_max )
+  {
+    FT_Error              error;
+    FT_Service_GlyphDict  service;
+
+
+    if ( !face )
+      return FT_THROW( Invalid_Face_Handle );
+
+    if ( !buffer || buffer_max == 0 )
+      return
