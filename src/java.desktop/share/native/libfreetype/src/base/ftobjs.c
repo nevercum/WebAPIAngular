@@ -4271,4 +4271,335 @@
       return FT_THROW( Invalid_Face_Handle );
 
     if ( !buffer || buffer_max == 0 )
-      return
+      return FT_THROW( Invalid_Argument );
+
+    /* clean up buffer */
+    ((FT_Byte*)buffer)[0] = '\0';
+
+    if ( (FT_Long)glyph_index >= face->num_glyphs )
+      return FT_THROW( Invalid_Glyph_Index );
+
+    if ( !FT_HAS_GLYPH_NAMES( face ) )
+      return FT_THROW( Invalid_Argument );
+
+    FT_FACE_LOOKUP_SERVICE( face, service, GLYPH_DICT );
+    if ( service && service->get_name )
+      error = service->get_name( face, glyph_index, buffer, buffer_max );
+    else
+      error = FT_THROW( Invalid_Argument );
+
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( const char* )
+  FT_Get_Postscript_Name( FT_Face  face )
+  {
+    const char*  result = NULL;
+
+
+    if ( !face )
+      goto Exit;
+
+    if ( !result )
+    {
+      FT_Service_PsFontName  service;
+
+
+      FT_FACE_LOOKUP_SERVICE( face,
+                              service,
+                              POSTSCRIPT_FONT_NAME );
+
+      if ( service && service->get_ps_font_name )
+        result = service->get_ps_font_name( face );
+    }
+
+  Exit:
+    return result;
+  }
+
+
+  /* documentation is in tttables.h */
+
+  FT_EXPORT_DEF( void* )
+  FT_Get_Sfnt_Table( FT_Face      face,
+                     FT_Sfnt_Tag  tag )
+  {
+    void*                  table = NULL;
+    FT_Service_SFNT_Table  service;
+
+
+    if ( face && FT_IS_SFNT( face ) )
+    {
+      FT_FACE_FIND_SERVICE( face, service, SFNT_TABLE );
+      if ( service )
+        table = service->get_table( face, tag );
+    }
+
+    return table;
+  }
+
+
+  /* documentation is in tttables.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Load_Sfnt_Table( FT_Face    face,
+                      FT_ULong   tag,
+                      FT_Long    offset,
+                      FT_Byte*   buffer,
+                      FT_ULong*  length )
+  {
+    FT_Service_SFNT_Table  service;
+
+
+    if ( !face || !FT_IS_SFNT( face ) )
+      return FT_THROW( Invalid_Face_Handle );
+
+    FT_FACE_FIND_SERVICE( face, service, SFNT_TABLE );
+    if ( !service )
+      return FT_THROW( Unimplemented_Feature );
+
+    return service->load_table( face, tag, offset, buffer, length );
+  }
+
+
+  /* documentation is in tttables.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Sfnt_Table_Info( FT_Face    face,
+                      FT_UInt    table_index,
+                      FT_ULong  *tag,
+                      FT_ULong  *length )
+  {
+    FT_Service_SFNT_Table  service;
+    FT_ULong               offset;
+
+
+    /* test for valid `length' delayed to `service->table_info' */
+
+    if ( !face || !FT_IS_SFNT( face ) )
+      return FT_THROW( Invalid_Face_Handle );
+
+    FT_FACE_FIND_SERVICE( face, service, SFNT_TABLE );
+    if ( !service )
+      return FT_THROW( Unimplemented_Feature );
+
+    return service->table_info( face, table_index, tag, &offset, length );
+  }
+
+
+  /* documentation is in tttables.h */
+
+  FT_EXPORT_DEF( FT_ULong )
+  FT_Get_CMap_Language_ID( FT_CharMap  charmap )
+  {
+    FT_Service_TTCMaps  service;
+    FT_Face             face;
+    TT_CMapInfo         cmap_info;
+
+
+    if ( !charmap || !charmap->face )
+      return 0;
+
+    face = charmap->face;
+    FT_FACE_FIND_SERVICE( face, service, TT_CMAP );
+    if ( !service )
+      return 0;
+    if ( service->get_cmap_info( charmap, &cmap_info ))
+      return 0;
+
+    return cmap_info.language;
+  }
+
+
+  /* documentation is in tttables.h */
+
+  FT_EXPORT_DEF( FT_Long )
+  FT_Get_CMap_Format( FT_CharMap  charmap )
+  {
+    FT_Service_TTCMaps  service;
+    FT_Face             face;
+    TT_CMapInfo         cmap_info;
+
+
+    if ( !charmap || !charmap->face )
+      return -1;
+
+    face = charmap->face;
+    FT_FACE_FIND_SERVICE( face, service, TT_CMAP );
+    if ( !service )
+      return -1;
+    if ( service->get_cmap_info( charmap, &cmap_info ))
+      return -1;
+
+    return cmap_info.format;
+  }
+
+
+  /* documentation is in ftsizes.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Activate_Size( FT_Size  size )
+  {
+    FT_Face  face;
+
+
+    if ( !size )
+      return FT_THROW( Invalid_Size_Handle );
+
+    face = size->face;
+    if ( !face || !face->driver )
+      return FT_THROW( Invalid_Face_Handle );
+
+    /* we don't need anything more complex than that; all size objects */
+    /* are already listed by the face                                  */
+    face->size = size;
+
+    return FT_Err_Ok;
+  }
+
+
+  /*************************************************************************/
+  /*************************************************************************/
+  /*************************************************************************/
+  /****                                                                 ****/
+  /****                                                                 ****/
+  /****                        R E N D E R E R S                        ****/
+  /****                                                                 ****/
+  /****                                                                 ****/
+  /*************************************************************************/
+  /*************************************************************************/
+  /*************************************************************************/
+
+  /* lookup a renderer by glyph format in the library's list */
+  FT_BASE_DEF( FT_Renderer )
+  FT_Lookup_Renderer( FT_Library       library,
+                      FT_Glyph_Format  format,
+                      FT_ListNode*     node )
+  {
+    FT_ListNode  cur;
+    FT_Renderer  result = NULL;
+
+
+    if ( !library )
+      goto Exit;
+
+    cur = library->renderers.head;
+
+    if ( node )
+    {
+      if ( *node )
+        cur = (*node)->next;
+      *node = NULL;
+    }
+
+    while ( cur )
+    {
+      FT_Renderer  renderer = FT_RENDERER( cur->data );
+
+
+      if ( renderer->glyph_format == format )
+      {
+        if ( node )
+          *node = cur;
+
+        result = renderer;
+        break;
+      }
+      cur = cur->next;
+    }
+
+  Exit:
+    return result;
+  }
+
+
+  static FT_Renderer
+  ft_lookup_glyph_renderer( FT_GlyphSlot  slot )
+  {
+    FT_Face      face    = slot->face;
+    FT_Library   library = FT_FACE_LIBRARY( face );
+    FT_Renderer  result  = library->cur_renderer;
+
+
+    if ( !result || result->glyph_format != slot->format )
+      result = FT_Lookup_Renderer( library, slot->format, 0 );
+
+    return result;
+  }
+
+
+  static void
+  ft_set_current_renderer( FT_Library  library )
+  {
+    FT_Renderer  renderer;
+
+
+    renderer = FT_Lookup_Renderer( library, FT_GLYPH_FORMAT_OUTLINE, 0 );
+    library->cur_renderer = renderer;
+  }
+
+
+  static FT_Error
+  ft_add_renderer( FT_Module  module )
+  {
+    FT_Library   library = module->library;
+    FT_Memory    memory  = library->memory;
+    FT_Error     error;
+    FT_ListNode  node    = NULL;
+
+
+    if ( FT_QNEW( node ) )
+      goto Exit;
+
+    {
+      FT_Renderer         render = FT_RENDERER( module );
+      FT_Renderer_Class*  clazz  = (FT_Renderer_Class*)module->clazz;
+
+
+      render->clazz        = clazz;
+      render->glyph_format = clazz->glyph_format;
+
+      /* allocate raster object if needed */
+      if ( clazz->raster_class && clazz->raster_class->raster_new )
+      {
+        error = clazz->raster_class->raster_new( memory, &render->raster );
+        if ( error )
+          goto Fail;
+
+        render->raster_render = clazz->raster_class->raster_render;
+        render->render        = clazz->render_glyph;
+      }
+
+#ifdef FT_CONFIG_OPTION_SVG
+      if ( clazz->glyph_format == FT_GLYPH_FORMAT_SVG )
+        render->render = clazz->render_glyph;
+#endif
+
+      /* add to list */
+      node->data = module;
+      FT_List_Add( &library->renderers, node );
+
+      ft_set_current_renderer( library );
+    }
+
+  Fail:
+    if ( error )
+      FT_FREE( node );
+
+  Exit:
+    return error;
+  }
+
+
+  static void
+  ft_remove_renderer( FT_Module  module )
+  {
+    FT_Library   library;
+    FT_Memory    memory;
+    FT_ListNode  node;
+
+
+    
