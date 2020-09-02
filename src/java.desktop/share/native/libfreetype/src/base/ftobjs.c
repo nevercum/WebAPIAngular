@@ -4871,4 +4871,282 @@
 
         MD5_Init( &ctx );
         if ( bitmap.buffer )
-          MD5_Update( &ctx, bi
+          MD5_Update( &ctx, bitmap.buffer,
+                      (unsigned long)rows * (unsigned long)pitch );
+        MD5_Final( md5, &ctx );
+
+        FT_TRACE3(( "  MD5 checksum: " ));
+        for ( i = 0; i < 16; i++ )
+          FT_TRACE3(( "%02X", md5[i] ));
+        FT_TRACE3(( "\n" ));
+      }
+
+      FT_Bitmap_Done( library, &bitmap );
+    }
+
+    /*
+     * Dump bitmap in Netpbm format (PBM or PGM).
+     */
+
+    /* we use FT_TRACE7 in this block */
+    if ( !error                               &&
+         ft_trace_levels[trace_checksum] >= 7 &&
+         slot->bitmap.buffer                  )
+    {
+      if ( slot->bitmap.rows  < 128U &&
+           slot->bitmap.width < 128U )
+      {
+        int  rows  = (int)slot->bitmap.rows;
+        int  width = (int)slot->bitmap.width;
+        int  pitch =      slot->bitmap.pitch;
+        int  i, j, m;
+
+        unsigned char*  topleft = slot->bitmap.buffer;
+
+
+        if ( pitch < 0 )
+          topleft -= pitch * ( rows - 1 );
+
+        FT_TRACE7(( "Netpbm image: start\n" ));
+        switch ( slot->bitmap.pixel_mode )
+        {
+        case FT_PIXEL_MODE_MONO:
+          FT_TRACE7(( "P1 %d %d\n", width, rows ));
+          for ( i = 0; i < rows; i++ )
+          {
+            for ( j = 0; j < width; )
+              for ( m = 128; m > 0 && j < width; m >>= 1, j++ )
+                FT_TRACE7(( " %d",
+                            ( topleft[i * pitch + j / 8] & m ) != 0 ));
+            FT_TRACE7(( "\n" ));
+          }
+          break;
+
+        default:
+          FT_TRACE7(( "P2 %d %d 255\n", width, rows ));
+          for ( i = 0; i < rows; i++ )
+          {
+            for ( j = 0; j < width; j += 1 )
+              FT_TRACE7(( " %3u", topleft[i * pitch + j] ));
+            FT_TRACE7(( "\n" ));
+          }
+        }
+        FT_TRACE7(( "Netpbm image: end\n" ));
+      }
+      else
+        FT_TRACE7(( "Netpbm image: too large, omitted\n" ));
+    }
+
+#undef  FT_COMPONENT
+#define FT_COMPONENT  objs
+
+#endif /* FT_DEBUG_LEVEL_TRACE */
+
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Render_Glyph( FT_GlyphSlot    slot,
+                   FT_Render_Mode  render_mode )
+  {
+    FT_Library  library;
+
+
+    if ( !slot || !slot->face )
+      return FT_THROW( Invalid_Argument );
+
+    library = FT_FACE_LIBRARY( slot->face );
+
+    return FT_Render_Glyph_Internal( library, slot, render_mode );
+  }
+
+
+  /*************************************************************************/
+  /*************************************************************************/
+  /*************************************************************************/
+  /****                                                                 ****/
+  /****                                                                 ****/
+  /****                         M O D U L E S                           ****/
+  /****                                                                 ****/
+  /****                                                                 ****/
+  /*************************************************************************/
+  /*************************************************************************/
+  /*************************************************************************/
+
+
+  /**************************************************************************
+   *
+   * @Function:
+   *   Destroy_Module
+   *
+   * @Description:
+   *   Destroys a given module object.  For drivers, this also destroys
+   *   all child faces.
+   *
+   * @InOut:
+   *   module ::
+   *     A handle to the target driver object.
+   *
+   * @Note:
+   *   The driver _must_ be LOCKED!
+   */
+  static void
+  Destroy_Module( FT_Module  module )
+  {
+    FT_Memory         memory  = module->memory;
+    FT_Module_Class*  clazz   = module->clazz;
+    FT_Library        library = module->library;
+
+
+    if ( library && library->auto_hinter == module )
+      library->auto_hinter = NULL;
+
+    /* if the module is a renderer */
+    if ( FT_MODULE_IS_RENDERER( module ) )
+      ft_remove_renderer( module );
+
+    /* if the module is a font driver, add some steps */
+    if ( FT_MODULE_IS_DRIVER( module ) )
+      Destroy_Driver( FT_DRIVER( module ) );
+
+    /* finalize the module object */
+    if ( clazz->module_done )
+      clazz->module_done( module );
+
+    /* discard it */
+    FT_FREE( module );
+  }
+
+
+  /* documentation is in ftmodapi.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Add_Module( FT_Library              library,
+                 const FT_Module_Class*  clazz )
+  {
+    FT_Error   error;
+    FT_Memory  memory;
+    FT_Module  module = NULL;
+    FT_UInt    nn;
+
+
+#define FREETYPE_VER_FIXED  ( ( (FT_Long)FREETYPE_MAJOR << 16 ) | \
+                                FREETYPE_MINOR                  )
+
+    if ( !library )
+      return FT_THROW( Invalid_Library_Handle );
+
+    if ( !clazz )
+      return FT_THROW( Invalid_Argument );
+
+    /* check FreeType version */
+    if ( clazz->module_requires > FREETYPE_VER_FIXED )
+      return FT_THROW( Invalid_Version );
+
+    /* look for a module with the same name in the library's table */
+    for ( nn = 0; nn < library->num_modules; nn++ )
+    {
+      module = library->modules[nn];
+      if ( ft_strcmp( module->clazz->module_name, clazz->module_name ) == 0 )
+      {
+        /* this installed module has the same name, compare their versions */
+        if ( clazz->module_version <= module->clazz->module_version )
+          return FT_THROW( Lower_Module_Version );
+
+        /* remove the module from our list, then exit the loop to replace */
+        /* it by our new version..                                        */
+        FT_Remove_Module( library, module );
+        break;
+      }
+    }
+
+    memory = library->memory;
+    error  = FT_Err_Ok;
+
+    if ( library->num_modules >= FT_MAX_MODULES )
+    {
+      error = FT_THROW( Too_Many_Drivers );
+      goto Exit;
+    }
+
+    /* allocate module object */
+    if ( FT_ALLOC( module, clazz->module_size ) )
+      goto Exit;
+
+    /* base initialization */
+    module->library = library;
+    module->memory  = memory;
+    module->clazz   = (FT_Module_Class*)clazz;
+
+    /* check whether the module is a renderer - this must be performed */
+    /* before the normal module initialization                         */
+    if ( FT_MODULE_IS_RENDERER( module ) )
+    {
+      /* add to the renderers list */
+      error = ft_add_renderer( module );
+      if ( error )
+        goto Fail;
+    }
+
+    /* is the module a auto-hinter? */
+    if ( FT_MODULE_IS_HINTER( module ) )
+      library->auto_hinter = module;
+
+    /* if the module is a font driver */
+    if ( FT_MODULE_IS_DRIVER( module ) )
+    {
+      FT_Driver  driver = FT_DRIVER( module );
+
+
+      driver->clazz = (FT_Driver_Class)module->clazz;
+    }
+
+    if ( clazz->module_init )
+    {
+      error = clazz->module_init( module );
+      if ( error )
+        goto Fail;
+    }
+
+    /* add module to the library's table */
+    library->modules[library->num_modules++] = module;
+
+  Exit:
+    return error;
+
+  Fail:
+    if ( FT_MODULE_IS_RENDERER( module ) )
+    {
+      FT_Renderer  renderer = FT_RENDERER( module );
+
+
+      if ( renderer->clazz                                          &&
+           renderer->clazz->glyph_format == FT_GLYPH_FORMAT_OUTLINE &&
+           renderer->raster                                         )
+        renderer->clazz->raster_class->raster_done( renderer->raster );
+    }
+
+    FT_FREE( module );
+    goto Exit;
+  }
+
+
+  /* documentation is in ftmodapi.h */
+
+  FT_EXPORT_DEF( FT_Module )
+  FT_Get_Module( FT_Library   library,
+                 const char*  module_name )
+  {
+    FT_Module   result = NULL;
+    FT_Module*  cur;
+    FT_Module*  limit;
+
+
+    if ( !library || !module_name )
+      return result;
+
+    cur   = library->modules;
+    limit = cur + library->nu
