@@ -4602,4 +4602,273 @@
     FT_ListNode  node;
 
 
-    
+    library = module->library;
+    if ( !library )
+      return;
+
+    memory = library->memory;
+
+    node = FT_List_Find( &library->renderers, module );
+    if ( node )
+    {
+      FT_Renderer  render = FT_RENDERER( module );
+
+
+      /* release raster object, if any */
+      if ( render->raster )
+        render->clazz->raster_class->raster_done( render->raster );
+
+      /* remove from list */
+      FT_List_Remove( &library->renderers, node );
+      FT_FREE( node );
+
+      ft_set_current_renderer( library );
+    }
+  }
+
+
+  /* documentation is in ftrender.h */
+
+  FT_EXPORT_DEF( FT_Renderer )
+  FT_Get_Renderer( FT_Library       library,
+                   FT_Glyph_Format  format )
+  {
+    /* test for valid `library' delayed to `FT_Lookup_Renderer' */
+
+    return FT_Lookup_Renderer( library, format, 0 );
+  }
+
+
+  /* documentation is in ftrender.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Set_Renderer( FT_Library     library,
+                   FT_Renderer    renderer,
+                   FT_UInt        num_params,
+                   FT_Parameter*  parameters )
+  {
+    FT_ListNode  node;
+    FT_Error     error = FT_Err_Ok;
+
+    FT_Renderer_SetModeFunc  set_mode;
+
+
+    if ( !library )
+    {
+      error = FT_THROW( Invalid_Library_Handle );
+      goto Exit;
+    }
+
+    if ( !renderer )
+    {
+      error = FT_THROW( Invalid_Argument );
+      goto Exit;
+    }
+
+    if ( num_params > 0 && !parameters )
+    {
+      error = FT_THROW( Invalid_Argument );
+      goto Exit;
+    }
+
+    node = FT_List_Find( &library->renderers, renderer );
+    if ( !node )
+    {
+      error = FT_THROW( Invalid_Argument );
+      goto Exit;
+    }
+
+    FT_List_Up( &library->renderers, node );
+
+    if ( renderer->glyph_format == FT_GLYPH_FORMAT_OUTLINE )
+      library->cur_renderer = renderer;
+
+    set_mode = renderer->clazz->set_mode;
+
+    for ( ; num_params > 0; num_params-- )
+    {
+      error = set_mode( renderer, parameters->tag, parameters->data );
+      if ( error )
+        break;
+      parameters++;
+    }
+
+  Exit:
+    return error;
+  }
+
+
+  FT_BASE_DEF( FT_Error )
+  FT_Render_Glyph_Internal( FT_Library      library,
+                            FT_GlyphSlot    slot,
+                            FT_Render_Mode  render_mode )
+  {
+    FT_Error     error = FT_Err_Ok;
+    FT_Face      face  = slot->face;
+    FT_Renderer  renderer;
+
+
+    switch ( slot->format )
+    {
+    default:
+      if ( slot->internal->load_flags & FT_LOAD_COLOR )
+      {
+        FT_LayerIterator  iterator;
+
+        FT_UInt  base_glyph = slot->glyph_index;
+
+        FT_Bool  have_layers;
+        FT_UInt  glyph_index;
+        FT_UInt  color_index;
+
+
+        /* check whether we have colored glyph layers */
+        iterator.p  = NULL;
+        have_layers = FT_Get_Color_Glyph_Layer( face,
+                                                base_glyph,
+                                                &glyph_index,
+                                                &color_index,
+                                                &iterator );
+        if ( have_layers )
+        {
+          error = FT_New_GlyphSlot( face, NULL );
+          if ( !error )
+          {
+            TT_Face       ttface = (TT_Face)face;
+            SFNT_Service  sfnt   = (SFNT_Service)ttface->sfnt;
+
+
+            do
+            {
+              FT_Int32  load_flags = slot->internal->load_flags;
+
+
+              /* disable the `FT_LOAD_COLOR' flag to avoid recursion */
+              /* right here in this function                         */
+              load_flags &= ~FT_LOAD_COLOR;
+
+              /* render into the new `face->glyph' glyph slot */
+              load_flags |= FT_LOAD_RENDER;
+
+              error = FT_Load_Glyph( face, glyph_index, load_flags );
+              if ( error )
+                break;
+
+              /* blend new `face->glyph' into old `slot'; */
+              /* at the first call, `slot' is still empty */
+              error = sfnt->colr_blend( ttface,
+                                        color_index,
+                                        slot,
+                                        face->glyph );
+              if ( error )
+                break;
+
+            } while ( FT_Get_Color_Glyph_Layer( face,
+                                                base_glyph,
+                                                &glyph_index,
+                                                &color_index,
+                                                &iterator ) );
+
+            if ( !error )
+              slot->format = FT_GLYPH_FORMAT_BITMAP;
+
+            /* this call also restores `slot' as the glyph slot */
+            FT_Done_GlyphSlot( face->glyph );
+          }
+
+          if ( !error )
+            return error;
+
+          /* Failed to do the colored layer.  Draw outline instead. */
+          slot->format = FT_GLYPH_FORMAT_OUTLINE;
+        }
+      }
+
+      {
+        FT_ListNode  node = NULL;
+
+
+        /* small shortcut for the very common case */
+        if ( slot->format == FT_GLYPH_FORMAT_OUTLINE )
+        {
+          renderer = library->cur_renderer;
+          node     = library->renderers.head;
+        }
+        else
+          renderer = FT_Lookup_Renderer( library, slot->format, &node );
+
+        error = FT_ERR( Cannot_Render_Glyph );
+        while ( renderer )
+        {
+          error = renderer->render( renderer, slot, render_mode, NULL );
+          if ( !error                                   ||
+               FT_ERR_NEQ( error, Cannot_Render_Glyph ) )
+            break;
+
+          /* FT_Err_Cannot_Render_Glyph is returned if the render mode   */
+          /* is unsupported by the current renderer for this glyph image */
+          /* format.                                                     */
+
+          /* now, look for another renderer that supports the same */
+          /* format.                                               */
+          renderer = FT_Lookup_Renderer( library, slot->format, &node );
+        }
+
+        /* it is not an error if we cannot render a bitmap glyph */
+        if ( FT_ERR_EQ( error, Cannot_Render_Glyph ) &&
+             slot->format == FT_GLYPH_FORMAT_BITMAP  )
+          error = FT_Err_Ok;
+      }
+    }
+
+#ifdef FT_DEBUG_LEVEL_TRACE
+
+#undef  FT_COMPONENT
+#define FT_COMPONENT  checksum
+
+    /*
+     * Computing the MD5 checksum is expensive, unnecessarily distorting a
+     * possible profiling of FreeType if compiled with tracing support.  For
+     * this reason, we execute the following code only if explicitly
+     * requested.
+     */
+
+    /* we use FT_TRACE3 in this block */
+    if ( !error                               &&
+         ft_trace_levels[trace_checksum] >= 3 &&
+         slot->bitmap.buffer                  )
+    {
+      FT_Bitmap  bitmap;
+      FT_Error   err;
+
+
+      FT_Bitmap_Init( &bitmap );
+
+      /* we convert to a single bitmap format for computing the checksum */
+      /* this also converts the bitmap flow to `down' (i.e., pitch > 0)  */
+      err = FT_Bitmap_Convert( library, &slot->bitmap, &bitmap, 1 );
+      if ( !err )
+      {
+        MD5_CTX        ctx;
+        unsigned char  md5[16];
+        unsigned long  coverage = 0;
+        int            i, j;
+        int            rows  = (int)bitmap.rows;
+        int            pitch = bitmap.pitch;
+
+
+        FT_TRACE3(( "FT_Render_Glyph: bitmap %dx%d, %s (mode %d)\n",
+                    pitch,
+                    rows,
+                    pixel_modes[slot->bitmap.pixel_mode],
+                    slot->bitmap.pixel_mode ));
+
+        for ( i = 0; i < rows; i++ )
+          for ( j = 0; j < pitch; j++ )
+            coverage += bitmap.buffer[i * pitch + j];
+
+        FT_TRACE3(( "  Total coverage: %lu\n", coverage ));
+
+        MD5_Init( &ctx );
+        if ( bitmap.buffer )
+          MD5_Update( &ctx, bi
