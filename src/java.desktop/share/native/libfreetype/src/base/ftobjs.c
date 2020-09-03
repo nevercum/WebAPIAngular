@@ -5149,4 +5149,272 @@
       return result;
 
     cur   = library->modules;
-    limit = cur + library->nu
+    limit = cur + library->num_modules;
+
+    for ( ; cur < limit; cur++ )
+      if ( ft_strcmp( cur[0]->clazz->module_name, module_name ) == 0 )
+      {
+        result = cur[0];
+        break;
+      }
+
+    return result;
+  }
+
+
+  /* documentation is in ftobjs.h */
+
+  FT_BASE_DEF( const void* )
+  FT_Get_Module_Interface( FT_Library   library,
+                           const char*  mod_name )
+  {
+    FT_Module  module;
+
+
+    /* test for valid `library' delayed to FT_Get_Module() */
+
+    module = FT_Get_Module( library, mod_name );
+
+    return module ? module->clazz->module_interface : 0;
+  }
+
+
+  FT_BASE_DEF( FT_Pointer )
+  ft_module_get_service( FT_Module    module,
+                         const char*  service_id,
+                         FT_Bool      global )
+  {
+    FT_Pointer  result = NULL;
+
+
+    if ( module )
+    {
+      FT_ASSERT( module->clazz && module->clazz->get_interface );
+
+      /* first, look for the service in the module */
+      if ( module->clazz->get_interface )
+        result = module->clazz->get_interface( module, service_id );
+
+      if ( global && !result )
+      {
+        /* we didn't find it, look in all other modules then */
+        FT_Library  library = module->library;
+        FT_Module*  cur     = library->modules;
+        FT_Module*  limit   = cur + library->num_modules;
+
+
+        for ( ; cur < limit; cur++ )
+        {
+          if ( cur[0] != module )
+          {
+            FT_ASSERT( cur[0]->clazz );
+
+            if ( cur[0]->clazz->get_interface )
+            {
+              result = cur[0]->clazz->get_interface( cur[0], service_id );
+              if ( result )
+                break;
+            }
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+
+  /* documentation is in ftmodapi.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Remove_Module( FT_Library  library,
+                    FT_Module   module )
+  {
+    /* try to find the module from the table, then remove it from there */
+
+    if ( !library )
+      return FT_THROW( Invalid_Library_Handle );
+
+    if ( module )
+    {
+      FT_Module*  cur   = library->modules;
+      FT_Module*  limit = cur + library->num_modules;
+
+
+      for ( ; cur < limit; cur++ )
+      {
+        if ( cur[0] == module )
+        {
+          /* remove it from the table */
+          library->num_modules--;
+          limit--;
+          while ( cur < limit )
+          {
+            cur[0] = cur[1];
+            cur++;
+          }
+          limit[0] = NULL;
+
+          /* destroy the module */
+          Destroy_Module( module );
+
+          return FT_Err_Ok;
+        }
+      }
+    }
+    return FT_THROW( Invalid_Driver_Handle );
+  }
+
+
+  static FT_Error
+  ft_property_do( FT_Library        library,
+                  const FT_String*  module_name,
+                  const FT_String*  property_name,
+                  void*             value,
+                  FT_Bool           set,
+                  FT_Bool           value_is_string )
+  {
+    FT_Module*           cur;
+    FT_Module*           limit;
+    FT_Module_Interface  interface;
+
+    FT_Service_Properties  service;
+
+#ifdef FT_DEBUG_LEVEL_ERROR
+    const FT_String*  set_name  = "FT_Property_Set";
+    const FT_String*  get_name  = "FT_Property_Get";
+    const FT_String*  func_name = set ? set_name : get_name;
+#endif
+
+    FT_Bool  missing_func;
+
+
+    if ( !library )
+      return FT_THROW( Invalid_Library_Handle );
+
+    if ( !module_name || !property_name || !value )
+      return FT_THROW( Invalid_Argument );
+
+    cur   = library->modules;
+    limit = cur + library->num_modules;
+
+    /* search module */
+    for ( ; cur < limit; cur++ )
+      if ( !ft_strcmp( cur[0]->clazz->module_name, module_name ) )
+        break;
+
+    if ( cur == limit )
+    {
+      FT_TRACE2(( "%s: can't find module `%s'\n",
+                  func_name, module_name ));
+      return FT_THROW( Missing_Module );
+    }
+
+    /* check whether we have a service interface */
+    if ( !cur[0]->clazz->get_interface )
+    {
+      FT_TRACE2(( "%s: module `%s' doesn't support properties\n",
+                  func_name, module_name ));
+      return FT_THROW( Unimplemented_Feature );
+    }
+
+    /* search property service */
+    interface = cur[0]->clazz->get_interface( cur[0],
+                                              FT_SERVICE_ID_PROPERTIES );
+    if ( !interface )
+    {
+      FT_TRACE2(( "%s: module `%s' doesn't support properties\n",
+                  func_name, module_name ));
+      return FT_THROW( Unimplemented_Feature );
+    }
+
+    service = (FT_Service_Properties)interface;
+
+    if ( set )
+      missing_func = FT_BOOL( !service->set_property );
+    else
+      missing_func = FT_BOOL( !service->get_property );
+
+    if ( missing_func )
+    {
+      FT_TRACE2(( "%s: property service of module `%s' is broken\n",
+                  func_name, module_name ));
+      return FT_THROW( Unimplemented_Feature );
+    }
+
+    return set ? service->set_property( cur[0],
+                                        property_name,
+                                        value,
+                                        value_is_string )
+               : service->get_property( cur[0],
+                                        property_name,
+                                        value );
+  }
+
+
+  /* documentation is in ftmodapi.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Property_Set( FT_Library        library,
+                   const FT_String*  module_name,
+                   const FT_String*  property_name,
+                   const void*       value )
+  {
+    return ft_property_do( library,
+                           module_name,
+                           property_name,
+                           (void*)value,
+                           TRUE,
+                           FALSE );
+  }
+
+
+  /* documentation is in ftmodapi.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Property_Get( FT_Library        library,
+                   const FT_String*  module_name,
+                   const FT_String*  property_name,
+                   void*             value )
+  {
+    return ft_property_do( library,
+                           module_name,
+                           property_name,
+                           value,
+                           FALSE,
+                           FALSE );
+  }
+
+
+#ifdef FT_CONFIG_OPTION_ENVIRONMENT_PROPERTIES
+
+  /* this variant is used for handling the FREETYPE_PROPERTIES */
+  /* environment variable                                      */
+
+  FT_BASE_DEF( FT_Error )
+  ft_property_string_set( FT_Library        library,
+                          const FT_String*  module_name,
+                          const FT_String*  property_name,
+                          FT_String*        value )
+  {
+    return ft_property_do( library,
+                           module_name,
+                           property_name,
+                           (void*)value,
+                           TRUE,
+                           TRUE );
+  }
+
+#endif
+
+
+  /*************************************************************************/
+  /*************************************************************************/
+  /*************************************************************************/
+  /****                                                                 ****/
+  /****                                                                 ****/
+  /****                         L I B R A R Y                           ****/
+  /****                                                                 ****/
+  /****                                                                 ****/
+  /*************************************************************************/
+  /*********************************************************
