@@ -5417,4 +5417,316 @@
   /****                                                                 ****/
   /****                                                                 ****/
   /*************************************************************************/
-  /*********************************************************
+  /*************************************************************************/
+  /*************************************************************************/
+
+
+  /* documentation is in ftmodapi.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Reference_Library( FT_Library  library )
+  {
+    if ( !library )
+      return FT_THROW( Invalid_Library_Handle );
+
+    library->refcount++;
+
+    return FT_Err_Ok;
+  }
+
+
+  /* documentation is in ftmodapi.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_New_Library( FT_Memory    memory,
+                  FT_Library  *alibrary )
+  {
+    FT_Library  library = NULL;
+    FT_Error    error;
+
+
+    if ( !memory || !alibrary )
+      return FT_THROW( Invalid_Argument );
+
+#ifndef FT_DEBUG_LOGGING
+#ifdef FT_DEBUG_LEVEL_ERROR
+    /* init debugging support */
+    ft_debug_init();
+#endif /* FT_DEBUG_LEVEL_ERROR */
+#endif /* !FT_DEBUG_LOGGING */
+
+    /* first of all, allocate the library object */
+    if ( FT_NEW( library ) )
+      return error;
+
+    library->memory = memory;
+
+    library->version_major = FREETYPE_MAJOR;
+    library->version_minor = FREETYPE_MINOR;
+    library->version_patch = FREETYPE_PATCH;
+
+    library->refcount = 1;
+
+    /* That's ok now */
+    *alibrary = library;
+
+    return FT_Err_Ok;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( void )
+  FT_Library_Version( FT_Library   library,
+                      FT_Int      *amajor,
+                      FT_Int      *aminor,
+                      FT_Int      *apatch )
+  {
+    FT_Int  major = 0;
+    FT_Int  minor = 0;
+    FT_Int  patch = 0;
+
+
+    if ( library )
+    {
+      major = library->version_major;
+      minor = library->version_minor;
+      patch = library->version_patch;
+    }
+
+    if ( amajor )
+      *amajor = major;
+
+    if ( aminor )
+      *aminor = minor;
+
+    if ( apatch )
+      *apatch = patch;
+  }
+
+
+  /* documentation is in ftmodapi.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Done_Library( FT_Library  library )
+  {
+    FT_Memory  memory;
+
+
+    if ( !library )
+      return FT_THROW( Invalid_Library_Handle );
+
+    library->refcount--;
+    if ( library->refcount > 0 )
+      goto Exit;
+
+    memory = library->memory;
+
+    /*
+     * Close all faces in the library.  If we don't do this, we can have
+     * some subtle memory leaks.
+     *
+     * Example:
+     *
+     * - the cff font driver uses the pshinter module in cff_size_done
+     * - if the pshinter module is destroyed before the cff font driver,
+     *   opened FT_Face objects managed by the driver are not properly
+     *   destroyed, resulting in a memory leak
+     *
+     * Some faces are dependent on other faces, like Type42 faces that
+     * depend on TrueType faces synthesized internally.
+     *
+     * The order of drivers should be specified in driver_name[].
+     */
+    {
+      FT_UInt      m, n;
+      const char*  driver_name[] = { "type42", NULL };
+
+
+      for ( m = 0;
+            m < sizeof ( driver_name ) / sizeof ( driver_name[0] );
+            m++ )
+      {
+        for ( n = 0; n < library->num_modules; n++ )
+        {
+          FT_Module    module      = library->modules[n];
+          const char*  module_name = module->clazz->module_name;
+          FT_List      faces;
+
+
+          if ( driver_name[m]                                &&
+               ft_strcmp( module_name, driver_name[m] ) != 0 )
+            continue;
+
+          if ( ( module->clazz->module_flags & FT_MODULE_FONT_DRIVER ) == 0 )
+            continue;
+
+          FT_TRACE7(( "FT_Done_Library: close faces for %s\n", module_name ));
+
+          faces = &FT_DRIVER( module )->faces_list;
+          while ( faces->head )
+          {
+            FT_Done_Face( FT_FACE( faces->head->data ) );
+            if ( faces->head )
+              FT_TRACE0(( "FT_Done_Library: failed to free some faces\n" ));
+          }
+        }
+      }
+    }
+
+    /* Close all other modules in the library */
+#if 1
+    /* XXX Modules are removed in the reversed order so that  */
+    /* type42 module is removed before truetype module.  This */
+    /* avoids double free in some occasions.  It is a hack.   */
+    while ( library->num_modules > 0 )
+      FT_Remove_Module( library,
+                        library->modules[library->num_modules - 1] );
+#else
+    {
+      FT_UInt  n;
+
+
+      for ( n = 0; n < library->num_modules; n++ )
+      {
+        FT_Module  module = library->modules[n];
+
+
+        if ( module )
+        {
+          Destroy_Module( module );
+          library->modules[n] = NULL;
+        }
+      }
+    }
+#endif
+
+    FT_FREE( library );
+
+  Exit:
+    return FT_Err_Ok;
+  }
+
+
+  /* documentation is in ftmodapi.h */
+
+  FT_EXPORT_DEF( void )
+  FT_Set_Debug_Hook( FT_Library         library,
+                     FT_UInt            hook_index,
+                     FT_DebugHook_Func  debug_hook )
+  {
+    if ( library && debug_hook &&
+         hook_index <
+           ( sizeof ( library->debug_hooks ) / sizeof ( void* ) ) )
+      library->debug_hooks[hook_index] = debug_hook;
+  }
+
+
+  /* documentation is in ftmodapi.h */
+
+  FT_EXPORT_DEF( FT_TrueTypeEngineType )
+  FT_Get_TrueType_Engine_Type( FT_Library  library )
+  {
+    FT_TrueTypeEngineType  result = FT_TRUETYPE_ENGINE_TYPE_NONE;
+
+
+    if ( library )
+    {
+      FT_Module  module = FT_Get_Module( library, "truetype" );
+
+
+      if ( module )
+      {
+        FT_Service_TrueTypeEngine  service;
+
+
+        service = (FT_Service_TrueTypeEngine)
+                    ft_module_get_service( module,
+                                           FT_SERVICE_ID_TRUETYPE_ENGINE,
+                                           0 );
+        if ( service )
+          result = service->engine_type;
+      }
+    }
+
+    return result;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Error )
+  FT_Get_SubGlyph_Info( FT_GlyphSlot  glyph,
+                        FT_UInt       sub_index,
+                        FT_Int       *p_index,
+                        FT_UInt      *p_flags,
+                        FT_Int       *p_arg1,
+                        FT_Int       *p_arg2,
+                        FT_Matrix    *p_transform )
+  {
+    FT_Error  error = FT_ERR( Invalid_Argument );
+
+
+    if ( glyph                                      &&
+         glyph->subglyphs                           &&
+         glyph->format == FT_GLYPH_FORMAT_COMPOSITE &&
+         sub_index < glyph->num_subglyphs           )
+    {
+      FT_SubGlyph  subg = glyph->subglyphs + sub_index;
+
+
+      *p_index     = subg->index;
+      *p_flags     = subg->flags;
+      *p_arg1      = subg->arg1;
+      *p_arg2      = subg->arg2;
+      *p_transform = subg->transform;
+
+      error = FT_Err_Ok;
+    }
+
+    return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Bool )
+  FT_Get_Color_Glyph_Layer( FT_Face            face,
+                            FT_UInt            base_glyph,
+                            FT_UInt           *aglyph_index,
+                            FT_UInt           *acolor_index,
+                            FT_LayerIterator*  iterator )
+  {
+    TT_Face       ttface;
+    SFNT_Service  sfnt;
+
+
+    if ( !face                                   ||
+         !aglyph_index                           ||
+         !acolor_index                           ||
+         !iterator                               ||
+         base_glyph >= (FT_UInt)face->num_glyphs )
+      return 0;
+
+    if ( !FT_IS_SFNT( face ) )
+      return 0;
+
+    ttface = (TT_Face)face;
+    sfnt   = (SFNT_Service)ttface->sfnt;
+
+    if ( sfnt->get_colr_layer )
+      return sfnt->get_colr_layer( ttface,
+                                   base_glyph,
+                                   aglyph_index,
+                                   acolor_index,
+                                   iterator );
+    else
+      return 0;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Bool )
+  FT_Get_Color_Glyph_Paint( FT_Face                  face,
+                        
