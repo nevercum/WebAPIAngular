@@ -22,4 +22,15 @@
  */
 package nsk.jvmti.AttachOnDemand.attach036;
 
-import nsk.
+import nsk.share.Consts;
+
+public class attach036Agent00  {
+
+    public static void agentmain() {
+        try {
+            System.out.println("TEST FAILED: agent shouldn't be able to start");
+        } finally {
+            System.exit(Consts.JCK_STATUS_BASE + Consts.TEST_FAILED);
+        }
+    }
+}
