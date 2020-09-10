@@ -106,4 +106,217 @@ public class SuggestProviders {
         "jdk.charsets provides java.nio.charset.spi.CharsetProvider used by java.base",
         "jdk.compiler provides java.util.spi.ToolProvider used by java.base",
         "jdk.compiler provides javax.tools.JavaCompiler used by java.compiler",
-        "jdk.jlink provides jdk.tools.jlink.plugin.Plugi
+        "jdk.jlink provides jdk.tools.jlink.plugin.Plugin used by jdk.jlink",
+        "jdk.jlink provides java.util.spi.ToolProvider used by java.base"
+    );
+
+    private final List<String> APP_USES = List.of(
+        "uses p1.S",
+        "uses p2.T"
+    );
+
+    private final List<String> APP_PROVIDERS = List.of(
+        "m1 provides p1.S used by m1",
+        "m2 provides p1.S used by m1",
+        "m2 provides p2.T used by m2",
+        "m3 provides p2.T used by m2",
+        "m3 provides p3.S not used by any observable module"
+    );
+
+    @Test
+    public void suggestProviders() throws Throwable {
+        if (!hasJmods()) return;
+
+        List<String> output = JLink.run("--module-path", MODULE_PATH,
+                                        "--suggest-providers").output();
+
+        Stream<String> uses =
+            Stream.concat(JAVA_BASE_USES.stream(), APP_USES.stream());
+        Stream<String> providers =
+            Stream.concat(SYSTEM_PROVIDERS.stream(), APP_PROVIDERS.stream());
+
+        assertTrue(output.containsAll(Stream.concat(uses, providers)
+                                            .collect(Collectors.toList())));
+    }
+
+    /**
+     * find providers from the observable modules and --add-modules has no
+     * effect on the suggested providers
+     */
+    @Test
+    public void observableModules() throws Throwable {
+        if (!hasJmods()) return;
+
+        List<String> output = JLink.run("--module-path", MODULE_PATH,
+                                        "--add-modules", "m1",
+                                        "--suggest-providers").output();
+
+        Stream<String> uses =
+            Stream.concat(JAVA_BASE_USES.stream(), Stream.of("uses p1.S"));
+        Stream<String> providers =
+            Stream.concat(SYSTEM_PROVIDERS.stream(), APP_PROVIDERS.stream());
+
+        assertTrue(output.containsAll(Stream.concat(uses, providers)
+                                            .collect(Collectors.toList())));
+    }
+
+    /**
+     * find providers from the observable modules with --limit-modules
+     */
+    @Test
+    public void limitModules() throws Throwable {
+        if (!hasJmods()) return;
+
+        List<String> output = JLink.run("--module-path", MODULE_PATH,
+                                        "--limit-modules", "m1",
+                                        "--suggest-providers").output();
+
+        Stream<String> uses =
+            Stream.concat(JAVA_BASE_USES.stream(), Stream.of("uses p1.S"));
+        Stream<String> providers =
+            Stream.concat(JAVA_BASE_PROVIDERS.stream(),
+                          Stream.of("m1 provides p1.S used by m1")
+        );
+
+        assertTrue(output.containsAll(Stream.concat(uses, providers)
+                                            .collect(Collectors.toList())));
+    }
+
+    @Test
+    public void providersForServices() throws Throwable {
+        if (!hasJmods()) return;
+
+        List<String> output =
+            JLink.run("--module-path", MODULE_PATH,
+                      "--suggest-providers",
+                      "java.nio.charset.spi.CharsetProvider,p1.S").output();
+
+        System.out.println(output);
+        Stream<String> expected = Stream.concat(
+            Stream.of("jdk.charsets provides java.nio.charset.spi.CharsetProvider used by java.base"),
+            Stream.of("m1 provides p1.S used by m1",
+                      "m2 provides p1.S used by m1")
+        );
+
+        assertTrue(output.containsAll(expected.collect(Collectors.toList())));
+    }
+
+    @Test
+    public void unusedService() throws Throwable {
+        if (!hasJmods()) return;
+
+        List<String> output =
+            JLink.run("--module-path", MODULE_PATH,
+                      "--suggest-providers",
+                      "p3.S").output();
+
+        List<String> expected = List.of(
+            "m3 provides p3.S not used by any observable module"
+        );
+        assertTrue(output.containsAll(expected));
+
+        // should not print other services m3 provides
+        assertFalse(output.contains("m3 provides p2.T used by m2"));
+    }
+
+    @Test
+    public void nonExistentService() throws Throwable {
+        if (!hasJmods()) return;
+
+        List<String> output =
+            JLink.run("--module-path", MODULE_PATH,
+                      "--suggest-providers",
+                      "nonExistentType").output();
+
+        List<String> expected = List.of(
+            "No provider found for service specified to --suggest-providers: nonExistentType"
+        );
+        assertTrue(output.containsAll(expected));
+    }
+
+    @Test
+    public void noSuggestProviders() throws Throwable {
+        if (!hasJmods()) return;
+
+        List<String> output =
+            JLink.run("--module-path", MODULE_PATH,
+                      "--bind-services",
+                      "--suggest-providers").output();
+
+        String expected = "--bind-services option is specified. No additional providers suggested.";
+        assertTrue(output.contains(expected));
+
+    }
+
+    @Test
+    public void suggestTypeNotRealProvider() throws Throwable {
+        if (!hasJmods()) return;
+
+        List<String> output =
+            JLink.run("--module-path", MODULE_PATH,
+                      "--add-modules", "m1",
+                      "--suggest-providers",
+                      "java.util.List").output();
+
+        System.out.println(output);
+        List<String> expected = List.of(
+            "No provider found for service specified to --suggest-providers: java.util.List"
+        );
+
+        assertTrue(output.containsAll(expected));
+    }
+
+    @Test
+    public void addNonObservableModule() throws Throwable {
+        if (!hasJmods()) return;
+
+        List<String> output =
+            JLink.run("--module-path", MODULE_PATH,
+                      "--add-modules", "nonExistentModule",
+                      "--suggest-providers",
+                      "java.nio.charset.spi.CharsetProvider").output();
+
+        System.out.println(output);
+        List<String> expected = List.of(
+            "jdk.charsets provides java.nio.charset.spi.CharsetProvider used by java.base"
+        );
+
+        assertTrue(output.containsAll(expected));
+    }
+
+    static class JLink {
+        static final ToolProvider JLINK_TOOL = ToolProvider.findFirst("jlink")
+            .orElseThrow(() ->
+                new RuntimeException("jlink tool not found")
+            );
+
+        static JLink run(String... options) {
+            JLink jlink = new JLink();
+            assertTrue(jlink.execute(options) == 0);
+            return jlink;
+        }
+
+        final List<String> output = new ArrayList<>();
+        private int execute(String... options) {
+            System.out.println("jlink " +
+                Stream.of(options).collect(Collectors.joining(" ")));
+
+            StringWriter writer = new StringWriter();
+            PrintWriter pw = new PrintWriter(writer);
+            int rc = JLINK_TOOL.run(pw, pw, options);
+            System.out.println(writer.toString());
+            Stream.of(writer.toString().split("\\v"))
+                  .map(String::trim)
+                  .forEach(output::add);
+            return rc;
+        }
+
+        boolean contains(String s) {
+            return output.contains(s);
+        }
+
+        List<String> output() {
+            return output;
+        }
+    }
+}
