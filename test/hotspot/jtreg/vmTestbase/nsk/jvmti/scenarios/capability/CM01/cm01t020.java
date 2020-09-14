@@ -96,3 +96,50 @@ public class cm01t020 extends DebugeeClass {
         return status;
     }
 }
+
+/* =================================================================== */
+
+class cm01t020Thread extends Thread {
+    public Object startingMonitor = new Object();
+    private Object waitingMonitor = new Object();
+
+    public cm01t020Thread(String name) {
+        super(name);
+    }
+
+    public void run() {
+        synchronized (waitingMonitor) {
+
+            Object o = new Object();
+            int i = 1;
+            long l = 2;
+            float f = 3.0F;
+            double d = 4.0;
+
+            // notify about starting
+            synchronized (startingMonitor) {
+                startingMonitor.notify();
+            }
+
+            // wait on monitor
+            try {
+                waitingMonitor.wait(cm01t020.timeout);
+            } catch (InterruptedException ignore) {
+                // just finish
+            }
+        }
+    }
+
+    public boolean checkReady() {
+        // wait until waitingMonitor released on wait()
+        synchronized (waitingMonitor) {
+        }
+        return true;
+    }
+
+    public void letFinish() {
+        synchronized (waitingMonitor) {
+            waitingMonitor.notify();
+        }
+    }
+}
