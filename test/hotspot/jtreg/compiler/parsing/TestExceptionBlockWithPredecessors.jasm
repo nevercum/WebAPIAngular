@@ -135,4 +135,40 @@ Method testWorksWithoutPreds:"()V"
 		iconst_1;
 		iadd;
 		putfield	Field loopCounter:"I";
-		goto	L32; // Only merge block starting at that bytecode which has a smaller rpo than this block -> process in next iteration 
+		goto	L32; // Only merge block starting at that bytecode which has a smaller rpo than this block -> process in next iteration in do_all_blocks()
+		endtry t0, t1;
+	L67:	stack_frame_type same;
+		goto	L74;
+		catch t0 java/lang/RuntimeException;
+		stack_frame_type stack1;
+		stack_map class java/lang/RuntimeException;
+		astore_1;
+		aload_0;
+		getfield	Field loopCounter:"I";
+		bipush	10;
+		if_icmpge	L74;
+        aload_0;
+        dup;
+		getfield	Field loopCounter:"I";
+		iconst_1;
+		iadd;
+		putfield	Field loopCounter:"I";
+		goto L74;
+		catch t1 java/lang/Throwable;
+	L70:    stack_frame_type stack1;
+		stack_map class java/lang/Throwable;
+		astore_1;
+	L74:	stack_frame_type same;
+		return;
+}
+
+
+public Method dontInlineThrow:"()V"
+	throws java/lang/RuntimeException
+	stack 0 locals 1
+{
+		return;
+}
+
+} // end Class TestExceptionBlockWithPredecessors
+
