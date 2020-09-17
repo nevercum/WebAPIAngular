@@ -50,4 +50,17 @@ class Test {
         System.out.println(nil().prepend(makeCell(null)));
         System.out.println(cons(makeCell(null), nil()));
 
-        System.out
+        System.out.println(id(nil()));
+        System.out.println(id(nil()).length());
+
+        System.out.println(cons("abc", id(nil())));
+        System.out.println(id(nil()).prepend("abc"));
+        System.out.println(id(nil()).prepend(makeCell(null)));
+        System.out.println(cons(makeCell(null), id(nil())));
+
+        List<String> a =
+            args.length == 1 ? Test.<String>nil() : Test.<String>nil();
+        a = (List<String>) Test.<String>nil();
+    }
+
+}
