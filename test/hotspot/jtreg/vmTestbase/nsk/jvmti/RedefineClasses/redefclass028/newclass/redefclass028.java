@@ -112,4 +112,32 @@ public class redefclass028 {
             pubOuterFl[1] = 2;
             prStOuterFl[1] = 2;
             packStOuterFl[1] = 2;
-            pubStOuter
+            pubStOuterFl[1] = 2;
+
+            redefclass028HotMethod(0);
+        }
+
+        /**
+         * Hotspot method to be compiled
+         */
+        void redefclass028HotMethod(int i) {
+            log.display("new " + this.getName()
+                + ": redefclass028HotMethod()");
+
+            prOuterFl[2] = 2;
+            packOuterFl[2] = 2;
+            pubOuterFl[2] = 2;
+            prStOuterFl[2] = 2;
+            packStOuterFl[2] = 2;
+            pubStOuterFl[2] = 2;
+        }
+
+        /**
+         * New version of dummy method which is not accessing
+         * a private field of the outer class.
+         * So compiler should not add a synthetic access method
+         * into the outer class.
+         */
+         void methAccessingOuterPrivateField() {}
+    }
+}
