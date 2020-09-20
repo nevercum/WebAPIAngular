@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,22 +21,12 @@
  * questions.
  */
 
-/**
+/*
  *
- * Used by AnnotationSecurityTest.java
- **/
-@SqeDescriptorKey("INTERFACE DescribedMBean")
-public interface DescribedMBean {
-
-    @SqeDescriptorKey("ATTRIBUTE StringProp")
-    public String getStringProp();
-
-    @SqeDescriptorKey("ATTRIBUTE StringProp")
-    public void setStringProp(String name);
-
-    @SqeDescriptorKey("OPERATION doNothing")
-    public void doNothing();
-
-    @SqeDescriptorKey("OPERATION doNothingParam")
-    public void doNothingParam(@SqeDescriptorKey("OPERATION PARAMETER name")String name);
+ *
+ * Used by run_tests.sh
+ *
+ * An agent "supporting" class that will be loaded by the bootstrap class loader.
+ */
+public class BootSupport {
 }

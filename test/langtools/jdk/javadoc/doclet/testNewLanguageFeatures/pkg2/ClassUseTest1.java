@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2006, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2004, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,22 +22,14 @@
  * questions.
  */
 
-/**
- *
- * Used by AnnotationSecurityTest.java
- **/
-@SqeDescriptorKey("INTERFACE DescribedMBean")
-public interface DescribedMBean {
+package pkg2;
 
-    @SqeDescriptorKey("ATTRIBUTE StringProp")
-    public String getStringProp();
+public class ClassUseTest1 <T extends Foo & Foo2> {
 
-    @SqeDescriptorKey("ATTRIBUTE StringProp")
-    public void setStringProp(String name);
+    public ParamTest<Foo> field;
 
-    @SqeDescriptorKey("OPERATION doNothing")
-    public void doNothing();
+    public <T extends Foo & Foo2> T method(T t) {
+        return null;
+    }
 
-    @SqeDescriptorKey("OPERATION doNothingParam")
-    public void doNothingParam(@SqeDescriptorKey("OPERATION PARAMETER name")String name);
 }

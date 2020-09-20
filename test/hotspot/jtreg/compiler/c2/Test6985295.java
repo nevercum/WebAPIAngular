@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2006, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,21 +23,32 @@
  */
 
 /**
+ * @test
+ * @bug 6985295
+ * @summary JVM fails to evaluate condition randomly
  *
- * Used by AnnotationSecurityTest.java
- **/
-@SqeDescriptorKey("INTERFACE DescribedMBean")
-public interface DescribedMBean {
+ * @run main/othervm -Xbatch compiler.c2.Test6985295
+ */
 
-    @SqeDescriptorKey("ATTRIBUTE StringProp")
-    public String getStringProp();
+package compiler.c2;
 
-    @SqeDescriptorKey("ATTRIBUTE StringProp")
-    public void setStringProp(String name);
+public class Test6985295 {
 
-    @SqeDescriptorKey("OPERATION doNothing")
-    public void doNothing();
-
-    @SqeDescriptorKey("OPERATION doNothingParam")
-    public void doNothingParam(@SqeDescriptorKey("OPERATION PARAMETER name")String name);
+    public static void main(String[] args) {
+        int min = Integer.MAX_VALUE-50000;
+        int max = Integer.MAX_VALUE;
+        System.out.println("max = " + max);
+        long counter = 0;
+        int i;
+        for(i = min; i <= max; i++) {
+            counter++;
+            if (counter > 1000000) {
+              System.out.println("Passed");
+              System.exit(95);
+            }
+        }
+        System.out.println("iteration went " + counter + " times (" + i + ")");
+        System.out.println("FAILED");
+        System.exit(97);
+    }
 }
