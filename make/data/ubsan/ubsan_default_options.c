@@ -47,4 +47,8 @@
 // extremely early during library loading, before main is called. We need to override the default
 // options because by default UBSan only prints a warning for each occurrence. We want jtreg tests
 // to fail when undefined behavior is encountered. We also want a full stack trace for the offending
-// thread so it is easier to track down. You can override these options by setti
+// thread so it is easier to track down. You can override these options by setting the environment
+// variable UBSAN_OPTIONS.
+ATTRIBUTE_DEFAULT_VISIBILITY ATTRIBUTE_USED const char* __ubsan_default_options() {
+  return "halt_on_error=1,print_stacktrace=1";
+}
