@@ -101,4 +101,75 @@ Java_sun_nio_ch_AixPollPort_pollsetCreate(JNIEnv *env, jclass c) {
 }
 
 JNIEXPORT jint JNICALL
-Java_sun_
+Java_sun_nio_ch_AixPollPort_pollsetCtl(JNIEnv *env, jclass c, jint ps,
+                                       jint opcode, jint fd, jint events) {
+    struct poll_ctl event;
+    int res;
+
+    event.cmd = opcode;
+    event.events = events;
+    event.fd = fd;
+
+    RESTARTABLE(_pollset_ctl((pollset_t)ps, &event, 1 /* length */), res);
+
+    return (res == 0) ? 0 : errno;
+}
+
+JNIEXPORT jint JNICALL
+Java_sun_nio_ch_AixPollPort_pollsetPoll(JNIEnv *env, jclass c,
+                                        jint ps, jlong address, jint numfds) {
+    struct pollfd *events = jlong_to_ptr(address);
+    int res;
+
+    RESTARTABLE(_pollset_poll(ps, events, numfds, -1), res);
+    if (res < 0) {
+        JNU_ThrowIOExceptionWithLastError(env, "pollset_poll failed");
+    }
+    return res;
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_ch_AixPollPort_pollsetDestroy(JNIEnv *env, jclass c, jint ps) {
+    int res;
+    RESTARTABLE(_pollset_destroy((pollset_t)ps), res);
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_ch_AixPollPort_socketpair(JNIEnv* env, jclass clazz, jintArray sv) {
+    int sp[2];
+    if (socketpair(PF_UNIX, SOCK_STREAM, 0, sp) == -1) {
+        JNU_ThrowIOExceptionWithLastError(env, "socketpair failed");
+    } else {
+        jint res[2];
+        res[0] = (jint)sp[0];
+        res[1] = (jint)sp[1];
+        (*env)->SetIntArrayRegion(env, sv, 0, 2, &res[0]);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_ch_AixPollPort_interrupt(JNIEnv *env, jclass c, jint fd) {
+    int res;
+    int buf[1];
+    buf[0] = 1;
+    RESTARTABLE(write(fd, buf, 1), res);
+    if (res < 0) {
+        JNU_ThrowIOExceptionWithLastError(env, "write failed");
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_ch_AixPollPort_drain1(JNIEnv *env, jclass cl, jint fd) {
+    int res;
+    char buf[1];
+    RESTARTABLE(read(fd, buf, 1), res);
+    if (res < 0) {
+        JNU_ThrowIOExceptionWithLastError(env, "drain1 failed");
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_ch_AixPollPort_close0(JNIEnv *env, jclass c, jint fd) {
+    int res;
+    RESTARTABLE(close(fd), res);
+}
