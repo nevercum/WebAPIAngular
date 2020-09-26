@@ -246,4 +246,103 @@ public interface TypeIndicators {
   /** The high 16 bits of the target's 32-bit virtual address. Used
       for the first instruction in a two-instruction sequence that
       loads a full address. This relocation must be immediately
-      followed by
+      followed by a PAIR relocations whose SymbolTableIndex contains a
+      signed 16-bit displacement which is added to the upper 16 bits
+      taken from the location being relocated. */
+  public static final short IMAGE_REL_PPC_REFHI = (short) 0x0010;
+  /** The low 16 bits of the target's virtual address. */
+  public static final short IMAGE_REL_PPC_REFLO = (short) 0x0011;
+  /** This relocation is only valid when it immediately follows a
+      REFHI or SECRELHI relocation. Its SymbolTableIndex contains a
+      displacement and not an index into the symbol table. */
+  public static final short IMAGE_REL_PPC_PAIR = (short) 0x0012;
+  /** The low 16 bits of the 32-bit offset of the target from the
+      beginning of its section. */
+  public static final short IMAGE_REL_PPC_SECRELLO = (short) 0x0013;
+  /** The high 16 bits of the 32-bit offset of the target from the
+      beginning of its section. A PAIR relocation must immediately
+      follow this on. The SymbolTableIndex of the PAIR relocation
+      contains a signed 16-bit displacement which is added to the
+      upper 16 bits taken from the location being relocated. */
+  public static final short IMAGE_REL_PPC_SECRELHI = (short) 0x0014;
+  /** 16-bit signed displacement of the target relative to the Global
+      Pointer (GP) register. */
+  public static final short IMAGE_REL_PPC_GPREL = (short) 0x0015;
+
+  //
+  // SH3 and SH4 processors
+  //
+
+  /** This relocation is ignored. */
+  public static final short IMAGE_REL_SH3_ABSOLUTE = (short) 0x0000;
+  /** Reference to the 16-bit location that contains the virtual
+      address of the target symbol. */
+  public static final short IMAGE_REL_SH3_DIRECT16 = (short) 0x0001;
+  /** The target's 32-bit virtual address. */
+  public static final short IMAGE_REL_SH3_DIRECT32 = (short) 0x0002;
+  /** Reference to the 8-bit location that contains the virtual
+      address of the target symbol. */
+  public static final short IMAGE_REL_SH3_DIRECT8 = (short) 0x0003;
+  /** Reference to the 8-bit instruction that contains the effective
+      16-bit virtual address of the target symbol. */
+  public static final short IMAGE_REL_SH3_DIRECT8_WORD = (short) 0x0004;
+  /** Reference to the 8-bit instruction that contains the effective
+      32-bit virtual address of the target symbol. */
+  public static final short IMAGE_REL_SH3_DIRECT8_LONG = (short) 0x0005;
+  /** Reference to the 8-bit location whose low 4 bits contain the
+      virtual address of the target symbol. */
+  public static final short IMAGE_REL_SH3_DIRECT4 = (short) 0x0006;
+  /** Reference to the 8-bit instruction whose low 4 bits contain the
+      effective 16-bit virtual address of the target symbol. */
+  public static final short IMAGE_REL_SH3_DIRECT4_WORD = (short) 0x0007;
+  /** Reference to the 8-bit instruction whose low 4 bits contain the
+      effective 32-bit virtual address of the target symbol. */
+  public static final short IMAGE_REL_SH3_DIRECT4_LONG = (short) 0x0008;
+  /** Reference to the 8-bit instruction which contains the effective
+      16-bit relative offset of the target symbol. */
+  public static final short IMAGE_REL_SH3_PCREL8_WORD = (short) 0x0009;
+  /** Reference to the 8-bit instruction which contains the effective
+      32-bit relative offset of the target symbol. */
+  public static final short IMAGE_REL_SH3_PCREL8_LONG = (short) 0x000A;
+  /** Reference to the 16-bit instruction whose low 12 bits contain
+      the effective 16-bit relative offset of the target symbol. */
+  public static final short IMAGE_REL_SH3_PCREL12_WORD = (short) 0x000B;
+  /** Reference to a 32-bit location that is the virtual address of
+      the symbol's section. */
+  public static final short IMAGE_REL_SH3_STARTOF_SECTION = (short) 0x000C;
+  /** Reference to the 32-bit location that is the size of the
+      symbol's section. */
+  public static final short IMAGE_REL_SH3_SIZEOF_SECTION = (short) 0x000D;
+  /** The 16-bit section index of the section containing the target.
+      This is used to support debugging information. */
+  public static final short IMAGE_REL_SH3_SECTION = (short) 0x000E;
+  /** The 32-bit offset of the target from the beginning of its
+      section. This is used to support debugging information as well
+      as static thread local storage. */
+  public static final short IMAGE_REL_SH3_SECREL = (short) 0x000F;
+  /** The target's 32-bit relative virtual address. */
+  public static final short IMAGE_REL_SH3_DIRECT32_NB = (short) 0x0010;
+
+  //
+  // ARM processors
+  //
+
+  /** This relocation is ignored. */
+  public static final short IMAGE_REL_ARM_ABSOLUTE = (short) 0x0000;
+  /** The target's 32-bit virtual address. */
+  public static final short IMAGE_REL_ARM_ADDR32 = (short) 0x0001;
+  /** The target's 32-bit relative virtual address. */
+  public static final short IMAGE_REL_ARM_ADDR32NB = (short) 0x0002;
+  /** The 24-bit relative displacement to the target.  */
+  public static final short IMAGE_REL_ARM_BRANCH24 = (short) 0x0003;
+  /** Reference to a subroutine call, consisting of two 16-bit
+      instructions with 11-bit offsets. */
+  public static final short IMAGE_REL_ARM_BRANCH11 = (short) 0x0004;
+  /** The 16-bit section index of the section containing the target.
+      This is used to support debugging information. */
+  public static final short IMAGE_REL_ARM_SECTION = (short) 0x000E;
+  /** The 32-bit offset of the target from the beginning of its
+      section. This is used to support debugging information as well
+      as static thread local storage. */
+  public static final short IMAGE_REL_ARM_SECREL = (short) 0x000F;
+}
