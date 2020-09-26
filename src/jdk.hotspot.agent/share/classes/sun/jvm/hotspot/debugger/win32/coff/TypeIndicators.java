@@ -117,4 +117,133 @@ public interface TypeIndicators {
   /** This relocation is ignored. */
   public static final short IMAGE_REL_ALPHA_ABSOLUTE = (short) 0x0000;
   /** The target's 32-bit virtual address. This fixup is illegal in a
-      PE32+ image unless 
+      PE32+ image unless the image has been sandboxed by clearing the
+      IMAGE_FILE_LARGE_ADDRESS_AWARE bit in the File Header. */
+  public static final short IMAGE_REL_ALPHA_REFLONG = (short) 0x0001;
+  /** The target's 64-bit virtual address. */
+  public static final short IMAGE_REL_ALPHA_REFQUAD = (short) 0x0002;
+  /** 32-bit signed displacement of the target relative to the Global
+      Pointer (GP) register. */
+  public static final short IMAGE_REL_ALPHA_GPREL32 = (short) 0x0003;
+  /** 16-bit signed displacement of the target relative to the Global
+      Pointer (GP) register. */
+  public static final short IMAGE_REL_ALPHA_LITERAL = (short) 0x0004;
+  /** Reserved for future use. */
+  public static final short IMAGE_REL_ALPHA_LITUSE = (short) 0x0005;
+  /** Reserved for future use. */
+  public static final short IMAGE_REL_ALPHA_GPDISP = (short) 0x0006;
+  /** The 21-bit relative displacement to the target. This supports
+      the Alpha relative branch instructions. */
+  public static final short IMAGE_REL_ALPHA_BRADDR = (short) 0x0007;
+  /** 14-bit hints to the processor for the target of an Alpha jump
+      instruction. */
+  public static final short IMAGE_REL_ALPHA_HINT = (short) 0x0008;
+  /** The target's 32-bit virtual address split into high and low
+      16-bit parts. Either an ABSOLUTE or MATCH relocation must
+      immediately follow this relocation. The high 16 bits of the
+      target address are stored in the location identified by the
+      INLINE_REFLONG relocation. The low 16 bits are stored four bytes
+      later if the following relocation is of type ABSOLUTE or at a
+      signed displacement given in the SymbolTableIndex if the
+      following relocation is of type MATCH. */
+  public static final short IMAGE_REL_ALPHA_INLINE_REFLONG = (short) 0x0009;
+  /** The high 16 bits of the target's 32-bit virtual address. Used
+      for the first instruction in a two-instruction sequence that
+      loads a full address. This relocation must be immediately
+      followed by a PAIR relocations whose SymbolTableIndex contains a
+      signed 16-bit displacement which is added to the upper 16 bits
+      taken from the location being relocated. */
+  public static final short IMAGE_REL_ALPHA_REFHI = (short) 0x000A;
+  /** The low 16 bits of the target's virtual address. */
+  public static final short IMAGE_REL_ALPHA_REFLO = (short) 0x000B;
+  /** This relocation is only valid when it immediately follows a
+      REFHI , REFQ3, REFQ2, or SECRELHI relocation. Its
+      SymbolTableIndex contains a displacement and not an index into
+      the symbol table. */
+  public static final short IMAGE_REL_ALPHA_PAIR = (short) 0x000C;
+  /** This relocation is only valid when it immediately follows
+      INLINE_REFLONG relocation. Its SymbolTableIndex contains the
+      displacement in bytes of the location for the matching low
+      address and not an index into the symbol table. */
+  public static final short IMAGE_REL_ALPHA_MATCH = (short) 0x000D;
+  /** The 16-bit section index of the section containing the target.
+      This is used to support debugging information. */
+  public static final short IMAGE_REL_ALPHA_SECTION = (short) 0x000E;
+  /** The 32-bit offset of the target from the beginning of its
+      section. This is used to support debugging information as well
+      as static thread local storage. */
+  public static final short IMAGE_REL_ALPHA_SECREL = (short) 0x000F;
+  /** The target's 32-bit relative virtual address. */
+  public static final short IMAGE_REL_ALPHA_REFLONGNB = (short) 0x0010;
+  /** The low 16 bits of the 32-bit offset of the target from the
+      beginning of its section. */
+  public static final short IMAGE_REL_ALPHA_SECRELLO = (short) 0x0011;
+  /** The high 16 bits of the 32-bit offset of the target from the
+      beginning of its section. A PAIR relocation must immediately
+      follow this on. The SymbolTableIndex of the PAIR relocation
+      contains a signed 16-bit displacement which is added to the
+      upper 16 bits taken from the location being relocated. */
+  public static final short IMAGE_REL_ALPHA_SECRELHI = (short) 0x0012;
+  /** The low 16 bits of the high 32 bits of the target's 64-bit
+      virtual address. This relocation must be immediately followed by
+      a PAIR relocations whose SymbolTableIndex contains a signed
+      32-bit displacement which is added to the 16 bits taken from the
+      location being relocated. The 16 bits in the relocated location
+      are shifted left by 32 before this addition. */
+  public static final short IMAGE_REL_ALPHA_REFQ3 = (short) 0x0013;
+  /** The high 16 bits of the low 32 bits of the target's 64-bit
+      virtual address. This relocation must be immediately followed by
+      a PAIR relocations whose SymbolTableIndex contains a signed
+      16-bit displacement which is added to the upper 16 bits taken
+      from the location being relocated. */
+  public static final short IMAGE_REL_ALPHA_REFQ2 = (short) 0x0014;
+  /** The low 16 bits of the target's 64-bit virtual address. */
+  public static final short IMAGE_REL_ALPHA_REFQ1 = (short) 0x0015;
+  /** The low 16 bits of the 32-bit signed displacement of the target
+      relative to the Global Pointer (GP) register. */
+  public static final short IMAGE_REL_ALPHA_GPRELLO = (short) 0x0016;
+  /** The high 16 bits of the 32-bit signed displacement of the target
+      relative to the Global Pointer (GP) register. */
+  public static final short IMAGE_REL_ALPHA_GPRELHI = (short) 0x0017;
+
+  //
+  // PowerPC processors
+  //
+
+  /** This relocation is ignored. */
+  public static final short IMAGE_REL_PPC_ABSOLUTE = (short) 0x0000;
+  /** The target's 64-bit virtual address. */
+  public static final short IMAGE_REL_PPC_ADDR64 = (short) 0x0001;
+  /** The target's 32-bit virtual address. */
+  public static final short IMAGE_REL_PPC_ADDR32 = (short) 0x0002;
+  /** The low 24 bits of the target's virtual address. This is only
+      valid when the target symbol is absolute and can be sign
+      extended to its original value. */
+  public static final short IMAGE_REL_PPC_ADDR24 = (short) 0x0003;
+  /** The low 16 bits of the target's virtual address. */
+  public static final short IMAGE_REL_PPC_ADDR16 = (short) 0x0004;
+  /** The low 14 bits of the target's virtual address. This is only
+      valid when the target symbol is absolute and can be sign
+      extended to its original value. */
+  public static final short IMAGE_REL_PPC_ADDR14 = (short) 0x0005;
+  /** A 24-bit PC-relative offset to the symbol's location. */
+  public static final short IMAGE_REL_PPC_REL24 = (short) 0x0006;
+  /** A 14-bit PC-relative offset to the symbol's location. */
+  public static final short IMAGE_REL_PPC_REL14 = (short) 0x0007;
+  /** The target's 32-bit relative virtual address. */
+  public static final short IMAGE_REL_PPC_ADDR32NB = (short) 0x000A;
+  /** The 32-bit offset of the target from the beginning of its
+      section. This is used to support debugging information as well
+      as static thread local storage. */
+  public static final short IMAGE_REL_PPC_SECREL = (short) 0x000B;
+  /** The 16-bit section index of the section containing the target.
+      This is used to support debugging information. */
+  public static final short IMAGE_REL_PPC_SECTION = (short) 0x000C;
+  /** The 16-bit offset of the target from the beginning of its
+      section. This is used to support debugging information as well
+      as static thread local storage. */
+  public static final short IMAGE_REL_PPC_SECREL16 = (short) 0x000F;
+  /** The high 16 bits of the target's 32-bit virtual address. Used
+      for the first instruction in a two-instruction sequence that
+      loads a full address. This relocation must be immediately
+      followed by
