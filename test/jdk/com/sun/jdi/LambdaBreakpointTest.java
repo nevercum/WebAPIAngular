@@ -102,4 +102,19 @@ public class LambdaBreakpointTest extends TestScaffold {
 
         // Put a breakpoint on each location in the order they should happen
         for (int line : BKPT_LINES) {
-            System.out.p
+            System.out.println("Running to line: " + line);
+            BreakpointEvent be = resumeTo("LambdaBreakpointTestTarg", line);
+            int stoppedAt = be.location().lineNumber();
+            System.out.println("Stopped at line: " + stoppedAt);
+            if (stoppedAt != line) {
+                throw new Exception("Stopped on the wrong line: "
+                        + stoppedAt + " != " + line);
+            }
+        }
+
+        /*
+         * resume the target listening for events
+         */
+        listenUntilVMDisconnect();
+    }
+}
