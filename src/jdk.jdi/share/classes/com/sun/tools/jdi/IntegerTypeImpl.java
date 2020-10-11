@@ -1,10 +1,12 @@
 /*
- * Copyright (c) 2006, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -21,28 +23,24 @@
  * questions.
  */
 
-/*
- * @test
- * @bug 4733558 6471539
- * @summary Tests Date encoding
- * @run main/othervm -Djava.security.manager=allow java_sql_Date
- * @author Sergey Malenkov
- * @modules java.desktop
- *          java.sql
- */
+package com.sun.tools.jdi;
 
-import java.sql.Date;
+import com.sun.jdi.IntegerType;
+import com.sun.jdi.InvalidTypeException;
+import com.sun.jdi.PrimitiveValue;
+import com.sun.jdi.VirtualMachine;
 
-public final class java_sql_Date extends AbstractTest<Date> {
-    public static void main(String[] args) {
-        new java_sql_Date().test(true);
+public class IntegerTypeImpl extends PrimitiveTypeImpl implements IntegerType {
+
+    IntegerTypeImpl(VirtualMachine vm) {
+        super(vm);
     }
 
-    protected Date getObject() {
-        return new Date(System.currentTimeMillis());
+    public String signature() {
+        return String.valueOf((char)JDWP.Tag.INT);
     }
 
-    protected Date getAnotherObject() {
-        return new Date(0L);
+    PrimitiveValue convert(PrimitiveValue value) throws InvalidTypeException {
+        return vm.mirrorOf(((PrimitiveValueImpl)value).checkedIntValue());
     }
 }

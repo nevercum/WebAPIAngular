@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,28 +21,38 @@
  * questions.
  */
 
-/*
- * @test
- * @bug 4733558 6471539
- * @summary Tests Date encoding
- * @run main/othervm -Djava.security.manager=allow java_sql_Date
- * @author Sergey Malenkov
- * @modules java.desktop
- *          java.sql
+package pkg1;
+
+import java.io.*;
+
+/**
+ * A test class where the outer class is package private and the inner class is private
+ * and a nested inner class is protected.
  */
 
-import java.sql.Date;
+class NestedInnerClass {
 
-public final class java_sql_Date extends AbstractTest<Date> {
-    public static void main(String[] args) {
-        new java_sql_Date().test(true);
-    }
+    private static class InnerClass {
 
-    protected Date getObject() {
-        return new Date(System.currentTimeMillis());
-    }
+        protected static class ProNestedInnerClass implements java.io.Serializable {
 
-    protected Date getAnotherObject() {
-        return new Date(0L);
+            public final int SERIALIZABLE_CONSTANT = 1;
+
+            /**
+             * @param s ObjectInputStream.
+             * @throws IOException when there is an I/O error.
+             * @serial
+             */
+            private void readObject(ObjectInputStream s) throws IOException {
+            }
+
+            /**
+             * @param s ObjectOutputStream.
+             * @throws IOException when there is an I/O error.
+             * @serial
+             */
+            private void writeObject(ObjectOutputStream s) throws IOException {
+            }
+        }
     }
 }
