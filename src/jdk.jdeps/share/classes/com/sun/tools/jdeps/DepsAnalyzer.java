@@ -137,4 +137,234 @@ public class DepsAnalyzer {
                 if (compileTimeView)
                     transitiveArchiveDeps(depth-1);
                 else
-         
+                    transitiveDeps(depth-1);
+            }
+
+            Set<Archive> archives = archives();
+
+            // analyze the dependencies collected
+            analyzer.run(archives, finder.locationToArchive());
+
+            if (writer != null) {
+                writer.generateOutput(archives, analyzer);
+            }
+        } finally {
+            finder.shutdown();
+        }
+        return true;
+    }
+
+    /**
+     * Returns the archives for reporting that has matching dependences.
+     *
+     * If --require is set, they should be excluded.
+     */
+    Set<Archive> archives() {
+        if (filter.requiresFilter().isEmpty()) {
+            return archives.stream()
+                .filter(this::include)
+                .filter(Archive::hasDependences)
+                .collect(Collectors.toSet());
+        } else {
+            // use the archives that have dependences and not specified in --require
+            return archives.stream()
+                .filter(this::include)
+                .filter(source -> !filter.requiresFilter().contains(source.getName()))
+                .filter(source ->
+                        source.getDependencies()
+                              .map(finder::locationToArchive)
+                              .anyMatch(a -> a != source))
+                .collect(Collectors.toSet());
+        }
+    }
+
+    /**
+     * Returns the dependences, either class name or package name
+     * as specified in the given verbose level.
+     */
+    Set<String> dependences() {
+        return analyzer.archives().stream()
+                       .map(analyzer::dependences)
+                       .flatMap(Set::stream)
+                       .collect(Collectors.toSet());
+    }
+
+    /**
+     * Returns the archives that contains the given locations and
+     * not parsed and analyzed.
+     */
+    private Set<Archive> unresolvedArchives(Stream<Location> locations) {
+        return locations.filter(l -> !finder.isParsed(l))
+                        .distinct()
+                        .map(configuration::findClass)
+                        .flatMap(Optional::stream)
+                        .collect(toSet());
+    }
+
+    /*
+     * Recursively analyzes entire module/archives.
+    */
+    private void transitiveArchiveDeps(int depth) throws IOException {
+        Stream<Location> deps = archives.stream()
+                                        .flatMap(Archive::getDependencies);
+
+        // start with the unresolved archives
+        Set<Archive> unresolved = unresolvedArchives(deps);
+        do {
+            // parse all unresolved archives
+            Set<Location> targets = apiOnly
+                ? finder.parseExportedAPIs(unresolved.stream())
+                : finder.parse(unresolved.stream());
+            archives.addAll(unresolved);
+
+            // Add dependencies to the next batch for analysis
+            unresolved = unresolvedArchives(targets.stream());
+        } while (!unresolved.isEmpty() && depth-- > 0);
+    }
+
+    /*
+     * Recursively analyze the class dependences
+     */
+    private void transitiveDeps(int depth) throws IOException {
+        Stream<Location> deps = archives.stream()
+                                        .flatMap(Archive::getDependencies);
+
+        Deque<Location> unresolved = deps.collect(Collectors.toCollection(LinkedList::new));
+        ConcurrentLinkedDeque<Location> deque = new ConcurrentLinkedDeque<>();
+        do {
+            Location target;
+            while ((target = unresolved.poll()) != null) {
+                if (finder.isParsed(target))
+                    continue;
+
+                Archive archive = configuration.findClass(target).orElse(null);
+                if (archive != null) {
+                    archives.add(archive);
+
+                    String name = target.getName();
+                    Set<Location> targets = apiOnly
+                            ? finder.parseExportedAPIs(archive, name)
+                            : finder.parse(archive, name);
+
+                    // build unresolved dependencies
+                    targets.stream()
+                           .filter(t -> !finder.isParsed(t))
+                           .forEach(deque::add);
+                }
+            }
+            unresolved = deque;
+            deque = new ConcurrentLinkedDeque<>();
+        } while (!unresolved.isEmpty() && depth-- > 0);
+    }
+
+    /*
+     * Tests if the given archive is requested for analysis.
+     * It includes the root modules specified in --module, --add-modules
+     * or modules specified on the command line
+     *
+     * This filters system module by default unless they are explicitly
+     * requested.
+     */
+    public boolean include(Archive source) {
+        Module module = source.getModule();
+        // skip system module by default
+        return  !module.isSystem()
+                    || configuration.rootModules().contains(source);
+    }
+
+    // ----- for testing purpose -----
+
+    public static enum Info {
+        REQUIRES,
+        REQUIRES_TRANSITIVE,
+        EXPORTED_API,
+        MODULE_PRIVATE,
+        QUALIFIED_EXPORTED_API,
+        INTERNAL_API,
+        JDK_INTERNAL_API,
+        JDK_REMOVED_INTERNAL_API
+    }
+
+    public static class Node {
+        public final String name;
+        public final String source;
+        public final Info info;
+        Node(String name, Info info) {
+            this(name, name, info);
+        }
+        Node(String name, String source, Info info) {
+            this.name = name;
+            this.source = source;
+            this.info = info;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            if (info != Info.REQUIRES && info != Info.REQUIRES_TRANSITIVE)
+                sb.append(source).append("/");
+
+            sb.append(name);
+            if (info == Info.QUALIFIED_EXPORTED_API)
+                sb.append(" (qualified)");
+            else if (info == Info.JDK_INTERNAL_API)
+                sb.append(" (JDK internal)");
+            else if (info == Info.INTERNAL_API)
+                sb.append(" (internal)");
+            return sb.toString();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof Node))
+                return false;
+
+            Node other = (Node)o;
+            return this.name.equals(other.name) &&
+                    this.source.equals(other.source) &&
+                    this.info.equals(other.info);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = name.hashCode();
+            result = 31 * result + source.hashCode();
+            result = 31 * result + info.hashCode();
+            return result;
+        }
+    }
+
+    /**
+     * Returns a graph of module dependences.
+     *
+     * Each Node represents a module and each edge is a dependence.
+     * No analysis on "requires transitive".
+     */
+    public Graph<Node> moduleGraph() {
+        Graph.Builder<Node> builder = new Graph.Builder<>();
+
+        archives()
+            .forEach(m -> {
+                Node u = new Node(m.getName(), Info.REQUIRES);
+                builder.addNode(u);
+                analyzer.requires(m)
+                    .map(req -> new Node(req.getName(), Info.REQUIRES))
+                    .forEach(v -> builder.addEdge(u, v));
+            });
+        return builder.build();
+    }
+
+    /**
+     * Returns a graph of dependences.
+     *
+     * Each Node represents a class or package per the specified verbose level.
+     * Each edge indicates
+     */
+    public Graph<Node> dependenceGraph() {
+        Graph.Builder<Node> builder = new Graph.Builder<>();
+
+        archives().stream()
+            .map(analyzer.results::get)
+            .filter(deps -> !deps.dependencies().isEmpty())
+            .flatMap(deps -> deps.dependencies().stream())
+            .forEach(d ->
