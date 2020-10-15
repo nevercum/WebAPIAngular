@@ -367,4 +367,42 @@ public class DepsAnalyzer {
             .map(analyzer.results::get)
             .filter(deps -> !deps.dependencies().isEmpty())
             .flatMap(deps -> deps.dependencies().stream())
-            .forEach(d ->
+            .forEach(d -> addEdge(builder, d));
+        return builder.build();
+    }
+
+    private void addEdge(Graph.Builder<Node> builder, Analyzer.Dep dep) {
+        Archive source = dep.originArchive();
+        Archive target = dep.targetArchive();
+        String pn = dep.target();
+        if (verbose == CLASS || verbose == VERBOSE) {
+            int i = dep.target().lastIndexOf('.');
+            pn = i > 0 ? dep.target().substring(0, i) : "";
+        }
+        final Info info;
+        Module targetModule = target.getModule();
+        if (source == target) {
+            info = Info.MODULE_PRIVATE;
+        } else if (!targetModule.isNamed()) {
+            info = Info.EXPORTED_API;
+        } else if (targetModule.isExported(pn) && !targetModule.isJDKUnsupported()) {
+            info = Info.EXPORTED_API;
+        } else {
+            Module module = target.getModule();
+            if (module == Analyzer.REMOVED_JDK_INTERNALS) {
+                info = Info.JDK_REMOVED_INTERNAL_API;
+            } else if (!source.getModule().isJDK() && module.isJDK())
+                info = Info.JDK_INTERNAL_API;
+                // qualified exports or inaccessible
+            else if (module.isExported(pn, source.getModule().name()))
+                info = Info.QUALIFIED_EXPORTED_API;
+            else
+                info = Info.INTERNAL_API;
+        }
+
+        Node u = new Node(dep.origin(), source.getName(), info);
+        Node v = new Node(dep.target(), target.getName(), info);
+        builder.addEdge(u, v);
+    }
+
+}
