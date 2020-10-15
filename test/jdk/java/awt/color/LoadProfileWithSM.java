@@ -1,12 +1,11 @@
+
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,22 +22,23 @@
  * questions.
  */
 
-package jdk.internal.access;
+import java.awt.color.*;
 
-import java.net.HttpCookie;
-import java.util.List;
+/*
+ * @test
+ * @bug 8058969 8178708
+ * @summary test standard profiles loads with SecurityManager installed.
+ * @run main/othervm -Djava.security.manager=allow LoadProfileWithSM
+ */
 
-public interface JavaNetHttpCookieAccess {
-    /*
-     * Constructs cookies from Set-Cookie or Set-Cookie2 header string,
-     * retaining the original header String in the cookie itself.
-     */
-    public List<HttpCookie> parse(String header);
+public class LoadProfileWithSM {
 
-    /*
-     * Returns the original header this cookie was constructed from, if it was
-     * constructed by parsing a header, otherwise null.
-     */
-    public String header(HttpCookie cookie);
+    public static void main(String[] args) {
+        System.setSecurityManager(new SecurityManager());
+        ICC_Profile profile =
+            ((ICC_ColorSpace)(ColorSpace.getInstance(
+                ColorSpace.CS_GRAY))).getProfile();
+        /* request profile data in order to force profile loading */
+        profile.getData();
+   }
 }
-

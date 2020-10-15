@@ -1,12 +1,10 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -22,23 +20,17 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package jdk.vm.ci.code.site;
 
-package jdk.internal.access;
+/**
+ * A reason for infopoint insertion.
+ */
+public enum InfopointReason {
 
-import java.net.HttpCookie;
-import java.util.List;
-
-public interface JavaNetHttpCookieAccess {
-    /*
-     * Constructs cookies from Set-Cookie or Set-Cookie2 header string,
-     * retaining the original header String in the cookie itself.
-     */
-    public List<HttpCookie> parse(String header);
-
-    /*
-     * Returns the original header this cookie was constructed from, if it was
-     * constructed by parsing a header, otherwise null.
-     */
-    public String header(HttpCookie cookie);
+    SAFEPOINT,
+    CALL,
+    IMPLICIT_EXCEPTION,
+    METHOD_START,
+    METHOD_END,
+    BYTECODE_POSITION;
 }
-
