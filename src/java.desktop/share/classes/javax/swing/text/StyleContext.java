@@ -970,3 +970,712 @@ public class StyleContext implements Serializable, AbstractDocument.AttributeCon
          * Copies a set of attributes.
          *
          * @return the copy
+         * @see AttributeSet#copyAttributes
+         */
+        public AttributeSet copyAttributes() {
+            return this;
+        }
+
+        /**
+         * Gets the value of an attribute.
+         *
+         * @param key the attribute name
+         * @return the attribute value
+         * @see AttributeSet#getAttribute
+         */
+        public Object getAttribute(Object key) {
+            Object value = getLocalAttribute(key);
+            if (value == null) {
+                AttributeSet parent = getResolveParent();
+                if (parent != null)
+                    value = parent.getAttribute(key);
+            }
+            return value;
+        }
+
+        /**
+         * Gets the names of all attributes.
+         *
+         * @return the attribute names
+         * @see AttributeSet#getAttributeNames
+         */
+        public Enumeration<?> getAttributeNames() {
+            return new KeyEnumeration(attributes);
+        }
+
+        /**
+         * Checks whether a given attribute name/value is defined.
+         *
+         * @param name the attribute name
+         * @param value the attribute value
+         * @return true if the name/value is defined
+         * @see AttributeSet#containsAttribute
+         */
+        public boolean containsAttribute(Object name, Object value) {
+            return value.equals(getAttribute(name));
+        }
+
+        /**
+         * Checks whether the attribute set contains all of
+         * the given attributes.
+         *
+         * @param attrs the attributes to check
+         * @return true if the element contains all the attributes
+         * @see AttributeSet#containsAttributes
+         */
+        public boolean containsAttributes(AttributeSet attrs) {
+            boolean result = true;
+
+            Enumeration<?> names = attrs.getAttributeNames();
+            while (result && names.hasMoreElements()) {
+                Object name = names.nextElement();
+                result = attrs.getAttribute(name).equals(getAttribute(name));
+            }
+
+            return result;
+        }
+
+        /**
+         * If not overridden, the resolving parent defaults to
+         * the parent element.
+         *
+         * @return the attributes from the parent
+         * @see AttributeSet#getResolveParent
+         */
+        public AttributeSet getResolveParent() {
+            return resolveParent;
+        }
+
+        // --- variables -----------------------------------------
+
+        Object[] attributes;
+        // This is also stored in attributes
+        AttributeSet resolveParent;
+    }
+
+    /**
+     * An enumeration of the keys in a SmallAttributeSet.
+     */
+    static class KeyEnumeration implements Enumeration<Object> {
+
+        KeyEnumeration(Object[] attr) {
+            this.attr = attr;
+            i = 0;
+        }
+
+        /**
+         * Tests if this enumeration contains more elements.
+         *
+         * @return  <code>true</code> if this enumeration contains more elements;
+         *          <code>false</code> otherwise.
+         * @since   1.0
+         */
+        public boolean hasMoreElements() {
+            return i < attr.length;
+        }
+
+        /**
+         * Returns the next element of this enumeration.
+         *
+         * @return     the next element of this enumeration.
+         * @throws  NoSuchElementException  if no more elements exist.
+         * @since      1.0
+         */
+        public Object nextElement() {
+            if (i < attr.length) {
+                Object o = attr[i];
+                i += 2;
+                return o;
+            }
+            throw new NoSuchElementException();
+        }
+
+        Object[] attr;
+        int i;
+    }
+
+    /**
+     * Sorts the key strings so that they can be very quickly compared
+     * in the attribute set searches.
+     */
+    static class KeyBuilder {
+
+        public void initialize(AttributeSet a) {
+            if (a instanceof SmallAttributeSet) {
+                initialize(((SmallAttributeSet)a).attributes);
+            } else {
+                keys.removeAllElements();
+                data.removeAllElements();
+                Enumeration<?> names = a.getAttributeNames();
+                while (names.hasMoreElements()) {
+                    Object name = names.nextElement();
+                    addAttribute(name, a.getAttribute(name));
+                }
+            }
+        }
+
+        /**
+         * Initialize with a set of already sorted
+         * keys (data from an existing SmallAttributeSet).
+         */
+        private void initialize(Object[] sorted) {
+            keys.removeAllElements();
+            data.removeAllElements();
+            int n = sorted.length;
+            for (int i = 0; i < n; i += 2) {
+                keys.addElement(sorted[i]);
+                data.addElement(sorted[i+1]);
+            }
+        }
+
+        /**
+         * Creates a table of sorted key/value entries
+         * suitable for creation of an instance of
+         * SmallAttributeSet.
+         */
+        public Object[] createTable() {
+            int n = keys.size();
+            Object[] tbl = new Object[2 * n];
+            for (int i = 0; i < n; i ++) {
+                int offs = 2 * i;
+                tbl[offs] = keys.elementAt(i);
+                tbl[offs + 1] = data.elementAt(i);
+            }
+            return tbl;
+        }
+
+        /**
+         * The number of key/value pairs contained
+         * in the current key being forged.
+         */
+        int getCount() {
+            return keys.size();
+        }
+
+        /**
+         * Adds a key/value to the set.
+         */
+        public void addAttribute(Object key, Object value) {
+            keys.addElement(key);
+            data.addElement(value);
+        }
+
+        /**
+         * Adds a set of key/value pairs to the set.
+         */
+        public void addAttributes(AttributeSet attr) {
+            if (attr instanceof SmallAttributeSet) {
+                // avoid searching the keys, they are already interned.
+                Object[] tbl = ((SmallAttributeSet)attr).attributes;
+                int n = tbl.length;
+                for (int i = 0; i < n; i += 2) {
+                    addAttribute(tbl[i], tbl[i+1]);
+                }
+            } else {
+                Enumeration<?> names = attr.getAttributeNames();
+                while (names.hasMoreElements()) {
+                    Object name = names.nextElement();
+                    addAttribute(name, attr.getAttribute(name));
+                }
+            }
+        }
+
+        /**
+         * Removes the given name from the set.
+         */
+        public void removeAttribute(Object key) {
+            int n = keys.size();
+            for (int i = 0; i < n; i++) {
+                if (keys.elementAt(i).equals(key)) {
+                    keys.removeElementAt(i);
+                    data.removeElementAt(i);
+                    return;
+                }
+            }
+        }
+
+        /**
+         * Removes the set of keys from the set.
+         */
+        public void removeAttributes(Enumeration<?> names) {
+            while (names.hasMoreElements()) {
+                Object name = names.nextElement();
+                removeAttribute(name);
+            }
+        }
+
+        /**
+         * Removes the set of matching attributes from the set.
+         */
+        public void removeAttributes(AttributeSet attr) {
+            Enumeration<?> names = attr.getAttributeNames();
+            while (names.hasMoreElements()) {
+                Object name = names.nextElement();
+                Object value = attr.getAttribute(name);
+                removeSearchAttribute(name, value);
+            }
+        }
+
+        private void removeSearchAttribute(Object ikey, Object value) {
+            int n = keys.size();
+            for (int i = 0; i < n; i++) {
+                if (keys.elementAt(i).equals(ikey)) {
+                    if (data.elementAt(i).equals(value)) {
+                        keys.removeElementAt(i);
+                        data.removeElementAt(i);
+                    }
+                    return;
+                }
+            }
+        }
+
+        private Vector<Object> keys = new Vector<Object>();
+        private Vector<Object> data = new Vector<Object>();
+    }
+
+    /**
+     * key for a font table
+     */
+    static class FontKey {
+
+        private String family;
+        private int style;
+        private int size;
+
+        /**
+         * Constructs a font key.
+         */
+        public FontKey(String family, int style, int size) {
+            setValue(family, style, size);
+        }
+
+        public void setValue(String family, int style, int size) {
+            this.family = (family != null) ? family.intern() : null;
+            this.style = style;
+            this.size = size;
+        }
+
+        /**
+         * Returns a hashcode for this font.
+         * @return     a hashcode value for this font.
+         */
+        public int hashCode() {
+            int fhash = (family != null) ? family.hashCode() : 0;
+            return fhash ^ style ^ size;
+        }
+
+        /**
+         * Compares this object to the specified object.
+         * The result is <code>true</code> if and only if the argument is not
+         * <code>null</code> and is a <code>Font</code> object with the same
+         * name, style, and point size as this font.
+         * @param     obj   the object to compare this font with.
+         * @return    <code>true</code> if the objects are equal;
+         *            <code>false</code> otherwise.
+         */
+        public boolean equals(Object obj) {
+            if (obj instanceof FontKey) {
+                FontKey font = (FontKey)obj;
+                return (size == font.size) && (style == font.style) && (family == font.family);
+            }
+            return false;
+        }
+
+    }
+
+    /**
+     * A collection of attributes, typically used to represent
+     * character and paragraph styles.  This is an implementation
+     * of MutableAttributeSet that can be observed if desired.
+     * These styles will take advantage of immutability while
+     * the sets are small enough, and may be substantially more
+     * efficient than something like SimpleAttributeSet.
+     * <p>
+     * <strong>Warning:</strong>
+     * Serialized objects of this class will not be compatible with
+     * future Swing releases. The current serialization support is
+     * appropriate for short term storage or RMI between applications running
+     * the same version of Swing.  As of 1.4, support for long term storage
+     * of all JavaBeans
+     * has been added to the <code>java.beans</code> package.
+     * Please see {@link java.beans.XMLEncoder}.
+     */
+    @SuppressWarnings("serial") // Same-version serialization only
+    public class NamedStyle implements Style, Serializable {
+
+        /**
+         * Creates a new named style.
+         *
+         * @param name the style name, null for unnamed
+         * @param parent the parent style, null if none
+         * @since 1.4
+         */
+        public NamedStyle(String name, Style parent) {
+            attributes = getEmptySet();
+            if (name != null) {
+                setName(name);
+            }
+            if (parent != null) {
+                setResolveParent(parent);
+            }
+        }
+
+        /**
+         * Creates a new named style.
+         *
+         * @param parent the parent style, null if none
+         * @since 1.4
+         */
+        public NamedStyle(Style parent) {
+            this(null, parent);
+        }
+
+        /**
+         * Creates a new named style, with a null name and parent.
+         */
+        public NamedStyle() {
+            attributes = getEmptySet();
+        }
+
+        /**
+         * Converts the style to a string.
+         *
+         * @return the string
+         */
+        public String toString() {
+            return "NamedStyle:" + getName() + " " + attributes;
+        }
+
+        /**
+         * Fetches the name of the style.   A style is not required to be named,
+         * so null is returned if there is no name associated with the style.
+         *
+         * @return the name
+         */
+        public String getName() {
+            if (isDefined(StyleConstants.NameAttribute)) {
+                return getAttribute(StyleConstants.NameAttribute).toString();
+            }
+            return null;
+        }
+
+        /**
+         * Changes the name of the style.  Does nothing with a null name.
+         *
+         * @param name the new name
+         */
+        public void setName(String name) {
+            if (name != null) {
+                this.addAttribute(StyleConstants.NameAttribute, name);
+            }
+        }
+
+        /**
+         * Adds a change listener.
+         *
+         * @param l the change listener
+         */
+        public void addChangeListener(ChangeListener l) {
+            listenerList.add(ChangeListener.class, l);
+        }
+
+        /**
+         * Removes a change listener.
+         *
+         * @param l the change listener
+         */
+        public void removeChangeListener(ChangeListener l) {
+            listenerList.remove(ChangeListener.class, l);
+        }
+
+
+        /**
+         * Returns an array of all the <code>ChangeListener</code>s added
+         * to this NamedStyle with addChangeListener().
+         *
+         * @return all of the <code>ChangeListener</code>s added or an empty
+         *         array if no listeners have been added
+         * @since 1.4
+         */
+        public ChangeListener[] getChangeListeners() {
+            return listenerList.getListeners(ChangeListener.class);
+        }
+
+
+        /**
+         * Notifies all listeners that have registered interest for
+         * notification on this event type.  The event instance
+         * is lazily created using the parameters passed into
+         * the fire method.
+         *
+         * @see EventListenerList
+         */
+        protected void fireStateChanged() {
+            // Guaranteed to return a non-null array
+            Object[] listeners = listenerList.getListenerList();
+            // Process the listeners last to first, notifying
+            // those that are interested in this event
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==ChangeListener.class) {
+                    // Lazily create the event:
+                    if (changeEvent == null)
+                        changeEvent = new ChangeEvent(this);
+                    ((ChangeListener)listeners[i+1]).stateChanged(changeEvent);
+                }
+            }
+        }
+
+        /**
+         * Return an array of all the listeners of the given type that
+         * were added to this model.
+         * @param <T> the listener type
+         * @param listenerType the type of listeners requested
+         * @return all of the objects receiving <em>listenerType</em> notifications
+         *          from this model
+         *
+         * @since 1.3
+         */
+        public <T extends EventListener> T[] getListeners(Class<T> listenerType) {
+            return listenerList.getListeners(listenerType);
+        }
+
+        // --- AttributeSet ----------------------------
+        // delegated to the immutable field "attributes"
+
+        /**
+         * Gets the number of attributes that are defined.
+         *
+         * @return the number of attributes &gt;= 0
+         * @see AttributeSet#getAttributeCount
+         */
+        public int getAttributeCount() {
+            return attributes.getAttributeCount();
+        }
+
+        /**
+         * Checks whether a given attribute is defined.
+         *
+         * @param attrName the non-null attribute name
+         * @return true if the attribute is defined
+         * @see AttributeSet#isDefined
+         */
+        public boolean isDefined(Object attrName) {
+            return attributes.isDefined(attrName);
+        }
+
+        /**
+         * Checks whether two attribute sets are equal.
+         *
+         * @param attr the attribute set to check against
+         * @return true if the same
+         * @see AttributeSet#isEqual
+         */
+        public boolean isEqual(AttributeSet attr) {
+            return attributes.isEqual(attr);
+        }
+
+        /**
+         * Copies a set of attributes.
+         *
+         * @return the copy
+         * @see AttributeSet#copyAttributes
+         */
+        public AttributeSet copyAttributes() {
+            NamedStyle a = new NamedStyle();
+            a.attributes = attributes.copyAttributes();
+            return a;
+        }
+
+        /**
+         * Gets the value of an attribute.
+         *
+         * @param attrName the non-null attribute name
+         * @return the attribute value
+         * @see AttributeSet#getAttribute
+         */
+        public Object getAttribute(Object attrName) {
+            return attributes.getAttribute(attrName);
+        }
+
+        /**
+         * Gets the names of all attributes.
+         *
+         * @return the attribute names as an enumeration
+         * @see AttributeSet#getAttributeNames
+         */
+        public Enumeration<?> getAttributeNames() {
+            return attributes.getAttributeNames();
+        }
+
+        /**
+         * Checks whether a given attribute name/value is defined.
+         *
+         * @param name the non-null attribute name
+         * @param value the attribute value
+         * @return true if the name/value is defined
+         * @see AttributeSet#containsAttribute
+         */
+        public boolean containsAttribute(Object name, Object value) {
+            return attributes.containsAttribute(name, value);
+        }
+
+
+        /**
+         * Checks whether the element contains all the attributes.
+         *
+         * @param attrs the attributes to check
+         * @return true if the element contains all the attributes
+         * @see AttributeSet#containsAttributes
+         */
+        public boolean containsAttributes(AttributeSet attrs) {
+            return attributes.containsAttributes(attrs);
+        }
+
+        /**
+         * Gets attributes from the parent.
+         * If not overridden, the resolving parent defaults to
+         * the parent element.
+         *
+         * @return the attributes from the parent
+         * @see AttributeSet#getResolveParent
+         */
+        public AttributeSet getResolveParent() {
+            return attributes.getResolveParent();
+        }
+
+        // --- MutableAttributeSet ----------------------------------
+        // should fetch a new immutable record for the field
+        // "attributes".
+
+        /**
+         * Adds an attribute.
+         *
+         * @param name the non-null attribute name
+         * @param value the attribute value
+         * @see MutableAttributeSet#addAttribute
+         */
+        public void addAttribute(Object name, Object value) {
+            StyleContext context = StyleContext.this;
+            attributes = context.addAttribute(attributes, name, value);
+            fireStateChanged();
+        }
+
+        /**
+         * Adds a set of attributes to the element.
+         *
+         * @param attr the attributes to add
+         * @see MutableAttributeSet#addAttribute
+         */
+        public void addAttributes(AttributeSet attr) {
+            StyleContext context = StyleContext.this;
+            attributes = context.addAttributes(attributes, attr);
+            fireStateChanged();
+        }
+
+        /**
+         * Removes an attribute from the set.
+         *
+         * @param name the non-null attribute name
+         * @see MutableAttributeSet#removeAttribute
+         */
+        public void removeAttribute(Object name) {
+            StyleContext context = StyleContext.this;
+            attributes = context.removeAttribute(attributes, name);
+            fireStateChanged();
+        }
+
+        /**
+         * Removes a set of attributes for the element.
+         *
+         * @param names the attribute names
+         * @see MutableAttributeSet#removeAttributes
+         */
+        public void removeAttributes(Enumeration<?> names) {
+            StyleContext context = StyleContext.this;
+            attributes = context.removeAttributes(attributes, names);
+            fireStateChanged();
+        }
+
+        /**
+         * Removes a set of attributes for the element.
+         *
+         * @param attrs the attributes
+         * @see MutableAttributeSet#removeAttributes
+         */
+        public void removeAttributes(AttributeSet attrs) {
+            StyleContext context = StyleContext.this;
+            if (attrs == this) {
+                attributes = context.getEmptySet();
+            } else {
+                attributes = context.removeAttributes(attributes, attrs);
+            }
+            fireStateChanged();
+        }
+
+        /**
+         * Sets the resolving parent.
+         *
+         * @param parent the parent, null if none
+         * @see MutableAttributeSet#setResolveParent
+         */
+        public void setResolveParent(AttributeSet parent) {
+            if (parent != null) {
+                addAttribute(StyleConstants.ResolveAttribute, parent);
+            } else {
+                removeAttribute(StyleConstants.ResolveAttribute);
+            }
+        }
+
+        // --- serialization ---------------------------------------------
+
+        @Serial
+        private void writeObject(ObjectOutputStream s) throws IOException {
+            s.defaultWriteObject();
+            writeAttributeSet(s, attributes);
+        }
+
+        @Serial
+        private void readObject(ObjectInputStream s)
+            throws ClassNotFoundException, IOException
+        {
+            s.defaultReadObject();
+            attributes = SimpleAttributeSet.EMPTY;
+            readAttributeSet(s, this);
+        }
+
+        // --- member variables -----------------------------------------------
+
+        /**
+         * The change listeners for the model.
+         */
+        protected EventListenerList listenerList = new EventListenerList();
+
+        /**
+         * Only one ChangeEvent is needed per model instance since the
+         * event's only (read-only) state is the source property.  The source
+         * of events generated here is always "this".
+         */
+        protected transient ChangeEvent changeEvent = null;
+
+        /**
+         * Inner AttributeSet implementation, which may be an
+         * immutable unique set being shared.
+         */
+        private transient AttributeSet attributes;
+
+    }
+
+    static {
+        // initialize the static key registry with the StyleConstants keys
+        try {
+            int n = StyleConstants.keys.length;
+            for (int i = 0; i < n; i++) {
+                StyleContext.registerStaticAttributeKey(StyleConstants.keys[i]);
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
+
+}
