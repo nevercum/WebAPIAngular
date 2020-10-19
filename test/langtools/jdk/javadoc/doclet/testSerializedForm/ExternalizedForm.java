@@ -32,3 +32,12 @@ public class ExternalizedForm implements Externalizable {
     /**
      * @throws IOException when there is an I/O error.
      */
+    public void writeExternal(ObjectOutput oo) throws IOException {}
+
+    /**
+     * @throws IOException when there is an I/O error.
+     * @throws ClassNotFoundException if no class found.
+     * @serialData This is a serial data comment.
+     */
+    public void readExternal(ObjectInput oi) throws IOException, ClassNotFoundException {}
+}
