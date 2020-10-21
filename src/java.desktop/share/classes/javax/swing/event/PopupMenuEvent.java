@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 1998, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,25 +23,34 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javax.swing.event;
 
-package com.sun.jdi;
+import java.util.EventObject;
 
 /**
- * Thrown to indicate that the requested operation cannot be
- * completed because the specified class has not yet been prepared.
+ * PopupMenuEvent only contains the source of the event which is the JPopupMenu
+ * sending the event
+ * <p>
+ * <strong>Warning:</strong>
+ * Serialized objects of this class will not be compatible with
+ * future Swing releases. The current serialization support is
+ * appropriate for short term storage or RMI between applications running
+ * the same version of Swing.  As of 1.4, support for long term storage
+ * of all JavaBeans
+ * has been added to the <code>java.beans</code> package.
+ * Please see {@link java.beans.XMLEncoder}.
  *
- * @author Gordon Hirsch
- * @since  1.3
+ * @author Arnaud Weber
  */
-public class ClassNotPreparedException extends RuntimeException {
-
-    private static final long serialVersionUID = -6120698967144079642L;
-
-    public ClassNotPreparedException() {
-        super();
-    }
-
-    public ClassNotPreparedException(String s) {
-        super(s);
+@SuppressWarnings("serial")
+public class PopupMenuEvent extends EventObject {
+    /**
+     * Constructs a PopupMenuEvent object.
+     *
+     * @param source  the Object that originated the event
+     *                (typically <code>this</code>)
+     */
+    public PopupMenuEvent(Object source) {
+        super(source);
     }
 }
