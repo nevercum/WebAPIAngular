@@ -288,4 +288,108 @@ header extends java/lang/Object implements com/sun/jdi/event/LocatableEvent flag
 class name com/sun/jdi/event/LocatableEvent
 header extends java/lang/Object implements com/sun/jdi/event/Event,com/sun/jdi/Locatable flags 601
 
-class name com/sun/jdi/event/Met
+class name com/sun/jdi/event/MethodEntryEvent
+header extends java/lang/Object implements com/sun/jdi/event/LocatableEvent flags 601
+
+class name com/sun/jdi/event/MethodExitEvent
+header extends java/lang/Object implements com/sun/jdi/event/LocatableEvent flags 601
+
+class name com/sun/jdi/event/ModificationWatchpointEvent
+header extends java/lang/Object implements com/sun/jdi/event/WatchpointEvent flags 601
+
+class name com/sun/jdi/event/MonitorContendedEnterEvent
+header extends java/lang/Object implements com/sun/jdi/event/LocatableEvent flags 601
+
+class name com/sun/jdi/event/MonitorContendedEnteredEvent
+header extends java/lang/Object implements com/sun/jdi/event/LocatableEvent flags 601
+
+class name com/sun/jdi/event/MonitorWaitEvent
+header extends java/lang/Object implements com/sun/jdi/event/LocatableEvent flags 601
+
+class name com/sun/jdi/event/MonitorWaitedEvent
+header extends java/lang/Object implements com/sun/jdi/event/LocatableEvent flags 601
+
+class name com/sun/jdi/event/StepEvent
+header extends java/lang/Object implements com/sun/jdi/event/LocatableEvent flags 601
+
+class name com/sun/jdi/event/ThreadDeathEvent
+header extends java/lang/Object implements com/sun/jdi/event/Event flags 601
+
+class name com/sun/jdi/event/ThreadStartEvent
+header extends java/lang/Object implements com/sun/jdi/event/Event flags 601
+
+class name com/sun/jdi/event/VMDeathEvent
+header extends java/lang/Object implements com/sun/jdi/event/Event flags 601
+
+class name com/sun/jdi/event/VMDisconnectEvent
+header extends java/lang/Object implements com/sun/jdi/event/Event flags 601
+
+class name com/sun/jdi/event/VMStartEvent
+header extends java/lang/Object implements com/sun/jdi/event/Event flags 601
+
+class name com/sun/jdi/event/WatchpointEvent
+header extends java/lang/Object implements com/sun/jdi/event/LocatableEvent flags 601
+
+class name com/sun/jdi/request/AccessWatchpointRequest
+header extends java/lang/Object implements com/sun/jdi/request/WatchpointRequest flags 601
+
+class name com/sun/jdi/request/BreakpointRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest,com/sun/jdi/Locatable flags 601
+
+class name com/sun/jdi/request/ClassPrepareRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/ClassUnloadRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/DuplicateRequestException
+header extends java/lang/RuntimeException flags 21
+
+class name com/sun/jdi/request/EventRequest
+header extends java/lang/Object implements com/sun/jdi/Mirror flags 601
+
+class name com/sun/jdi/request/EventRequestManager
+header extends java/lang/Object implements com/sun/jdi/Mirror flags 601
+
+class name com/sun/jdi/request/ExceptionRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/InvalidRequestStateException
+header extends java/lang/RuntimeException flags 21
+
+class name com/sun/jdi/request/MethodEntryRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/MethodExitRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/ModificationWatchpointRequest
+header extends java/lang/Object implements com/sun/jdi/request/WatchpointRequest flags 601
+
+class name com/sun/jdi/request/MonitorContendedEnterRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/MonitorContendedEnteredRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/MonitorWaitRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/MonitorWaitedRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/StepRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/ThreadDeathRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/ThreadStartRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/VMDeathRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
+class name com/sun/jdi/request/WatchpointRequest
+header extends java/lang/Object implements com/sun/jdi/request/EventRequest flags 601
+
