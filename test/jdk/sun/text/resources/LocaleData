@@ -12,4 +12,208 @@ LocaleNames//es=Spanish
 LocaleNames/fr/fr=fran\u00e7ais
 
 # bug #4055602, 4290801, 8013836
-CurrencyNames/pt_BR
+CurrencyNames/pt_BR/BRL=R$
+FormatData/pt_BR/NumberPatterns/0=#,##0.###;-#,##0.###
+# FormatData/pt_BR/NumberPatterns/1=R$ #,##0.##;-R$ #,##0.## # Changed; see bug 4122840
+FormatData/pt_BR/NumberPatterns/2=#,##0%
+FormatData/pt_BR/TimePatterns/0=HH'h'mm'min'ss's' z
+FormatData/pt_BR/TimePatterns/1=H'h'm'min's's' z
+FormatData/pt_BR/TimePatterns/2=HH:mm:ss
+FormatData/pt_BR/TimePatterns/3=HH:mm
+FormatData/pt_BR/DatePatterns/0=EEEE, d' de 'MMMM' de 'yyyy
+FormatData/pt_BR/DatePatterns/1=d' de 'MMMM' de 'yyyy
+FormatData/pt_BR/DatePatterns/2=dd/MM/yyyy
+FormatData/pt_BR/DatePatterns/3=dd/MM/yy
+FormatData/pt_BR/DateTimePatterns/0={1} {0}
+FormatData/pt_BR/NumberElements/0=,
+FormatData/pt_BR/NumberElements/1=.
+FormatData/pt_BR/NumberElements/2=;
+FormatData/pt_BR/DayAbbreviations/0=Dom
+FormatData/pt_BR/DayAbbreviations/1=Seg
+FormatData/pt_BR/DayAbbreviations/2=Ter
+FormatData/pt_BR/DayNames/0=Domingo
+FormatData/pt_BR/DayNames/1=Segunda-feira
+FormatData/pt_BR/DayNames/2=Ter\u00e7a-feira
+CalendarData/pt_BR/firstDayOfWeek=1
+CalendarData/pt_BR/minimalDaysInFirstWeek=1
+FormatData/pt_BR/MonthNames/0=Janeiro
+FormatData/pt_BR/MonthNames/1=Fevereiro
+FormatData/pt_BR/MonthNames/2=Mar\u00e7o
+LocaleNames/pt_BR/pt=portugu\u00eas
+LocaleNames/pt_BR/PT=Portugal
+LocaleNames/pt_BR/BR=Brasil
+
+# bug 6414459: Wrong first day of week for Croatian locale
+CalendarData/hr/firstDayOfWeek=2
+
+# bug #4066550
+FormatData/ja/Eras/0=\u7d00\u5143\u524d
+FormatData/ja/Eras/1=\u897f\u66a6
+
+# bug #4067619
+LocaleNames//LT=Lithuania
+LocaleNames/en/LT=Lithuania
+
+# bug #4068012, 4290801, 4942982
+CurrencyNames/ru_RU/RUB=\u0440\u0443\u0431.
+FormatData/ru_RU/NumberPatterns/0=#,##0.###;-#,##0.###
+# FormatData/ru_RU/NumberPatterns/1=#,##0.##'\u0440.';-#,##0.##'\u0440.' # Changed; see bug 4122840
+FormatData/ru_RU/NumberPatterns/2=#,##0%
+
+# bug #4070174
+FormatData/en_CA/NumberElements/1=,
+FormatData/en_CA/NumberElements/2=;
+
+# bug #4070452
+FormatData/de_DE/DatePatterns/3=dd.MM.yy
+
+# bugs #4070178, 4070450, 4070695, 4070725, 6386647
+FormatData/en_GB/TimePatterns/0=HH:mm:ss 'o''clock' z
+FormatData/en_GB/TimePatterns/1=HH:mm:ss z
+FormatData/en_GB/TimePatterns/2=HH:mm:ss
+FormatData/en_GB/TimePatterns/3=HH:mm
+FormatData/en_GB/DatePatterns/0=EEEE, d MMMM yyyy
+FormatData/en_GB/DatePatterns/1=dd MMMM yyyy
+FormatData/en_GB/DatePatterns/2=dd-MMM-yyyy
+FormatData/en_GB/DatePatterns/3=dd/MM/yy
+FormatData/en_GB/DateTimePatterns/0={1} {0}
+
+# bug #4070795
+FormatData/fr_FR/DatePatterns/0=EEEE d MMMM yyyy
+
+# bug #4071003
+# FormatData/fr_CA/DatePatterns/0=d MMMM, yyyy # See bug 4103861
+# FormatData/fr_CA/DatePatterns/1=d MMMM, yyyy # See bug 4103861
+
+# bug #4071183
+# FormatData/it_IT/NumberPatterns/1='L.' #,##0;-'L.' #,##0 # Changed; see bug 4122840
+
+# bug #4071782
+FormatData/ru/DayAbbreviations/0=\u0412\u0441
+FormatData/ru/DayAbbreviations/1=\u041f\u043d
+FormatData/ru/DayAbbreviations/2=\u0412\u0442
+FormatData/ru/DayAbbreviations/3=\u0421\u0440
+FormatData/ru/DayAbbreviations/4=\u0427\u0442
+FormatData/ru/DayAbbreviations/5=\u041f\u0442
+FormatData/ru/DayAbbreviations/6=\u0421\u0431
+
+# bug #4072013 - obsoleted by 6386647: Full date format in DateFormat does not include day of the week for UK locale
+#FormatData/en_GB/DatePatterns/0=dd MMMM yyyy
+
+# bug #4072388
+LocaleNames/cs/cs=\u010de\u0161tina
+
+# bug #4072773
+FormatData/ja/DatePatterns/2=yyyy/MM/dd
+FormatData/ja/DatePatterns/3=yy/MM/dd
+
+# bug #4075404, 4290801, 4942982
+CurrencyNames/ru_RU/RUB=\u0440\u0443\u0431.
+FormatData/ru_RU/TimePatterns/0=H:mm:ss z
+FormatData/ru_RU/TimePatterns/1=H:mm:ss z
+FormatData/ru_RU/TimePatterns/2=H:mm:ss
+FormatData/ru_RU/TimePatterns/3=H:mm
+FormatData/ru_RU/DatePatterns/0=d MMMM yyyy '\u0433.'
+FormatData/ru_RU/DatePatterns/1=d MMMM yyyy '\u0433.'
+FormatData/ru_RU/DatePatterns/2=dd.MM.yyyy
+FormatData/ru_RU/DatePatterns/3=dd.MM.yy
+FormatData/ru_RU/DateTimePatterns/0={1} {0}
+
+# bug #4084356, 4290801
+CurrencyNames/pl_PL/PLN=z\u0142
+FormatData/pl_PL/NumberPatterns/0=#,##0.###;-#,##0.###
+# FormatData/pl_PL/NumberPatterns/1=#,##0.## z\u0142;-#,##0.## z\u0142 # Changed; see bug 4122840
+FormatData/pl_PL/NumberPatterns/2=#,##0%
+FormatData/pl_PL/DayNames/0=niedziela
+FormatData/pl_PL/DayNames/1=poniedzia\u0142ek
+FormatData/pl_PL/DayNames/2=wtorek
+FormatData/pl_PL/DayNames/3=\u015broda
+FormatData/pl_PL/DayNames/4=czwartek
+FormatData/pl_PL/DayNames/5=pi\u0105tek
+FormatData/pl_PL/DayNames/6=sobota
+FormatData/pl_PL/standalone.MonthNames/0=stycze\u0144
+FormatData/pl_PL/standalone.MonthNames/1=luty
+FormatData/pl_PL/standalone.MonthNames/2=marzec
+FormatData/pl_PL/standalone.MonthNames/3=kwiecie\u0144
+FormatData/pl_PL/standalone.MonthNames/4=maj
+FormatData/pl_PL/standalone.MonthNames/5=czerwiec
+FormatData/pl_PL/standalone.MonthNames/6=lipiec
+FormatData/pl_PL/standalone.MonthNames/7=sierpie\u0144
+FormatData/pl_PL/standalone.MonthNames/8=wrzesie\u0144
+FormatData/pl_PL/standalone.MonthNames/9=pa\u017adziernik
+FormatData/pl_PL/standalone.MonthNames/10=listopad
+FormatData/pl_PL/standalone.MonthNames/11=grudzie\u0144
+FormatData/pl_PL/standalone.MonthNames/12=
+LocaleNames/pl_PL/pl=polski
+FormatData/pl_PL/TimePatterns/0=HH:mm:ss z
+FormatData/pl_PL/TimePatterns/1=HH:mm:ss z
+FormatData/pl_PL/TimePatterns/2=HH:mm:ss
+FormatData/pl_PL/TimePatterns/3=HH:mm
+FormatData/pl_PL/DatePatterns/0=EEEE, d MMMM yyyy
+FormatData/pl_PL/DatePatterns/1=d MMMM yyyy
+FormatData/pl_PL/DatePatterns/2=yyyy-MM-dd
+# changed for bug 4984277
+FormatData/pl_PL/DatePatterns/3=dd.MM.yy
+FormatData/pl_PL/DateTimePatterns/0={1} {0}
+FormatData/pl_PL/NumberElements/0=,
+FormatData/pl_PL/NumberElements/1=\u00a0
+FormatData/pl_PL/NumberElements/2=;
+FormatData/pl_PL/NumberElements/3=%
+FormatData/pl_PL/NumberElements/4=0
+FormatData/pl_PL/NumberElements/5=#
+FormatData/pl_PL/NumberElements/6=-
+FormatData/pl_PL/NumberElements/7=E
+FormatData/pl_PL/NumberElements/8=\u2030
+FormatData/pl_PL/NumberElements/9=\u221e
+FormatData/pl_PL/NumberElements/10=\ufffd
+FormatData/pl_PL/Eras/0=p.n.e.
+FormatData/pl_PL/Eras/1=n.e.
+LocaleNames/pl_PL/PL=Polska
+FormatData/pl_PL/DayAbbreviations/0=N
+FormatData/pl_PL/DayAbbreviations/1=Pn
+FormatData/pl_PL/DayAbbreviations/2=Wt
+FormatData/pl_PL/DayAbbreviations/3=\u015ar
+FormatData/pl_PL/DayAbbreviations/4=Cz
+FormatData/pl_PL/DayAbbreviations/5=Pt
+FormatData/pl_PL/DayAbbreviations/6=So
+FormatData/pl_PL/MonthAbbreviations/0=sty
+FormatData/pl_PL/MonthAbbreviations/1=lut
+FormatData/pl_PL/MonthAbbreviations/2=mar
+FormatData/pl_PL/MonthAbbreviations/3=kwi
+FormatData/pl_PL/MonthAbbreviations/4=maj
+FormatData/pl_PL/MonthAbbreviations/5=cze
+FormatData/pl_PL/MonthAbbreviations/6=lip
+FormatData/pl_PL/MonthAbbreviations/7=sie
+FormatData/pl_PL/MonthAbbreviations/8=wrz
+FormatData/pl_PL/MonthAbbreviations/9=pa\u017a
+FormatData/pl_PL/MonthAbbreviations/10=lis
+FormatData/pl_PL/MonthAbbreviations/11=gru
+FormatData/pl_PL/MonthAbbreviations/12=
+CalendarData/pl_PL/firstDayOfWeek=2
+CalendarData/pl_PL/minimalDaysInFirstWeek=4
+FormatData/pl_PL/AmPmMarkers/0=AM
+FormatData/pl_PL/AmPmMarkers/1=PM
+
+# bug #4087238, 4290801
+# bug 4156708 - changed currency symbol from 00a5 to ffe5
+CurrencyNames/ja_JP/JPY=\uffe5
+# FormatData/ja_JP/NumberPatterns/1=\u00a5#,##0.00 # Changed; see bug 4122840
+
+# bug #4092361
+FormatData/en_US/TimePatterns/0=h:mm:ss a z
+FormatData/en_US/TimePatterns/1=h:mm:ss a z
+FormatData/en_US/TimePatterns/2=h:mm:ss a
+FormatData/en_US/TimePatterns/3=h:mm a
+FormatData/en_US/DatePatterns/0=EEEE, MMMM d, yyyy
+FormatData/en_US/DatePatterns/1=MMMM d, yyyy
+FormatData/en_US/DatePatterns/2=MMM d, yyyy
+FormatData/en_US/DatePatterns/3=M/d/yy
+FormatData/en_US/DateTimePatterns/0={1} {0}
+
+# bug #4094033, 4290801, 4942982
+CurrencyNames/ru_RU/RUB=\u0440\u0443\u0431.
+FormatData/ru_RU/NumberPatterns/0=#,##0.###;-#,##0.###
+# FormatData/ru_RU/NumberPatterns/1=#,##0.##'\u0440.';-#,##0.##'\u0440.' # Changed; see bug 4122840
+FormatData/ru_RU/NumberPatterns/2=#,##0%
+FormatData/ru_RU/MonthNames/0=\u044f\u043d\u0432\u0430\u0440\u044f
+FormatDat
