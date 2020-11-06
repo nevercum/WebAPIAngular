@@ -1,0 +1,15 @@
+#
+#
+#
+# List of locale data for locale-data test
+#
+
+# bug #4052473
+LocaleNames/en/es=Spanish
+LocaleNames//es=Spanish
+
+# bug #4052679
+LocaleNames/fr/fr=fran\u00e7ais
+
+# bug #4055602, 4290801, 8013836
+CurrencyNames/pt_BR
