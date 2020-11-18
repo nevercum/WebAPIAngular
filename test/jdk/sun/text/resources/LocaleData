@@ -2392,4 +2392,195 @@ FormatData/fr_FR/NumberPatterns/1=#,##0.00 \u00a4;-#,##0.00 \u00a4
 FormatData/it_IT/NumberPatterns/1=\u00a4 #,##0.00;-\u00a4 #,##0.00
 #FormatData/ja_JP/NumberPatterns/1=\u00a4#,##0.00  #see bug 4175306
 FormatData/ko_KR/NumberPatterns/1=\u00a4#,##0;-\u00a4#,##0
-FormatData
+FormatData/pl_PL/NumberPatterns/1=#,##0.## \u00a4;-#,##0.## \u00a4
+FormatData/pt_BR/NumberPatterns/1=\u00a4 #,##0.00;-\u00a4 #,##0.00
+#Changed; see 4936845
+FormatData/ru_RU/NumberPatterns/1=#,##0.## \u00a4;-#,##0.## \u00a4
+FormatData/uk_UA/NumberPatterns/1=#,##0.## \u00a4;-#,##0.## \u00a4
+
+# bug #4122468 # Use common country names
+LocaleNames//CI=C\u00f4te d\u2019Ivoire
+LocaleNames//LY=Libya
+LocaleNames//RU=Russia
+LocaleNames//VN=Vietnam
+
+# bug #4139860
+FormatData/cs/DatePatterns/0=EEEE, d. MMMM yyyy
+FormatData/cs/DatePatterns/1=d. MMMM yyyy
+FormatData/cs/DatePatterns/2=d.M.yyyy
+FormatData/cs/DatePatterns/3=d.M.yy
+FormatData/cs/NumberElements/1=\u00a0
+FormatData/cs_CZ/NumberPatterns/0=#,##0.##;-#,##0.##
+FormatData/cs_CZ/NumberPatterns/1=#,##0.## \u00a4;-#,##0.## \u00a4
+FormatData/cs_CZ/NumberPatterns/2=#,##0%
+
+#bug #4135752
+FormatData/th_TH/NumberPatterns/1=\u00a4#,##0.00;\u00a4-#,##0.00
+CurrencyNames/th_TH/THB=\u0e3f
+
+#bug #4153698
+# TimeZoneNames/zh_HK/zoneStrings/0/1=Hong Kong Standard Time # changed, see bug 4261506
+# TimeZoneNames/zh_HK/zoneStrings/0/2=HKST # changed, see bug 4261506
+LocaleNames/zh/HK=\u4e2d\u56fd\u9999\u6e2f\u7279\u522b\u884c\u653f\u533a
+FormatData/zh_HK/MonthNames/0=\u4e00\u6708
+FormatData/zh_HK/MonthNames/1=\u4e8c\u6708
+FormatData/zh_HK/MonthNames/2=\u4e09\u6708
+FormatData/zh_HK/MonthNames/3=\u56db\u6708
+FormatData/zh_HK/MonthAbbreviations/0=1\u6708
+FormatData/zh_HK/MonthAbbreviations/1=2\u6708
+FormatData/zh_HK/MonthAbbreviations/2=3\u6708
+FormatData/zh_HK/MonthAbbreviations/3=4\u6708
+FormatData/zh_HK/DayNames/0=\u661f\u671f\u65e5
+FormatData/zh_HK/DayNames/1=\u661f\u671f\u4e00
+FormatData/zh_HK/DayNames/2=\u661f\u671f\u4e8c
+FormatData/zh_HK/DayAbbreviations/0=\u65e5
+FormatData/zh_HK/DayAbbreviations/1=\u4e00
+FormatData/zh_HK/DayAbbreviations/2=\u4e8c
+FormatData/zh_HK/NumberPatterns/1=\u00a4#,##0.00;(\u00a4#,##0.00)
+CurrencyNames/zh_HK/HKD=HK$
+FormatData/zh_HK/TimePatterns/0=ahh'\u6642'mm'\u5206'ss'\u79d2' z
+FormatData/zh_HK/TimePatterns/1=ahh'\u6642'mm'\u5206'ss'\u79d2'
+FormatData/zh_HK/TimePatterns/2=ahh:mm:ss
+FormatData/zh_HK/TimePatterns/3=ah:mm
+FormatData/zh_HK/DatePatterns/0=yyyy'\u5e74'MM'\u6708'dd'\u65e5' EEEE
+FormatData/zh_HK/DatePatterns/1=yyyy'\u5e74'MM'\u6708'dd'\u65e5' EEEE
+FormatData/zh_HK/DatePatterns/2=yyyy'\u5e74'M'\u6708'd'\u65e5'
+FormatData/zh_HK/DatePatterns/3=yy'\u5e74'M'\u6708'd'\u65e5'
+FormatData/zh_HK/DateTimePatterns/0={1} {0}
+
+#bug #4149569
+LocaleNames/tr/TR=T\u00fcrkiye
+
+#bug 4175306
+FormatData/es_ES/NumberPatterns/1=#,##0 \u00a4;-#,##0 \u00a4
+FormatData/ja_JP/NumberPatterns/1=\u00a4#,##0;-\u00a4#,##0
+
+#bug #4215747 - commented out by mfang due to 4900884
+#FormatData/ko/TimePatterns/0=a h'\uc2dc' m'\ubd84' s'\ucd08' z
+#FormatData/ko/TimePatterns/1=a h'\uc2dc' m'\ubd84' s'\ucd08'
+
+#bug 4900884
+FormatData/ko/TimePatterns/0=a h'\uc2dc' mm'\ubd84' ss'\ucd08' z
+FormatData/ko/TimePatterns/1=a h'\uc2dc' mm'\ubd84' ss'\ucd08'
+FormatData/ko/TimePatterns/2=a h:mm:ss
+FormatData/ko/TimePatterns/3=a h:mm
+
+#bug 4209960 Incorrect language display names
+#Updated for bug 4819436 Update language and country data for Locale class
+LocaleNames//fo=Faroese
+LocaleNames//iu=Inuktitut
+LocaleNames//sg=Sango
+LocaleNames//si=Sinhala
+
+#bug 4331446 Localized country and language names for major locales (excerpt only)
+LocaleNames/es/SV=El Salvador
+
+#bug 4261506 (excerpt only)
+TimeZoneNames/en_CA/CTT/1=China Standard Time
+TimeZoneNames/en_CA/CTT/2=CST
+
+#bug nobugid, 4290801, 4942982
+CurrencyNames/ru_RU/RUB=\u0440\u0443\u0431.
+
+#bug 4826794
+LocaleNames/ru_RU/MM=\u041c\u044c\u044f\u043d\u043c\u0430 (\u0411\u0438\u0440\u043c\u0430)
+
+#bug 4518811
+CalendarData/ca_ES/minimalDaysInFirstWeek=4
+CalendarData/cs_CZ/minimalDaysInFirstWeek=4
+CalendarData/da_DK/minimalDaysInFirstWeek=4
+CalendarData/de_AT/minimalDaysInFirstWeek=4
+CalendarData/el_GR/minimalDaysInFirstWeek=4
+CalendarData/en_IE/minimalDaysInFirstWeek=4
+CalendarData/es_ES/minimalDaysInFirstWeek=4
+CalendarData/et_EE/minimalDaysInFirstWeek=4
+CalendarData/fi_FI/minimalDaysInFirstWeek=4
+CalendarData/is_IS/minimalDaysInFirstWeek=4
+CalendarData/lt_LT/minimalDaysInFirstWeek=4
+CalendarData/pl_PL/minimalDaysInFirstWeek=4
+CalendarData/pt_PT/minimalDaysInFirstWeek=4
+
+#bug 4945388
+CurrencyNames/be_BY/BYR=\u0420\u0443\u0431
+CurrencyNames/bg_BG/BGN=\u043b\u0432.
+
+#bug 4794068
+FormatData/ca_ES/NumberPatterns/0=#,##0.###;-#,##0.###
+
+#bug 5032580
+FormatData/sk/DayNames/0=Nede\u013ea
+FormatData/sk/DayAbbreviations/5=Pi
+
+#bug 5074431
+FormatData/bg/DayNames/4=\u0427\u0435\u0442\u0432\u044a\u0440\u0442\u044a\u043a
+
+#bug 2121133
+FormatData/sv/NumberElements/1=\u00a0
+
+#bug 6208712
+LocaleNames/zh/tw=\u5951\u7ef4\u8bed
+
+#bug 6277020
+CalendarData/ca_ES/firstDayOfWeek=2
+
+#bug 6277696
+#zh_SG, id, id_ID, en_MT, mt_MT, en_PH, el, el_CY, ms, ms_MY
+#zh_SG
+FormatData/zh_SG/DayAbbreviations/0=\u5468\u65e5
+FormatData/zh_SG/DayAbbreviations/1=\u5468\u4e00
+FormatData/zh_SG/DayAbbreviations/2=\u5468\u4e8c
+FormatData/zh_SG/DayAbbreviations/3=\u5468\u4e09
+FormatData/zh_SG/DayAbbreviations/4=\u5468\u56db
+FormatData/zh_SG/DayAbbreviations/5=\u5468\u4e94
+FormatData/zh_SG/DayAbbreviations/6=\u5468\u516d
+FormatData/zh_SG/NumberPatterns/0=#,##0.###
+FormatData/zh_SG/NumberPatterns/1=\u00a4#,##0.00
+FormatData/zh_SG/NumberPatterns/2=#,##0%
+CurrencyNames/zh_SG/SGD=S$
+FormatData/zh_SG/TimePatterns/0=a hh:mm:ss
+FormatData/zh_SG/TimePatterns/1=a hh:mm:ss
+FormatData/zh_SG/TimePatterns/2=a hh:mm
+FormatData/zh_SG/TimePatterns/3=a hh:mm
+FormatData/zh_SG/DatePatterns/0=dd MMMM yyyy
+FormatData/zh_SG/DatePatterns/1=dd MMM yyyy
+FormatData/zh_SG/DatePatterns/2=dd-MMM-yy
+FormatData/zh_SG/DatePatterns/3=dd/MM/yy
+FormatData/zh_SG/DateTimePatterns/0={1} {0}
+LocaleNames/zh_SG/ae=\u963f\u7ef4\u65af\u5854\u8bed
+LocaleNames/zh_SG/ak=\u963f\u80af\u8bed
+LocaleNames/zh_SG/cr=\u514b\u91cc\u65cf\u8bed
+LocaleNames/zh_SG/cu=\u6559\u4f1a\u65af\u62c9\u592b\u8bed
+LocaleNames/zh_SG/ff=\u5bcc\u62c9\u8bed
+LocaleNames/zh_SG/gv=\u9a6c\u6069\u8bed
+LocaleNames/zh_SG/ig=\u4f0a\u535a\u8bed
+LocaleNames/zh_SG/ii=\u56db\u5ddd\u5f5d\u8bed
+LocaleNames/zh_SG/ko=\u97e9\u8bed
+LocaleNames/zh_SG/kw=\u5eb7\u6c83\u5c14\u8bed
+LocaleNames/zh_SG/lg=\u5362\u5e72\u8fbe\u8bed
+LocaleNames/zh_SG/li=\u6797\u5821\u8bed
+LocaleNames/zh_SG/lu=\u9c81\u5df4\u52a0\u4e39\u52a0\u8bed
+LocaleNames/zh_SG/nd=\u5317\u6069\u5fb7\u8d1d\u52d2\u8bed
+LocaleNames/zh_SG/nr=\u5357\u6069\u5fb7\u8d1d\u52d2\u8bed
+LocaleNames/zh_SG/sc=\u8428\u4e01\u8bed
+LocaleNames/zh_SG/ty=\u5854\u5e0c\u63d0\u8bed
+LocaleNames/zh_SG/AS=\u7f8e\u5c5e\u8428\u6469\u4e9a
+LocaleNames/zh_SG/AU=\u6fb3\u5927\u5229\u4e9a
+LocaleNames/zh_SG/BD=\u5b5f\u52a0\u62c9\u56fd
+LocaleNames/zh_SG/BV=\u5e03\u97e6\u5c9b
+LocaleNames/zh_SG/BZ=\u4f2f\u5229\u5179
+LocaleNames/zh_SG/CZ=\u6377\u514b
+LocaleNames/zh_SG/ER=\u5384\u7acb\u7279\u91cc\u4e9a
+LocaleNames/zh_SG/FK=\u798f\u514b\u5170\u7fa4\u5c9b
+LocaleNames/zh_SG/FM=\u5bc6\u514b\u7f57\u5c3c\u897f\u4e9a
+LocaleNames/zh_SG/GS=\u5357\u4e54\u6cbb\u4e9a\u548c\u5357\u6851\u5a01\u5947\u7fa4\u5c9b
+LocaleNames/zh_SG/GW=\u51e0\u5185\u4e9a\u6bd4\u7ecd
+LocaleNames/zh_SG/HK=\u4e2d\u56fd\u9999\u6e2f\u7279\u522b\u884c\u653f\u533a
+LocaleNames/zh_SG/HM=\u8d6b\u5fb7\u5c9b\u548c\u9ea6\u514b\u5510\u7eb3\u7fa4\u5c9b
+LocaleNames/zh_SG/ID=\u5370\u5ea6\u5c3c\u897f\u4e9a
+LocaleNames/zh_SG/KR=\u97e9\u56fd
+LocaleNames/zh_SG/LA=\u8001\u631d
+LocaleNames/zh_SG/MK=\u5317\u9a6c\u5176\u987f
+LocaleNames/zh_SG/MO=\u4e2d\u56fd\u6fb3\u95e8\u7279\u522b\u884c\u653f\u533a
+LocaleNames/zh_SG/MP=\u5317\u9a6c\u91cc\u4e9a\u7eb3\u7fa4\u5c9b
+LocaleNames/zh_SG/NU=\u7ebd\u57c3
+LocaleNames/zh_SG/NZ=\
