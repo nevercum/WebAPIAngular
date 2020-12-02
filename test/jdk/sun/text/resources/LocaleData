@@ -5422,4 +5422,272 @@ FormatData/sr_BA/DayNames/3=\u0441\u0440\u0438\u0458\u0435\u0434\u0430
 FormatData/sr_BA/DayAbbreviations/3=\u0441\u0440\u0438
 FormatData/sr_BA/TimePatterns/0=HH '\u0447\u0430\u0441\u043e\u0432\u0430', mm '\u043c\u0438\u043d\u0443\u0442\u0430', ss' \u0441\u0435\u043a\u0443\u043d\u0434\u0438'
 FormatData/sr_BA/TimePatterns/1=HH.mm.ss z
-FormatD
+FormatData/sr_BA/TimePatterns/2=HH:mm:ss
+FormatData/sr_BA/TimePatterns/3=HH:mm
+FormatData/sr_BA/DatePatterns/0=EEEE, dd. MMMM yyyy.
+FormatData/sr_BA/DatePatterns/1=dd. MMMM yyyy.
+FormatData/sr_BA/DatePatterns/2=yyyy-MM-dd
+FormatData/sr_BA/DatePatterns/3=yy-MM-dd
+FormatData/sr_BA/DateTimePatterns/0={1} {0}
+LocaleNames/pt_BR/ce=checheno
+LocaleNames/pt_BR/ik=inupiaque
+LocaleNames/pt_BR/jv=javan\u00eas
+LocaleNames/pt_BR/nd=ndebele do norte
+LocaleNames/pt_BR/nr=ndebele do sul
+LocaleNames/pt_BR/st=soto do sul
+LocaleNames/pt_BR/AX=Ilhas Aland
+LocaleNames/pt_BR/BA=B\u00f3snia e Herzegovina
+LocaleNames/pt_BR/BH=Barein
+LocaleNames/pt_BR/KP=Coreia do Norte
+LocaleNames/pt_BR/MK=Maced\u00f4nia do Norte
+LocaleNames/pt_BR/ZW=Zimb\u00e1bue
+LocaleNames/pt_PT/ee=ewe
+LocaleNames/pt_PT/fo=fero\u00eas
+LocaleNames/pt_PT/gl=galego
+LocaleNames/pt_PT/ha=hau\u00e7\u00e1
+LocaleNames/pt_PT/hy=arm\u00eanio
+LocaleNames/pt_PT/ig=igbo
+LocaleNames/pt_PT/ki=quicuio
+LocaleNames/pt_PT/kl=groenland\u00eas
+LocaleNames/pt_PT/km=khmer
+LocaleNames/pt_PT/mh=marshal\u00eas
+LocaleNames/pt_PT/mk=maced\u00f4nio
+LocaleNames/pt_PT/nr=ndebele do sul
+LocaleNames/pt_PT/os=osseto
+LocaleNames/pt_PT/st=soto do sul
+LocaleNames/pt_PT/ta=t\u00e2mil
+LocaleNames/pt_PT/AI=Anguilla
+LocaleNames/pt_PT/AX=\u00c5land Islands
+
+# JE, GG, IM (6544471)
+LocaleNames//JE=Jersey
+LocaleNames//GG=Guernsey
+LocaleNames//IM=Isle of Man
+
+# bugs 6497154
+CalendarData/sk/firstDayOfWeek=2
+CalendarData/sk/minimalDaysInFirstWeek=4
+
+# bug 6558856
+LocaleNames/fi/da=tanska
+LocaleNames/fi/DK=Tanska
+LocaleNames/fi_FI/da=tanska
+LocaleNames/fi_FI/DK=Tanska
+
+# bug 6481177
+FormatData/nl/Eras/0=v. Chr.
+FormatData/nl/Eras/1=n. Chr.
+
+# bug 6379214
+LocaleNames/da/da=dansk
+
+# bug 6485516
+LocaleNames/fr/GF=Guyane fran\u00e7aise
+
+# bug 6486607
+LocaleNames/fr/GY=Guyana
+
+# bug 4225362
+FormatData/fr/DateTimePatternChars=GaMjkHmsSEDFwWxhKzZ
+FormatData/fr_BE/DateTimePatternChars=GaMjkHmsSEDFwWxhKzZ
+FormatData/fr_CA/DateTimePatternChars=GaMjkHmsSEDFwWxhKzZ
+FormatData/fr_CH/DateTimePatternChars=GaMjkHmsSEDFwWxhKzZ
+FormatData/fr_FR/DateTimePatternChars=GaMjkHmsSEDFwWxhKzZ
+FormatData/fr_LU/DateTimePatternChars=GaMjkHmsSEDFwWxhKzZ
+
+# bug 6547501
+FormatData/fr/NumberPatterns/2=#,##0 %
+# following two lines are also for bug 4494727
+FormatData/fr_CA/NumberPatterns/2=#,##0 %
+FormatData/fr_CH/NumberPatterns/2=#,##0 %
+
+# bug 4494727
+FormatData/de_CH/NumberPatterns/2=#,##0 %
+FormatData/tr/NumberPatterns/2=% #,##0
+# added to verify propper inheritance
+FormatData/tr_TR/NumberPatterns/2=% #,##0
+
+# bug 6533691
+LocaleNames/de/ME=Montenegro
+LocaleNames/de/RS=Serbien
+LocaleNames/es/ME=Montenegro
+LocaleNames/es/RS=Serbia
+LocaleNames/fr/ME=Mont\u00e9n\u00e9gro
+LocaleNames/fr/RS=Serbie
+LocaleNames/it/ME=Montenegro
+LocaleNames/it/RS=Serbia
+LocaleNames/ja/ME=\u30e2\u30f3\u30c6\u30cd\u30b0\u30ed
+LocaleNames/ja/RS=\u30bb\u30eb\u30d3\u30a2
+LocaleNames/ko/ME=\ubaac\ud14c\ub124\uadf8\ub85c
+LocaleNames/ko/RS=\uc138\ub974\ube44\uc544
+LocaleNames/sv/ME=Montenegro
+LocaleNames/sv/RS=Serbien
+LocaleNames/zh/ME=\u9ed1\u5c71
+LocaleNames/zh/RS=\u585e\u5c14\u7ef4\u4e9a
+LocaleNames/zh_TW/ME=\u8499\u7279\u5167\u54e5\u7f85
+LocaleNames/zh_TW/RS=\u585e\u723e\u7dad\u4e9e
+
+# bug 6531591
+CurrencyNames/ar_SD/SDD=\u062f.\u0633.\u200f
+CurrencyNames/ar_SD/SDG=\u062c.\u0633.\u200f
+
+# bug 6531593
+FormatData/is_IS/NumberPatterns/1=#,##0. \u00a4;-#,##0. \u00a4
+
+# bug 6509039
+FormatData/sv/AmPmMarkers/0=fm
+FormatData/sv/AmPmMarkers/1=em
+
+# JE, GG, IM (6544471)
+LocaleNames//JE=Jersey
+LocaleNames//GG=Guernsey
+LocaleNames//IM=Isle of Man
+
+# BL, MF (6627549)
+LocaleNames//BL=St. Barth\u00e9lemy
+LocaleNames//MF=St. Martin
+
+# bug 6609737
+FormatData/de/TimePatterns/0=HH:mm' Uhr 'z
+TimeZoneNames/de/CET/1=Mitteleurop\u00e4ische Zeit
+TimeZoneNames/de/CET/2=MEZ
+TimeZoneNames/de/CET/3=Mitteleurop\u00e4ische Sommerzeit
+TimeZoneNames/de/CET/4=MESZ
+TimeZoneNames/de/EET/2=OEZ
+TimeZoneNames/de/EET/4=OESZ
+TimeZoneNames/de/WET/2=WEZ
+TimeZoneNames/de/WET/4=WESZ
+
+# bug 6610748
+FormatData/fi/AmPmMarkers/0=ap.
+FormatData/fi/AmPmMarkers/1=ip.
+
+# bug 6507067
+TimeZoneNames/zh_TW/Asia\/Taipei/1=\u53f0\u7063\u6a19\u6e96\u6642\u9593
+TimeZoneNames/zh_TW/Asia\/Taipei/2=TST
+
+# bug 6645271
+FormatData/hr_HR/DatePatterns/2=dd.MM.yyyy.
+FormatData/hr_HR/DatePatterns/3=dd.MM.yy.
+
+# bug 6873931
+CurrencyNames/tr_TR/TRY=TL
+
+#bug 6450945
+CalendarData/ro/firstDayOfWeek=2
+CalendarData/ro/minimalDaysInFirstWeek=1
+FormatData/ro/DayNames/6=s\u00e2mb\u0103t\u0103
+
+#bug 6645268
+LocaleNames/fi/fr=ranska
+LocaleNames/fi/FR=Ranska
+LocaleNames/fi_FI/fr=ranska
+LocaleNames/fi_FI/FR=Ranska
+
+# bug 6646611, 6914413
+FormatData/be_BY/MonthNames/10=\u043b\u0456\u0441\u0442\u0430\u043f\u0430\u0434\u0430
+FormatData/be_BY/MonthAbbreviations/10=\u043b\u0456\u0441
+
+# bug 6645405
+FormatData/hu_HU/NumberPatterns/1=#,##0.## \u00a4;-#,##0.## \u00a4
+
+# bug 6650730
+FormatData/lt/NumberElements/1=\u00a0
+FormatData/lt/DatePatterns/2=yyyy-MM-dd
+
+#bug 6910489
+CalendarData/sl/firstDayOfWeek=2
+
+# bug 6573250
+CurrencyNames/en_CA/USD=US$
+
+# bug 6870908
+FormatData/et/MonthNames/0=jaanuar
+FormatData/et/MonthNames/1=veebruar
+FormatData/et/MonthNames/2=m\u00e4rts
+FormatData/et/MonthNames/3=aprill
+FormatData/et/MonthNames/4=mai
+FormatData/et/MonthNames/5=juuni
+FormatData/et/MonthNames/6=juuli
+FormatData/et/MonthNames/7=august
+FormatData/et/MonthNames/8=september
+FormatData/et/MonthNames/9=oktoober
+FormatData/et/MonthNames/10=november
+FormatData/et/MonthNames/11=detsember
+FormatData/et/MonthAbbreviations/0=jaan
+FormatData/et/MonthAbbreviations/1=veebr
+FormatData/et/MonthAbbreviations/2=m\u00e4rts
+FormatData/et/MonthAbbreviations/3=apr
+FormatData/et/MonthAbbreviations/4=mai
+FormatData/et/MonthAbbreviations/5=juuni
+FormatData/et/MonthAbbreviations/6=juuli
+FormatData/et/MonthAbbreviations/7=aug
+FormatData/et/MonthAbbreviations/8=sept
+FormatData/et/MonthAbbreviations/9=okt
+FormatData/et/MonthAbbreviations/10=nov
+FormatData/et/MonthAbbreviations/11=dets
+
+# bug 6585666
+LocaleNames/es/aa=afar
+LocaleNames/es/av=avar
+LocaleNames/es/az=azerbaiyano
+LocaleNames/es/ba=baskir
+LocaleNames/es/bh=bihari
+LocaleNames/es/bn=bengal\u00ed
+LocaleNames/es/cu=eslavo eclesi\u00e1stico
+LocaleNames/es/dz=dzongkha
+LocaleNames/es/eu=euskera
+LocaleNames/es/fa=persa
+LocaleNames/es/ff=fula
+LocaleNames/es/fj=fiyiano
+LocaleNames/es/fo=fero\u00e9s
+LocaleNames/es/fy=fris\u00f3n occidental
+LocaleNames/es/gu=guyarat\u00ed
+LocaleNames/es/gv=man\u00e9s
+LocaleNames/es/hi=hindi
+LocaleNames/es/ho=hiri motu
+LocaleNames/es/ie=interlingue
+LocaleNames/es/ig=igbo
+LocaleNames/es/ii=yi de Sichu\u00e1n
+LocaleNames/es/ik=inupiaq
+LocaleNames/es/kg=kongo
+LocaleNames/es/ki=kikuyu
+LocaleNames/es/kj=kuanyama
+LocaleNames/es/kk=kazajo
+LocaleNames/es/km=jemer
+LocaleNames/es/kn=canar\u00e9s
+LocaleNames/es/ks=cachemir
+LocaleNames/es/ku=kurdo
+LocaleNames/es/ky=kirgu\u00eds
+LocaleNames/es/lu=luba-katanga
+LocaleNames/es/mr=marat\u00ed
+LocaleNames/es/nb=noruego bokmal
+LocaleNames/es/nd=ndebele septentrional
+LocaleNames/es/nn=noruego nynorsk
+LocaleNames/es/nr=ndebele meridional
+LocaleNames/es/os=os\u00e9tico
+LocaleNames/es/rm=romanche
+LocaleNames/es/rn=kirundi
+LocaleNames/es/rw=kinyarwanda
+LocaleNames/es/sd=sindhi
+LocaleNames/es/se=sami septentrional
+LocaleNames/es/sl=esloveno
+LocaleNames/es/sn=shona
+LocaleNames/es/ss=suazi
+LocaleNames/es/st=sotho meridional
+LocaleNames/es/su=sundan\u00e9s
+LocaleNames/es/sw=suajili
+LocaleNames/es/tg=tayiko
+LocaleNames/es/ti=tigri\u00f1a
+LocaleNames/es/tn=setsuana
+LocaleNames/es/to=tongano
+LocaleNames/es/tw=twi
+LocaleNames/es/ty=tahitiano
+LocaleNames/es/ug=uigur
+LocaleNames/es/uk=ucraniano
+LocaleNames/es/uz=uzbeko
+LocaleNames/es/vo=volap\u00fck
+LocaleNames/es/za=zhuang
+
+# bug 6716626 - language
+LocaleNames/nl/aa=Afa
