@@ -6931,4 +6931,214 @@ CurrencyNames/zh_TW/krw=\u97d3\u5143
 CurrencyNames/zh_TW/lak=\u5bee\u570b\u57fa\u666e
 CurrencyNames/zh_TW/mad=\u6469\u6d1b\u54e5\u8fea\u62c9\u59c6
 CurrencyNames/zh_TW/mxn=\u58a8\u897f\u54e5\u62ab\u7d22
-CurrencyName
+CurrencyNames/zh_TW/mxv=\u58a8\u897f\u54e5\u8f49\u63db\u55ae\u4f4d (UDI)
+CurrencyNames/zh_TW/myr=\u99ac\u4f86\u897f\u4e9e\u4ee4\u5409
+CurrencyNames/zh_TW/mzn=\u83ab\u4e09\u6bd4\u514b\u6885\u8482\u5361\u723e
+CurrencyNames/zh_TW/nio=\u5c3c\u52a0\u62c9\u74dc\u91d1\u79d1\u591a\u5df4
+CurrencyNames/zh_TW/rol=\u820a\u7f85\u99ac\u5c3c\u4e9e\u5217\u4f0a
+CurrencyNames/zh_TW/ron=\u7f85\u99ac\u5c3c\u4e9e\u5217\u4f0a
+CurrencyNames/zh_TW/rsd=\u585e\u723e\u7dad\u4e9e\u6234\u7d0d
+CurrencyNames/zh_TW/scr=\u585e\u5e2d\u723e\u76e7\u6bd4
+CurrencyNames/zh_TW/sdg=\u8607\u4e39\u938a
+CurrencyNames/zh_TW/shp=\u8056\u8d6b\u52d2\u62ff\u938a
+CurrencyNames/zh_TW/srd=\u8607\u5229\u5357\u5143
+CurrencyNames/zh_TW/srg=\u8607\u5229\u5357\u57fa\u723e
+CurrencyNames/zh_TW/svc=\u85a9\u723e\u74e6\u591a\u79d1\u90ce
+CurrencyNames/zh_TW/szl=\u53f2\u74e6\u6fdf\u862d\u91cc\u6717\u5409\u5c3c
+CurrencyNames/zh_TW/tpe=\u5e1d\u6c76\u57c3\u65af\u5eab\u591a
+CurrencyNames/zh_TW/ttd=\u5343\u91cc\u9054\u53ca\u6258\u5df4\u54e5\u5143
+CurrencyNames/zh_TW/tzs=\u5766\u5c1a\u5c3c\u4e9e\u5148\u4ee4
+CurrencyNames/zh_TW/uzs=\u70cf\u8332\u5225\u514b\u7d22\u59c6
+CurrencyNames/zh_TW/veb=\u59d4\u5167\u745e\u62c9\u73bb\u5229\u74e6 (1871\u20132008)
+CurrencyNames/zh_TW/vef=\u59d4\u5167\u745e\u62c9\u73bb\u5229\u74e6 (2008\u20132018)
+CurrencyNames/zh_TW/xaf=\u6cd5\u90ce (CFA\u2013BEAC)
+CurrencyNames/zh_TW/xag=\u767d\u9280
+CurrencyNames/zh_TW/xof=\u6cd5\u90ce (CFA\u2013BCEAO)
+CurrencyNames/zh_TW/xpd=\u5e15\u62c9\u72c4\u6602
+CurrencyNames/zh_TW/xpt=\u767d\u91d1
+CurrencyNames/zh_TW/xts=\u6e2c\u8a66\u7528\u8ca8\u5e63\u4ee3\u78bc
+CurrencyNames/zh_TW/xxx=\u672a\u77e5\u8ca8\u5e63
+CurrencyNames/zh_TW/yer=\u8449\u9580\u91cc\u4e9e\u723e
+
+# bug 7036905
+CurrencyNames/de/afa=Afghani (1927-2002)
+CurrencyNames/de/afn=Afghani
+CurrencyNames/de/bob=Bolivianischer Boliviano
+CurrencyNames/de/dem=Deutsche Mark
+CurrencyNames/de/mwk=Malawi-Kwacha
+CurrencyNames/de/mxv=Unidad De Inversion (Mexiko)
+CurrencyNames/de/svc=El-Salvador-Col\u00f3n
+
+CurrencyNames/it/bob=boliviano
+
+# bug 7066203
+CurrencyNames//CUC=CUC
+CurrencyNames//TMT=TMT
+CurrencyNames//XSU=XSU
+CurrencyNames//XUA=XUA
+CurrencyNames//ZWL=ZWL
+CurrencyNames//ZWR=ZWR
+CurrencyNames//cuc=Cuban Convertible Peso
+CurrencyNames//tmt=Turkmenistani Manat
+CurrencyNames//zwl=Zimbabwean Dollar (2009)
+CurrencyNames//zwr=Zimbabwean Dollar (2008)
+
+CurrencyNames/de/cuc=Kubanischer konvertibler Peso
+CurrencyNames/de/tmt=Turkmenistan-Manat
+CurrencyNames/de/zwl=Simbabwe-Dollar (2009)
+
+CurrencyNames/es/cuc=peso cubano convertible
+CurrencyNames/es/tmt=manat turcomano
+CurrencyNames/es/zwl=d\u00f3lar zimbabuense
+
+CurrencyNames/es_CU/CUP=CU$
+CurrencyNames/es_CU/CUC=CUC$
+
+CurrencyNames/et_EE/eek=Eesti kroon
+CurrencyNames/et_EE/EUR=\u20ac
+CurrencyNames/et_EE/eur=euro
+
+CurrencyNames/fr/cuc=peso cubain convertible
+CurrencyNames/fr/tmt=nouveau manat turkm\u00e8ne
+
+CurrencyNames/ja/cuc=\u30ad\u30e5\u30fc\u30d0\u514c\u63db\u30da\u30bd
+CurrencyNames/ja/tmt=\u30c8\u30eb\u30af\u30e1\u30cb\u30b9\u30bf\u30f3\u30fb\u30de\u30ca\u30c8
+CurrencyNames/ja/zwl=\u30b8\u30f3\u30d0\u30d6\u30a8\u30fb\u30c9\u30eb(2009)
+
+CurrencyNames/ko/cuc=\ucfe0\ubc14 \ud0dc\ud658 \ud398\uc18c
+
+CurrencyNames/pt/bob=Boliviano da Bol\u00edvia
+CurrencyNames/pt/cuc=Peso cubano convers\u00edvel
+CurrencyNames/pt/tmt=Manat turcomeno
+CurrencyNames/pt/zwl=D\u00f3lar do Zimb\u00e1bue (2009)
+CurrencyNames/pt/zwr=D\u00f3lar do Zimb\u00e1bue (2008)
+
+CurrencyNames/sk_SK/skk=slovensk\u00e1 koruna
+CurrencyNames/sk_SK/EUR=\u20ac
+
+CurrencyNames/zh_CN/cuc=\u53e4\u5df4\u53ef\u5151\u6362\u6bd4\u7d22
+CurrencyNames/zh_CN/tmt=\u571f\u5e93\u66fc\u65af\u5766\u9a6c\u7eb3\u7279
+CurrencyNames/zh_CN/zwl=\u6d25\u5df4\u5e03\u97e6\u5143 (2009)
+
+CurrencyNames/zh_TW/cuc=\u53e4\u5df4\u53ef\u8f49\u63db\u62ab\u7d22
+CurrencyNames/zh_TW/tmt=\u571f\u5eab\u66fc\u99ac\u7d0d\u7279
+CurrencyNames/zh_TW/zwl=\u8f9b\u5df4\u5a01\u5143 (2009)
+
+# bug 7101495
+CalendarData/lv/firstDayOfWeek=2
+CalendarData/lv/minimalDaysInFirstWeek=4
+
+# bug 7003124
+FormatData/bg/TimePatterns/0=HH:mm:ss zzzz
+FormatData/bg/TimePatterns/2=HH:mm:ss
+FormatData/bg/TimePatterns/3=HH:mm
+FormatData/bg/DatePatterns/0=dd MMMM y, EEEE
+FormatData/bg/DatePatterns/1=dd MMMM y
+FormatData/bg/DatePatterns/2=dd.MM.yyyy
+FormatData/bg/DatePatterns/3=dd.MM.yy
+
+# bug 7085757
+CurrencyNames//SSP=SSP
+CurrencyNames//ssp=South Sudanese Pound
+CurrencyNames//xsu=Sucre
+CurrencyNames//xua=ADB Unit of Account
+LocaleNames//SS=South Sudan
+LocaleNames/en/SS=South Sudan
+
+# bug 7028073
+CurrencyNames/es_PE/PEN=S/.
+
+# bug 7171028
+FormatData/sl/DatePatterns/0=EEEE, dd. MMMM y
+FormatData/sl/DatePatterns/1=dd. MMMM y
+
+# bug 7189611
+CurrencyNames/es_VE/VEF=Bs.F.
+
+# rfe 8000983 (narrow names support)
+FormatData//DayNarrows/0=S
+FormatData//DayNarrows/1=M
+FormatData//DayNarrows/2=T
+FormatData//DayNarrows/3=W
+FormatData//DayNarrows/4=T
+FormatData//DayNarrows/5=F
+FormatData//DayNarrows/6=S
+FormatData//narrow.AmPmMarkers/0=a
+FormatData//narrow.AmPmMarkers/1=p
+FormatData//narrow.Eras/0=B
+FormatData//narrow.Eras/1=A
+FormatData//buddhist.narrow.Eras/0=BC
+FormatData//buddhist.narrow.Eras/1=B.E.
+FormatData//japanese.narrow.Eras/0=
+FormatData//japanese.narrow.Eras/1=M
+FormatData//japanese.narrow.Eras/2=T
+FormatData//japanese.narrow.Eras/3=S
+FormatData//japanese.narrow.Eras/4=H
+
+FormatData/ar/DayNarrows/0=\u062d
+FormatData/ar/DayNarrows/1=\u0646
+FormatData/ar/DayNarrows/2=\u062b
+FormatData/ar/DayNarrows/3=\u0631
+FormatData/ar/DayNarrows/4=\u062e
+FormatData/ar/DayNarrows/5=\u062c
+FormatData/ar/DayNarrows/6=\u0633
+
+FormatData/be/standalone.MonthNarrows/0=\u0441
+FormatData/be/standalone.MonthNarrows/1=\u043b
+FormatData/be/standalone.MonthNarrows/2=\u0441
+FormatData/be/standalone.MonthNarrows/3=\u043a
+FormatData/be/standalone.MonthNarrows/4=\u043c
+FormatData/be/standalone.MonthNarrows/5=\u0447
+FormatData/be/standalone.MonthNarrows/6=\u043b
+FormatData/be/standalone.MonthNarrows/7=\u0436
+FormatData/be/standalone.MonthNarrows/8=\u0432
+FormatData/be/standalone.MonthNarrows/9=\u043a
+FormatData/be/standalone.MonthNarrows/10=\u043b
+FormatData/be/standalone.MonthNarrows/11=\u0441
+FormatData/be/standalone.MonthNarrows/12=
+FormatData/be/DayNarrows/0=\u043d
+FormatData/be/DayNarrows/1=\u043f
+FormatData/be/DayNarrows/2=\u0430
+FormatData/be/DayNarrows/3=\u0441
+FormatData/be/DayNarrows/4=\u0447
+FormatData/be/DayNarrows/5=\u043f
+FormatData/be/DayNarrows/6=\u0441
+
+FormatData/bg/DayNarrows/0=\u043d
+FormatData/bg/DayNarrows/1=\u043f
+FormatData/bg/DayNarrows/2=\u0432
+FormatData/bg/DayNarrows/3=\u0441
+FormatData/bg/DayNarrows/4=\u0447
+FormatData/bg/DayNarrows/5=\u043f
+FormatData/bg/DayNarrows/6=\u0441
+
+FormatData/ca/standalone.MonthNarrows/0=g
+FormatData/ca/standalone.MonthNarrows/1=f
+FormatData/ca/standalone.MonthNarrows/2=m
+FormatData/ca/standalone.MonthNarrows/3=a
+FormatData/ca/standalone.MonthNarrows/4=m
+FormatData/ca/standalone.MonthNarrows/5=j
+FormatData/ca/standalone.MonthNarrows/6=j
+FormatData/ca/standalone.MonthNarrows/7=a
+FormatData/ca/standalone.MonthNarrows/8=s
+FormatData/ca/standalone.MonthNarrows/9=o
+FormatData/ca/standalone.MonthNarrows/10=n
+FormatData/ca/standalone.MonthNarrows/11=d
+FormatData/ca/standalone.MonthNarrows/12=
+FormatData/ca/DayNarrows/0=G
+# Note: "L" is a contribued item in CLDR
+FormatData/ca/DayNarrows/1=L
+FormatData/ca/DayNarrows/2=T
+FormatData/ca/DayNarrows/3=C
+FormatData/ca/DayNarrows/4=J
+FormatData/ca/DayNarrows/5=V
+FormatData/ca/DayNarrows/6=S
+FormatData/ca/standalone.DayNarrows/0=g
+FormatData/ca/standalone.DayNarrows/1=l
+FormatData/ca/standalone.DayNarrows/2=t
+FormatData/ca/standalone.DayNarrows/3=c
+FormatData/ca/standalone.DayNarrows/4=j
+FormatData/ca/standalone.DayNarrows/5=v
+FormatData/ca/standalone.DayNarrows/6=s
+
+FormatData/cs/DayN
