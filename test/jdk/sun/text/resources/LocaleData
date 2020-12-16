@@ -8085,4 +8085,251 @@ FormatData/sr-Latn/MonthNarrows/12=
 FormatData/th/MonthNarrows/0=\u0e21.\u0e04.
 FormatData/th/MonthNarrows/1=\u0e01.\u0e1e.
 FormatData/th/MonthNarrows/2=\u0e21\u0e35.\u0e04.
-FormatData/th/MonthNarrows/3=\u0e40\u
+FormatData/th/MonthNarrows/3=\u0e40\u0e21.\u0e22.
+FormatData/th/MonthNarrows/4=\u0e1e.\u0e04.
+FormatData/th/MonthNarrows/5=\u0e21\u0e34.\u0e22
+FormatData/th/MonthNarrows/6=\u0e01.\u0e04.
+FormatData/th/MonthNarrows/7=\u0e2a.\u0e04.
+FormatData/th/MonthNarrows/8=\u0e01.\u0e22.
+FormatData/th/MonthNarrows/9=\u0e15.\u0e04.
+FormatData/th/MonthNarrows/10=\u0e1e.\u0e22.
+FormatData/th/MonthNarrows/11=\u0e18.\u0e04.
+FormatData/th/MonthNarrows/12=
+FormatData/ar/MonthNarrows/0=\u064a
+FormatData/ar/MonthNarrows/1=\u0641
+FormatData/ar/MonthNarrows/2=\u0645
+FormatData/ar/MonthNarrows/3=\u0623
+FormatData/ar/MonthNarrows/4=\u0648
+FormatData/ar/MonthNarrows/5=\u0646
+FormatData/ar/MonthNarrows/6=\u0644
+FormatData/ar/MonthNarrows/7=\u063a
+FormatData/ar/MonthNarrows/8=\u0633
+FormatData/ar/MonthNarrows/9=\u0643
+FormatData/ar/MonthNarrows/10=\u0628
+FormatData/ar/MonthNarrows/11=\u062f
+FormatData/ar/MonthNarrows/12=
+FormatData/ru/MonthNarrows/0=\u042f
+FormatData/ru/MonthNarrows/1=\u0424
+FormatData/ru/MonthNarrows/2=\u041c
+FormatData/ru/MonthNarrows/3=\u0410
+FormatData/ru/MonthNarrows/4=\u041c
+FormatData/ru/MonthNarrows/5=\u0418
+FormatData/ru/MonthNarrows/6=\u0418
+FormatData/ru/MonthNarrows/7=\u0410
+FormatData/ru/MonthNarrows/8=\u0421
+FormatData/ru/MonthNarrows/9=\u041e
+FormatData/ru/MonthNarrows/10=\u041d
+FormatData/ru/MonthNarrows/11=\u0414
+FormatData/ru/MonthNarrows/12=
+FormatData/ms/MonthNarrows/0=J
+FormatData/ms/MonthNarrows/1=F
+FormatData/ms/MonthNarrows/2=M
+FormatData/ms/MonthNarrows/3=A
+FormatData/ms/MonthNarrows/4=M
+FormatData/ms/MonthNarrows/5=J
+FormatData/ms/MonthNarrows/6=J
+FormatData/ms/MonthNarrows/7=O
+FormatData/ms/MonthNarrows/8=S
+FormatData/ms/MonthNarrows/9=O
+FormatData/ms/MonthNarrows/10=N
+FormatData/ms/MonthNarrows/11=D
+FormatData/ms/MonthNarrows/12=
+FormatData/nl/MonthNarrows/0=J
+FormatData/nl/MonthNarrows/1=F
+FormatData/nl/MonthNarrows/2=M
+FormatData/nl/MonthNarrows/3=A
+FormatData/nl/MonthNarrows/4=M
+FormatData/nl/MonthNarrows/5=J
+FormatData/nl/MonthNarrows/6=J
+FormatData/nl/MonthNarrows/7=A
+FormatData/nl/MonthNarrows/8=S
+FormatData/nl/MonthNarrows/9=O
+FormatData/nl/MonthNarrows/10=N
+FormatData/nl/MonthNarrows/11=D
+FormatData/nl/MonthNarrows/12=
+FormatData/vi/MonthNarrows/0=1
+FormatData/vi/MonthNarrows/1=2
+FormatData/vi/MonthNarrows/2=3
+FormatData/vi/MonthNarrows/3=4
+FormatData/vi/MonthNarrows/4=5
+FormatData/vi/MonthNarrows/5=6
+FormatData/vi/MonthNarrows/6=7
+FormatData/vi/MonthNarrows/7=8
+FormatData/vi/MonthNarrows/8=9
+FormatData/vi/MonthNarrows/9=10
+FormatData/vi/MonthNarrows/10=11
+FormatData/vi/MonthNarrows/11=12
+FormatData/vi/MonthNarrows/12=
+FormatData/sr/MonthNarrows/0=\u0458
+FormatData/sr/MonthNarrows/1=\u0444
+FormatData/sr/MonthNarrows/2=\u043c
+FormatData/sr/MonthNarrows/3=\u0430
+FormatData/sr/MonthNarrows/4=\u043c
+FormatData/sr/MonthNarrows/5=\u0458
+FormatData/sr/MonthNarrows/6=\u0458
+FormatData/sr/MonthNarrows/7=\u0430
+FormatData/sr/MonthNarrows/8=\u0441
+FormatData/sr/MonthNarrows/9=\u043e
+FormatData/sr/MonthNarrows/10=\u043d
+FormatData/sr/MonthNarrows/11=\u0434
+FormatData/sr/MonthNarrows/12=
+FormatData/mt/MonthNarrows/0=J
+FormatData/mt/MonthNarrows/1=F
+FormatData/mt/MonthNarrows/2=M
+FormatData/mt/MonthNarrows/3=A
+FormatData/mt/MonthNarrows/4=M
+FormatData/mt/MonthNarrows/5=\u0120
+FormatData/mt/MonthNarrows/6=L
+FormatData/mt/MonthNarrows/7=A
+FormatData/mt/MonthNarrows/8=S
+FormatData/mt/MonthNarrows/9=O
+FormatData/mt/MonthNarrows/10=N
+FormatData/mt/MonthNarrows/11=D
+FormatData/mt/MonthNarrows/12=
+FormatData/da/MonthNarrows/0=J
+FormatData/da/MonthNarrows/1=F
+FormatData/da/MonthNarrows/2=M
+FormatData/da/MonthNarrows/3=A
+FormatData/da/MonthNarrows/4=M
+FormatData/da/MonthNarrows/5=J
+FormatData/da/MonthNarrows/6=J
+FormatData/da/MonthNarrows/7=A
+FormatData/da/MonthNarrows/8=S
+FormatData/da/MonthNarrows/9=O
+FormatData/da/MonthNarrows/10=N
+FormatData/da/MonthNarrows/11=D
+FormatData/da/MonthNarrows/12=
+FormatData/ro/MonthNarrows/0=I
+FormatData/ro/MonthNarrows/1=F
+FormatData/ro/MonthNarrows/2=M
+FormatData/ro/MonthNarrows/3=A
+FormatData/ro/MonthNarrows/4=M
+FormatData/ro/MonthNarrows/5=I
+FormatData/ro/MonthNarrows/6=I
+FormatData/ro/MonthNarrows/7=A
+FormatData/ro/MonthNarrows/8=S
+FormatData/ro/MonthNarrows/9=O
+FormatData/ro/MonthNarrows/10=N
+FormatData/ro/MonthNarrows/11=D
+FormatData/ro/MonthNarrows/12=
+FormatData/no/MonthNarrows/0=J
+FormatData/no/MonthNarrows/1=F
+FormatData/no/MonthNarrows/2=M
+FormatData/no/MonthNarrows/3=A
+FormatData/no/MonthNarrows/4=M
+FormatData/no/MonthNarrows/5=J
+FormatData/no/MonthNarrows/6=J
+FormatData/no/MonthNarrows/7=A
+FormatData/no/MonthNarrows/8=S
+FormatData/no/MonthNarrows/9=O
+FormatData/no/MonthNarrows/10=N
+FormatData/no/MonthNarrows/11=D
+FormatData/no/MonthNarrows/12=
+FormatData/pl/MonthNarrows/0=s
+FormatData/pl/MonthNarrows/1=l
+FormatData/pl/MonthNarrows/2=m
+FormatData/pl/MonthNarrows/3=k
+FormatData/pl/MonthNarrows/4=m
+FormatData/pl/MonthNarrows/5=c
+FormatData/pl/MonthNarrows/6=l
+FormatData/pl/MonthNarrows/7=s
+FormatData/pl/MonthNarrows/8=w
+FormatData/pl/MonthNarrows/9=p
+FormatData/pl/MonthNarrows/10=l
+FormatData/pl/MonthNarrows/11=g
+FormatData/pl/MonthNarrows/12=
+FormatData/iw/MonthNarrows/0=1
+FormatData/iw/MonthNarrows/1=2
+FormatData/iw/MonthNarrows/2=3
+FormatData/iw/MonthNarrows/3=4
+FormatData/iw/MonthNarrows/4=5
+FormatData/iw/MonthNarrows/5=6
+FormatData/iw/MonthNarrows/6=7
+FormatData/iw/MonthNarrows/7=8
+FormatData/iw/MonthNarrows/8=9
+FormatData/iw/MonthNarrows/9=10
+FormatData/iw/MonthNarrows/10=11
+FormatData/iw/MonthNarrows/11=12
+FormatData/iw/MonthNarrows/12=
+FormatData/zh/MonthNarrows/0=1
+FormatData/zh/MonthNarrows/1=2
+FormatData/zh/MonthNarrows/2=3
+FormatData/zh/MonthNarrows/3=4
+FormatData/zh/MonthNarrows/4=5
+FormatData/zh/MonthNarrows/5=6
+FormatData/zh/MonthNarrows/6=7
+FormatData/zh/MonthNarrows/7=8
+FormatData/zh/MonthNarrows/8=9
+FormatData/zh/MonthNarrows/9=10
+FormatData/zh/MonthNarrows/10=11
+FormatData/zh/MonthNarrows/11=12
+FormatData/zh/MonthNarrows/12=
+
+# bug #8074791
+FormatData/fi/DatePatterns/0=d. MMMM yyyy
+FormatData/fi/DatePatterns/1=d. MMMM yyyy
+FormatData/fi/DatePatterns/2=d.M.yyyy
+FormatData/fi/DatePatterns/3=d.M.yyyy
+
+# bug #8075173
+FormatData/de/standalone.MonthAbbreviations/2=M\u00e4r
+
+# bug #8129361
+CurrencyNames//hrk=Kuna
+
+# bug #7037368
+CurrencyNames/de/sar=Saudischer Rial
+CurrencyNames/de/xpf=CFP-Franc
+CurrencyNames/it/azn=manat azero
+CurrencyNames/it/ron=leu rumeno
+CurrencyNames/it/trl=lira turca (1922\u20132005)
+CurrencyNames/it/try=lira turca
+CurrencyNames/sv/bgl=bulgarisk h\u00e5rd lev (1962\u20131999)
+CurrencyNames/sv/xaf=centralafrikansk franc
+CurrencyNames/sv/xfu=internationella j\u00e4rnv\u00e4gsunionens franc
+CurrencyNames/sv/xof=v\u00e4stafrikansk franc
+CurrencyNames/zh_CN/sdg=\u82cf\u4e39\u9551
+
+# bug #8164784
+CurrencyNames//mwk=Malawian Malawi Kwacha
+CurrencyNames//pen=Peruvian Sol
+
+# bug #8145952
+CurrencyNames//byn=Belarusian Ruble
+CurrencyNames/be_BY/BYN=\u0420\u0443\u0431
+
+# bug #8037111
+FormatData/sv/NumberPatterns/2=#,##0 %
+# bug #8081643
+FormatData/sr-Latin/NumberElements/0=,
+FormatData/sr-Latin/NumberElements/1=.
+
+# bug #8187946
+CurrencyNames//stn=S\u00e3o Tom\u00e9 and Pr\u00edncipe Dobra
+CurrencyNames//lak=Lao Kip
+CurrencyNames//php=Philippine Peso
+CurrencyNames//azn=Azerbaijan Manat
+
+# bug #8193552
+CurrencyNames//mru=Mauritanian Ouguiya
+
+# bug #8208746, #8274658
+CurrencyNames//ved=Venezuelan Bol\u00edvar Soberano
+CurrencyNames//ves=Venezuelan Bol\u00edvar Soberano
+
+# bug #8206879
+# For Peru decimal separator is changed to dot(.) and grouping separator is changed to comma(,)
+FormatData/es_PE/NumberElements/0=.
+FormatData/es_PE/NumberElements/1=,
+
+# bug #8227127
+FormatData/ja/short.Eras/0=\u7d00\u5143\u524d
+FormatData/ja/short.Eras/1=\u897f\u66a6
+FormatData/zh/short.Eras/0=\u516c\u5143\u524d
+FormatData/zh/short.Eras/1=\u516c\u5143
+FormatData/zh_TW/short.Eras/0=\u897f\u5143\u524d
+FormatData/zh_TW/short.Eras/1=\u897f\u5143
+
+# bug 8234288
+TimeZoneNames/en/Asia\/Istanbul/1=Turkey Time
+TimeZoneNames/e
