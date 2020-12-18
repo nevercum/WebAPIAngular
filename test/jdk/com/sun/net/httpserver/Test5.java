@@ -129,4 +129,35 @@ public class Test5 extends Test {
         String s = "GET /test/1.html HTTP/1.1\r\nContent-length: 20\r\n"+
         "\r\n" +body1 +
         "GET /test/2.html HTTP/1.1\r\nContent-length: 30\r\n"+
-        "\r\n"+ body2
+        "\r\n"+ body2 +
+        "GET /test/3.html HTTP/1.1\r\nContent-length: 10\r\n"+
+        "\r\n"+ body3 +
+        "GET /test/4.html HTTP/1.1\r\nContent-length: 10\r\n"+
+        "\r\n"+body4;
+
+        Socket socket = new Socket (InetAddress.getLoopbackAddress(), port);
+        OutputStream os = socket.getOutputStream();
+        os.write (s.getBytes());
+        InputStream is = socket.getInputStream();
+        int c, count=0;
+        byte[] b = new byte [1024];
+        while ((c=is.read(b, count, b.length-count)) != -1) {
+            count +=c;
+        }
+        is.close();
+        socket.close();
+        s = new String (b,0,count, "ISO8859_1");
+        if (!compare (s, result)) {
+            System.err.println(" Expected [" + result + "]\n actual [" + s + "]");
+            throw new RuntimeException ("wrong string result");
+        }
+    }
+
+    static boolean compare (String s, String result) {
+        Pattern pattern = Pattern.compile (result,
+                Pattern.DOTALL|Pattern.CASE_INSENSITIVE
+        );
+        Matcher matcher = pattern.matcher (s);
+        return matcher.matches();
+    }
+}
