@@ -17,4 +17,25 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or h
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+/**
+ * @test
+ * @bug 7101822
+ * @summary Verify that cycles between type parameter bounds and imports/class nesting
+ *          are not a problem.
+ * @compile TypeParamCycle2.java
+ */
+package pkg;
+
+import pkg.A.Outer.Inner;
+
+class B extends Inner {
+}
+
+class A {
+   static class Outer<X extends Inner> { static class Inner {} }
+}
+
