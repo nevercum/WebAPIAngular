@@ -265,4 +265,158 @@ public class ClassDataTest {
      */
     @Test
     public void mutableListClassData() throws ReflectiveOperationException {
-        ClassByteBuilder bui
+        ClassByteBuilder builder = new ClassByteBuilder("T7");
+        // generate classDataAt instance method
+        byte[] bytes = builder.classDataAt(ACC_PUBLIC, MethodType.class, 0).build();
+        MethodType mtype = MethodType.methodType(int.class, String.class);
+        List<MethodType> cd = new ArrayList<>(List.of(mtype));
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, cd, true);
+        // call through condy
+        Class<?> c = lookup.lookupClass();
+        assertClassData(lookup, c.newInstance(), mtype);
+        // modify the class data
+        assertTrue(cd.remove(0) == mtype);
+        cd.add(0,  MethodType.methodType(void.class));
+        MethodType newMType = cd.get(0);
+        // loading the element using condy returns the original value
+        assertClassData(lookup, c.newInstance(), mtype);
+        // direct invocation of MethodHandles.classDataAt returns the modified value
+        assertEquals(MethodHandles.classDataAt(lookup, "_", MethodType.class, 0), newMType);
+    }
+
+    // helper method to extract from a class data map
+    public static <T> T getClassDataEntry(Lookup lookup, String key, Class<T> type) throws IllegalAccessException {
+        Map<String, T> cd = MethodHandles.classData(lookup, "_", Map.class);
+        return type.cast(cd.get(key));
+    }
+
+    @Test
+    public void classDataMap() throws ReflectiveOperationException {
+        ClassByteBuilder builder = new ClassByteBuilder("map");
+        // generate classData static method
+        Handle bsm = new Handle(H_INVOKESTATIC, "ClassDataTest", "getClassDataEntry",
+                "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/Object;",
+                false);
+        // generate two accessor methods to get the entries from class data
+        byte[] bytes = builder.classData(ACC_PUBLIC|ACC_STATIC, Map.class)
+                              .classData(ACC_PUBLIC|ACC_STATIC, "getClass",
+                                         Class.class, new ConstantDynamic("class", Type.getDescriptor(Class.class), bsm))
+                              .classData(ACC_PUBLIC|ACC_STATIC, "getMethod",
+                                         MethodHandle.class, new ConstantDynamic("method", Type.getDescriptor(MethodHandle.class), bsm))
+                              .build();
+
+        // generate a hidden class
+        Lookup hcLookup = hiddenClass(100);
+        Class<?> hc = hcLookup.lookupClass();
+        assertClassData(hcLookup, 100);
+
+        MethodHandle mh = hcLookup.findStatic(hc, "classData", MethodType.methodType(int.class));
+        Map<String, Object> cd = Map.of("class", hc, "method", mh);
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, cd, true);
+        assertClassData(lookup, cd);
+
+        // validate the entries from the class data map
+        Class<?> c = lookup.lookupClass();
+        Method m = c.getMethod("getClass");
+        Class<?> v = (Class<?>)m.invoke(null);
+        assertEquals(hc, v);
+
+        Method m1 = c.getMethod("getMethod");
+        MethodHandle v1 = (MethodHandle) m1.invoke(null);
+        assertEquals(mh, v1);
+    }
+
+    @Test(expectedExceptions = { IllegalArgumentException.class })
+    public void nonDefaultName() throws ReflectiveOperationException {
+        ClassByteBuilder builder = new ClassByteBuilder("nonDefaultName");
+        byte[] bytes = builder.classData(ACC_PUBLIC|ACC_STATIC, Class.class)
+                              .build();
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, ClassDataTest.class, true);
+        assertClassData(lookup, ClassDataTest.class);
+        // throw IAE
+        MethodHandles.classData(lookup, "non_default_name", Class.class);
+    }
+
+    static class ClassByteBuilder {
+        private static final String OBJECT_CLS = "java/lang/Object";
+        private static final String MHS_CLS = "java/lang/invoke/MethodHandles";
+        private static final String CLASS_DATA_BSM_DESCR =
+                "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/Object;";
+        private final ClassWriter cw;
+        private final String classname;
+
+        /**
+         * A builder to generate a class file to access class data
+         * @param classname
+         */
+        ClassByteBuilder(String classname) {
+            this.classname = classname;
+            this.cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+            cw.visit(V14, ACC_FINAL, classname, null, OBJECT_CLS, null);
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
+            mv.visitCode();
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitMethodInsn(INVOKESPECIAL, OBJECT_CLS, "<init>", "()V", false);
+            mv.visitInsn(RETURN);
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
+        byte[] build() {
+            cw.visitEnd();
+            byte[] bytes = cw.toByteArray();
+            Path p = Paths.get(classname + ".class");
+                try (OutputStream os = Files.newOutputStream(p)) {
+                os.write(bytes);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+            return bytes;
+        }
+
+        /*
+         * Generate classData method to load class data via condy
+         */
+        ClassByteBuilder classData(int accessFlags, Class<?> returnType) {
+            MethodType mtype = MethodType.methodType(returnType);
+            MethodVisitor mv = cw.visitMethod(accessFlags,
+                                             "classData",
+                                              mtype.descriptorString(), null, null);
+            mv.visitCode();
+            Handle bsm = new Handle(H_INVOKESTATIC, MHS_CLS, "classData",
+                                    CLASS_DATA_BSM_DESCR,
+                                    false);
+            ConstantDynamic dynamic = new ConstantDynamic("_", Type.getDescriptor(returnType), bsm);
+            mv.visitLdcInsn(dynamic);
+            mv.visitInsn(returnType == int.class ? IRETURN :
+                            (returnType == float.class ? FRETURN : ARETURN));
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+            return this;
+        }
+
+        /*
+         * Generate classDataAt method to load an element from class data via condy
+         */
+        ClassByteBuilder classDataAt(int accessFlags, Class<?> returnType, int index) {
+            MethodType mtype = MethodType.methodType(returnType);
+            MethodVisitor mv = cw.visitMethod(accessFlags,
+                                              "classData",
+                                               mtype.descriptorString(), null, null);
+            mv.visitCode();
+            Handle bsm = new Handle(H_INVOKESTATIC, "java/lang/invoke/MethodHandles", "classDataAt",
+                        "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/Class;I)Ljava/lang/Object;",
+                        false);
+            ConstantDynamic dynamic = new ConstantDynamic("_", Type.getDescriptor(returnType), bsm, index);
+            mv.visitLdcInsn(dynamic);
+            mv.visitInsn(returnType == int.class? IRETURN : ARETURN);
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+            return this;
+        }
+
+        ClassByteBuilder classData(int accessFlags, String name, Class<?> returnType, ConstantDynamic dynamic) {
+            MethodType mtype = MethodType.methodType(returnType);
+            MethodVisitor mv = cw.visitMethod(accessFlags,
+                                              name,
+                                           
