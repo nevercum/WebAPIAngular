@@ -109,4 +109,114 @@ public class MethodHandlesInvokersTest extends MethodHandlesTest {
         assertEquals(log.hashCode(), code);
         assertCalled("invokee", args);
         MethodHandle inv;
-        O
+        Object result;
+        // exact invoker
+        countTest();
+        calledLog.clear();
+        inv = MethodHandles.exactInvoker(type);
+        result = inv.invokeWithArguments(targetPlusArgs);
+        if (testRetCode)  assertEquals(code, result);
+        assertCalled("invokee", args);
+        // generic invoker
+        countTest();
+        inv = MethodHandles.invoker(type);
+        if (nargs <= 3 && type == type.generic()) {
+            calledLog.clear();
+            switch (nargs) {
+            case 0:
+                result = inv.invokeExact(target);
+                break;
+            case 1:
+                result = inv.invokeExact(target, args[0]);
+                break;
+            case 2:
+                result = inv.invokeExact(target, args[0], args[1]);
+                break;
+            case 3:
+                result = inv.invokeExact(target, args[0], args[1], args[2]);
+                break;
+            }
+            if (testRetCode)  assertEquals(code, result);
+            assertCalled("invokee", args);
+        }
+        calledLog.clear();
+        result = inv.invokeWithArguments(targetPlusArgs);
+        if (testRetCode)  assertEquals(code, result);
+        assertCalled("invokee", args);
+        // varargs invoker #0
+        calledLog.clear();
+        inv = MethodHandles.spreadInvoker(type, 0);
+        if (type.returnType() == Object.class) {
+            result = inv.invokeExact(target, args);
+        } else if (type.returnType() == void.class) {
+            result = null; inv.invokeExact(target, args);
+        } else {
+            result = inv.invokeWithArguments(target, (Object) args);
+        }
+        if (testRetCode)  assertEquals(code, result);
+        assertCalled("invokee", args);
+        if (nargs >= 1 && type == type.generic()) {
+            // varargs invoker #1
+            calledLog.clear();
+            inv = MethodHandles.spreadInvoker(type, 1);
+            result = inv.invokeExact(target, args[0], Arrays.copyOfRange(args, 1, nargs));
+            if (testRetCode)  assertEquals(code, result);
+            assertCalled("invokee", args);
+        }
+        if (nargs >= 2 && type == type.generic()) {
+            // varargs invoker #2
+            calledLog.clear();
+            inv = MethodHandles.spreadInvoker(type, 2);
+            result = inv.invokeExact(target, args[0], args[1], Arrays.copyOfRange(args, 2, nargs));
+            if (testRetCode)  assertEquals(code, result);
+            assertCalled("invokee", args);
+        }
+        if (nargs >= 3 && type == type.generic()) {
+            // varargs invoker #3
+            calledLog.clear();
+            inv = MethodHandles.spreadInvoker(type, 3);
+            result = inv.invokeExact(target, args[0], args[1], args[2], Arrays.copyOfRange(args, 3, nargs));
+            if (testRetCode)  assertEquals(code, result);
+            assertCalled("invokee", args);
+        }
+        for (int k = 0; k <= nargs; k++) {
+            // varargs invoker #0..N
+            if (CAN_TEST_LIGHTLY && (k > 1 || k < nargs - 1))  continue;
+            countTest();
+            calledLog.clear();
+            inv = MethodHandles.spreadInvoker(type, k);
+            MethodType expType = (type.dropParameterTypes(k, nargs)
+                                 .appendParameterTypes(Object[].class)
+                                 .insertParameterTypes(0, MethodHandle.class));
+            assertEquals(expType, inv.type());
+            List<Object> targetPlusVarArgs = new ArrayList<>(targetPlusArgs);
+            List<Object> tailList = targetPlusVarArgs.subList(1+k, 1+nargs);
+            Object[] tail = tailList.toArray();
+            tailList.clear(); tailList.add(tail);
+            result = inv.invokeWithArguments(targetPlusVarArgs);
+            if (testRetCode)  assertEquals(code, result);
+            assertCalled("invokee", args);
+        }
+
+        // dynamic invoker
+        countTest();
+        CallSite site = new MutableCallSite(type);
+        inv = site.dynamicInvoker();
+
+        // see if we get the result of the original target:
+        try {
+            result = inv.invokeWithArguments(args);
+            assertTrue("should not reach here", false);
+        } catch (IllegalStateException ex) {
+            String msg = ex.getMessage();
+            assertTrue(msg, msg.contains("site"));
+        }
+
+        // set new target after invoker is created, to make sure we track target
+        site.setTarget(target);
+        calledLog.clear();
+        result = inv.invokeWithArguments(args);
+        if (testRetCode)  assertEquals(code, result);
+        assertCalled("invokee", args);
+    }
+}
