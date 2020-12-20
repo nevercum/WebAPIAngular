@@ -92,4 +92,177 @@ public class ClassDataTest {
 
     @Test(dataProvider = "teleportedLookup", expectedExceptions = { IllegalAccessException.class })
     public void illegalAccess(Lookup lookup, int access) throws IllegalAccessException {
-        int lookupModes = lookup.loo
+        int lookupModes = lookup.lookupModes();
+        assertTrue((lookupModes & ORIGINAL) == 0);
+        assertEquals(lookupModes, access);
+        MethodHandles.classData(lookup, "_", int.class);
+    }
+
+    @Test(expectedExceptions = { ClassCastException.class })
+    public void incorrectType() throws IllegalAccessException {
+        Lookup lookup = hiddenClass(20);
+        MethodHandles.classData(lookup, "_", Long.class);
+    }
+
+    @Test(expectedExceptions = { IndexOutOfBoundsException.class })
+    public void invalidIndex() throws IllegalAccessException {
+        Lookup lookup = hiddenClass(List.of());
+        MethodHandles.classDataAt(lookup, "_", Object.class, 0);
+    }
+
+    @Test(expectedExceptions = { NullPointerException.class })
+    public void unboxNull() throws IllegalAccessException {
+        List<Integer> list = new ArrayList<>();
+        list.add(null);
+        Lookup lookup = hiddenClass(list);
+        MethodHandles.classDataAt(lookup, "_", int.class, 0);
+    }
+
+    @Test
+    public void nullElement() throws IllegalAccessException {
+        List<Object> list = new ArrayList<>();
+        list.add(null);
+        Lookup lookup = hiddenClass(list);
+        assertTrue(MethodHandles.classDataAt(lookup, "_", Object.class, 0) == null);
+    }
+
+    @Test
+    public void intClassData() throws ReflectiveOperationException {
+        ClassByteBuilder builder = new ClassByteBuilder("T1-int");
+        byte[] bytes = builder.classData(ACC_PUBLIC|ACC_STATIC, int.class).build();
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, 100, true);
+        int value = MethodHandles.classData(lookup, "_", int.class);
+        assertEquals(value, 100);
+        // call through condy
+        assertClassData(lookup, 100);
+    }
+
+    @Test
+    public void floatClassData() throws ReflectiveOperationException {
+        ClassByteBuilder builder = new ClassByteBuilder("T1-float");
+        byte[] bytes = builder.classData(ACC_PUBLIC|ACC_STATIC, float.class).build();
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, 0.1234f, true);
+        float value = MethodHandles.classData(lookup, "_", float.class);
+        assertEquals(value, 0.1234f);
+        // call through condy
+        assertClassData(lookup, 0.1234f);
+    }
+
+    @Test
+    public void classClassData() throws ReflectiveOperationException {
+        Class<?> hc = hiddenClass(100).lookupClass();
+        ClassByteBuilder builder = new ClassByteBuilder("T2");
+        byte[] bytes = builder.classData(ACC_PUBLIC|ACC_STATIC, Class.class).build();
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, hc, true);
+        Class<?> value = MethodHandles.classData(lookup, "_", Class.class);
+        assertEquals(value, hc);
+        // call through condy
+        assertClassData(lookup, hc);
+    }
+
+    @Test
+    public void arrayClassData() throws ReflectiveOperationException {
+        ClassByteBuilder builder = new ClassByteBuilder("T3");
+        byte[] bytes = builder.classData(ACC_PUBLIC|ACC_STATIC, String[].class).build();
+        String[] colors = new String[] { "red", "yellow", "blue"};
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, colors, true);
+        assertClassData(lookup, colors.clone());
+        // class data is modifiable and not a constant
+        colors[0] = "black";
+        // it will get back the modified class data
+        String[] value = MethodHandles.classData(lookup, "_", String[].class);
+        assertEquals(value, colors);
+        // even call through condy as it's not a constant
+        assertClassData(lookup, colors);
+    }
+
+    @Test
+    public void listClassData() throws ReflectiveOperationException {
+        ClassByteBuilder builder = new ClassByteBuilder("T4");
+        byte[] bytes = builder.classDataAt(ACC_PUBLIC|ACC_STATIC, Integer.class, 2).build();
+        List<Integer> cd = List.of(100, 101, 102, 103);
+        int expected = 102;  // element at index=2
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, cd, true);
+        int value = MethodHandles.classDataAt(lookup, "_", int.class, 2);
+        assertEquals(value, expected);
+        // call through condy
+        assertClassData(lookup, expected);
+    }
+
+    @Test
+    public void arrayListClassData() throws ReflectiveOperationException {
+        ClassByteBuilder builder = new ClassByteBuilder("T4");
+        byte[] bytes = builder.classDataAt(ACC_PUBLIC|ACC_STATIC, Integer.class, 1).build();
+        ArrayList<Integer> cd = new ArrayList<>();
+        Stream.of(100, 101, 102, 103).forEach(cd::add);
+        int expected = 101;  // element at index=1
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, cd, true);
+        int value = MethodHandles.classDataAt(lookup, "_", int.class, 1);
+        assertEquals(value, expected);
+        // call through condy
+        assertClassData(lookup, expected);
+    }
+
+    private static Lookup hiddenClass(int value) {
+        ClassByteBuilder builder = new ClassByteBuilder("HC");
+        byte[] bytes = builder.classData(ACC_PUBLIC|ACC_STATIC, int.class).build();
+        try {
+            return LOOKUP.defineHiddenClassWithClassData(bytes, value, true);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+    private static Lookup hiddenClass(List<?> list) {
+        ClassByteBuilder builder = new ClassByteBuilder("HC");
+        byte[] bytes = builder.classData(ACC_PUBLIC|ACC_STATIC, List.class).build();
+        try {
+            return LOOKUP.defineHiddenClassWithClassData(bytes, list, true);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    public void condyInvokedFromVirtualMethod() throws ReflectiveOperationException {
+        ClassByteBuilder builder = new ClassByteBuilder("T5");
+        // generate classData instance method
+        byte[] bytes = builder.classData(ACC_PUBLIC, Class.class).build();
+        Lookup hcLookup = hiddenClass(100);
+        assertClassData(hcLookup, 100);
+        Class<?> hc = hcLookup.lookupClass();
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, hc, true);
+        Class<?> value = MethodHandles.classData(lookup, "_", Class.class);
+        assertEquals(value, hc);
+        // call through condy
+        Class<?> c = lookup.lookupClass();
+        assertClassData(lookup, c.newInstance(), hc);
+    }
+
+    @Test
+    public void immutableListClassData() throws ReflectiveOperationException {
+        ClassByteBuilder builder = new ClassByteBuilder("T6");
+        // generate classDataAt instance method
+        byte[] bytes = builder.classDataAt(ACC_PUBLIC, Integer.class, 2).build();
+        List<Integer> cd = List.of(100, 101, 102, 103);
+        int expected = 102;  // element at index=2
+        Lookup lookup = LOOKUP.defineHiddenClassWithClassData(bytes, cd, true);
+        int value = MethodHandles.classDataAt(lookup, "_", int.class, 2);
+        assertEquals(value, expected);
+        // call through condy
+        Class<?> c = lookup.lookupClass();
+        assertClassData(lookup, c.newInstance() ,expected);
+    }
+
+    /*
+     * The return value of MethodHandles::classDataAt is the element
+     * contained in the list when the method is called.
+     * If MethodHandles::classDataAt is called via condy, the value
+     * will be captured as a constant.  If the class data is modified
+     * after the element at the given index is computed via condy,
+     * subsequent LDC of such ConstantDynamic entry will return the same
+     * value. However, direct invocation of MethodHandles::classDataAt
+     * will return the modified value.
+     */
+    @Test
+    public void mutableListClassData() throws ReflectiveOperationException {
+        ClassByteBuilder bui
