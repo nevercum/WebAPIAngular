@@ -419,4 +419,92 @@ public class ClassDataTest {
             MethodType mtype = MethodType.methodType(returnType);
             MethodVisitor mv = cw.visitMethod(accessFlags,
                                               name,
-                                           
+                                              mtype.descriptorString(), null, null);
+            mv.visitCode();
+            mv.visitLdcInsn(dynamic);
+            mv.visitInsn(returnType == int.class? IRETURN : ARETURN);
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+            return this;
+        }
+    }
+
+    /*
+     * Load an int constant from class data via condy and
+     * verify it matches the given value.
+     */
+    private void assertClassData(Lookup lookup, int value) throws ReflectiveOperationException {
+        Class<?> c = lookup.lookupClass();
+        Method m = c.getMethod("classData");
+        int v = (int) m.invoke(null);
+        assertEquals(value, v);
+    }
+
+    /*
+     * Load an int constant from class data via condy and
+     * verify it matches the given value.
+     */
+    private void assertClassData(Lookup lookup, Object o, int value) throws ReflectiveOperationException {
+        Class<?> c = lookup.lookupClass();
+        Method m = c.getMethod("classData");
+        int v = (int) m.invoke(o);
+        assertEquals(value, v);
+    }
+
+    /*
+     * Load a float constant from class data via condy and
+     * verify it matches the given value.
+     */
+    private void assertClassData(Lookup lookup, float value) throws ReflectiveOperationException {
+        Class<?> c = lookup.lookupClass();
+        Method m = c.getMethod("classData");
+        float v = (float) m.invoke(null);
+        assertEquals(value, v);
+    }
+
+    /*
+     * Load a Class constant from class data via condy and
+     * verify it matches the given value.
+     */
+    private void assertClassData(Lookup lookup, Class<?> value) throws ReflectiveOperationException {
+        Class<?> c = lookup.lookupClass();
+        Method m = c.getMethod("classData");
+        Class<?> v = (Class<?>)m.invoke(null);
+        assertEquals(value, v);
+    }
+
+    /*
+     * Load a Class from class data via condy and
+     * verify it matches the given value.
+     */
+    private void assertClassData(Lookup lookup, Object o, Class<?> value) throws ReflectiveOperationException {
+        Class<?> c = lookup.lookupClass();
+        Method m = c.getMethod("classData");
+        Object v = m.invoke(o);
+        assertEquals(value, v);
+    }
+
+    /*
+     * Load an Object from class data via condy and
+     * verify it matches the given value.
+     */
+    private void assertClassData(Lookup lookup, Object value) throws ReflectiveOperationException {
+        Class<?> c = lookup.lookupClass();
+        Method m = c.getMethod("classData");
+        Object v = m.invoke(null);
+        assertEquals(value, v);
+    }
+
+    /*
+     * Load an Object from class data via condy and
+     * verify it matches the given value.
+     */
+    private void assertClassData(Lookup lookup, Object o, Object value) throws ReflectiveOperationException {
+        Class<?> c = lookup.lookupClass();
+        Method m = c.getMethod("classData");
+        Object v = m.invoke(o);
+        assertEquals(value, v);
+    }
+}
+
+
