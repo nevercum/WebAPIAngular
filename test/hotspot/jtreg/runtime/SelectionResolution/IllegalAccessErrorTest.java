@@ -37,4 +37,122 @@ import selectionresolution.ClassData;
 import selectionresolution.MethodData;
 import selectionresolution.Result;
 import selectionresolution.SelectionResolutionTest;
-import selectionresolution.SelectionResolutionTest
+import selectionresolution.SelectionResolutionTestCase;
+import selectionresolution.Template;
+
+public class IllegalAccessErrorTest extends SelectionResolutionTest {
+
+    private static final SelectionResolutionTestCase.Builder initBuilder =
+        new SelectionResolutionTestCase.Builder();
+
+    static {
+        initBuilder.setResult(Result.IAE);
+    }
+
+    private static final Collection<TestGroup> testgroups =
+        Arrays.asList(
+                /* invokestatic tests */
+                /* Group 125 : callsite = methodref, methodref !=
+                 * expected, expected is class
+                 */
+                new TestGroup.Simple(initBuilder,
+                        Template.SetInvoke(SelectionResolutionTestCase.InvokeInstruction.INVOKESTATIC),
+                        Template.ResultCombo(EnumSet.of(Template.Kind.CLASS),
+                                             EnumSet.of(MethodData.Access.PRIVATE),
+                                             EnumSet.of(MethodData.Context.STATIC),
+                                             EnumSet.of(ClassData.Package.SAME)),
+                        Template.MethodrefNotEqualsExpectedClass,
+                        Template.CallsiteEqualsMethodref,
+                        Template.TrivialObjectref),
+                /* Group 126: callsite :> methodref, methodref = expected,
+                 * expected is class, expected and callsite in the same package
+                 */
+                new TestGroup.Simple(initBuilder,
+                        Template.SetInvoke(SelectionResolutionTestCase.InvokeInstruction.INVOKESTATIC),
+                        Template.ResultCombo(EnumSet.of(Template.Kind.CLASS),
+                                             EnumSet.of(MethodData.Access.PRIVATE),
+                                             EnumSet.of(MethodData.Context.STATIC),
+                                             EnumSet.of(ClassData.Package.SAME)),
+                        Template.MethodrefEqualsExpected,
+                        Template.CallsiteSubclassMethodref,
+                        Template.TrivialObjectref),
+                /* Group 127: callsite :> methodref, methodref != expected,
+                 * expected is class, expected and callsite in the same package
+                 */
+                new TestGroup.Simple(initBuilder,
+                        Template.SetInvoke(SelectionResolutionTestCase.InvokeInstruction.INVOKESTATIC),
+                        Template.ResultCombo(EnumSet.of(Template.Kind.CLASS),
+                                             EnumSet.of(MethodData.Access.PRIVATE),
+                                             EnumSet.of(MethodData.Context.STATIC),
+                                             EnumSet.of(ClassData.Package.SAME)),
+                        Template.MethodrefNotEqualsExpectedClass,
+                        Template.CallsiteSubclassMethodref,
+                        Template.TrivialObjectref),
+                /* Group 128: callsite unrelated to methodref, methodref = expected,
+                 * expected is class, expected and callsite in the same package
+                 */
+                new TestGroup.Simple(initBuilder,
+                        Template.SetInvoke(SelectionResolutionTestCase.InvokeInstruction.INVOKESTATIC),
+                        Template.ResultCombo(EnumSet.of(Template.Kind.CLASS),
+                                             EnumSet.of(MethodData.Access.PRIVATE),
+                                             EnumSet.of(MethodData.Context.STATIC),
+                                             EnumSet.of(ClassData.Package.SAME)),
+                        Template.MethodrefEqualsExpected,
+                        Template.CallsiteUnrelatedToMethodref,
+                        Template.TrivialObjectref),
+                /* Group 129: callsite unrelated to methodref, methodref != expected,
+                 * expected is class, expected and callsite in the same package
+                 */
+                new TestGroup.Simple(initBuilder,
+                        Template.SetInvoke(SelectionResolutionTestCase.InvokeInstruction.INVOKESTATIC),
+                        Template.ResultCombo(EnumSet.of(Template.Kind.CLASS),
+                                             EnumSet.of(MethodData.Access.PRIVATE),
+                                             EnumSet.of(MethodData.Context.STATIC),
+                                             EnumSet.of(ClassData.Package.SAME)),
+                        Template.MethodrefNotEqualsExpectedClass,
+                        Template.CallsiteUnrelatedToMethodref,
+                        Template.TrivialObjectref),
+                /* Group 130: callsite = methodref, methodref != expected,
+                 * expected is class, expected and callsite not in the same package
+                 */
+                new TestGroup.Simple(initBuilder,
+                        Template.SetInvoke(SelectionResolutionTestCase.InvokeInstruction.INVOKESTATIC),
+                        Template.ResultCombo(EnumSet.of(Template.Kind.CLASS),
+                                             EnumSet.of(MethodData.Access.PRIVATE,
+                                                        MethodData.Access.PACKAGE),
+                                             EnumSet.of(MethodData.Context.STATIC),
+                                             EnumSet.of(ClassData.Package.DIFFERENT)),
+                        Template.MethodrefNotEqualsExpectedClass,
+                        Template.CallsiteEqualsMethodref,
+                        Template.TrivialObjectref),
+                /* Group 131: callsite :> methodref, methodref = expected,
+                 * expected is class, expected and callsite not in the same package
+                 */
+                new TestGroup.Simple(initBuilder,
+                        Template.SetInvoke(SelectionResolutionTestCase.InvokeInstruction.INVOKESTATIC),
+                        Template.ResultCombo(EnumSet.of(Template.Kind.CLASS),
+                                             EnumSet.of(MethodData.Access.PRIVATE,
+                                                        MethodData.Access.PACKAGE),
+                                             EnumSet.of(MethodData.Context.STATIC),
+                                             EnumSet.of(ClassData.Package.DIFFERENT)),
+                        Template.MethodrefEqualsExpected,
+                        Template.CallsiteSubclassMethodref,
+                        Template.TrivialObjectref),
+                /* Group 132: callsite :> methodref, methodref != expected,
+                 * expected is class, expected and callsite not in the same package
+                 */
+                new TestGroup.Simple(initBuilder,
+                        Template.SetInvoke(SelectionResolutionTestCase.InvokeInstruction.INVOKESTATIC),
+                        Template.ResultCombo(EnumSet.of(Template.Kind.CLASS),
+                                             EnumSet.of(MethodData.Access.PRIVATE,
+                                                        MethodData.Access.PACKAGE),
+                                             EnumSet.of(MethodData.Context.STATIC),
+                                             EnumSet.of(ClassData.Package.DIFFERENT)),
+                        Template.MethodrefNotEqualsExpectedClass,
+                        Template.CallsiteSubclassMethodref,
+                        Template.TrivialObjectref),
+                /* Group 133: callsite unrelated to methodref, methodref = expected,
+                 * expected is class, expected and callsite not in the same package
+                 */
+                new TestGroup.Simple(initBuilder,
+                        Template.SetInvoke(SelectionRes
