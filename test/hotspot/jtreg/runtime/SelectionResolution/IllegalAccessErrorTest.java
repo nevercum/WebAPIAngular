@@ -479,4 +479,38 @@ public class IllegalAccessErrorTest extends SelectionResolutionTest {
                 new TestGroup.Simple(initBuilder,
                         Template.SetInvoke(SelectionResolutionTestCase.InvokeInstruction.INVOKESPECIAL),
                         Template.ResultCombo(EnumSet.of(Template.Kind.CLASS),
-                                 
+                                             EnumSet.of(MethodData.Access.PACKAGE,
+                                                        MethodData.Access.PRIVATE),
+                                             EnumSet.of(MethodData.Context.INSTANCE),
+                                             EnumSet.of(ClassData.Package.DIFFERENT)),
+                        Template.OverrideAbstractExpectedClass,
+                        Template.MethodrefEqualsExpected,
+                        Template.IgnoredAbstract,
+                        Template.CallsiteSubclassMethodref,
+                        Template.ObjectrefExactSubclassOfCallsite),
+                /* Group 156: callsite :> methodref, methodref != expected,
+                 * expected is class, expected and callsite not in the same package
+                 */
+                new TestGroup.Simple(initBuilder,
+                        Template.SetInvoke(SelectionResolutionTestCase.InvokeInstruction.INVOKESPECIAL),
+                        Template.ResultCombo(EnumSet.of(Template.Kind.CLASS),
+                                             EnumSet.of(MethodData.Access.PACKAGE,
+                                                        MethodData.Access.PRIVATE),
+                                             EnumSet.of(MethodData.Context.INSTANCE,
+                                                        MethodData.Context.ABSTRACT),
+                                             EnumSet.of(ClassData.Package.DIFFERENT)),
+                        Template.OverrideAbstractExpectedClass,
+                        Template.MethodrefNotEqualsExpectedClass,
+                        Template.IgnoredAbstract,
+                        Template.CallsiteSubclassMethodref,
+                        Template.ObjectrefExactSubclassOfCallsite)
+            );
+
+    private IllegalAccessErrorTest() {
+        super(testgroups);
+    }
+
+    public static void main(final String... args) {
+        new IllegalAccessErrorTest().run();
+    }
+}
