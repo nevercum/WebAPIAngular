@@ -191,4 +191,210 @@ final class OverridableResource {
     }
 
     Source saveToFile(Path dest) throws IOException {
-        if (d
+        if (dest == null) {
+            return sendToConsumer(null);
+        }
+        return sendToConsumer(new ResourceConsumer() {
+            @Override
+            public Path publicName() {
+                return dest.getFileName();
+            }
+
+            @Override
+            public void consume(InputStream in) throws IOException {
+                Files.createDirectories(IOUtils.getParent(dest));
+                Files.copy(in, dest, StandardCopyOption.REPLACE_EXISTING);
+            }
+        });
+    }
+
+    Source saveToFile(File dest) throws IOException {
+        return saveToFile(toPath(dest));
+    }
+
+    static InputStream readDefault(String resourceName) {
+        return ResourceLocator.class.getResourceAsStream(resourceName);
+    }
+
+    static OverridableResource createResource(String defaultName,
+            Map<String, ? super Object> params) {
+        return new OverridableResource(defaultName).setResourceDir(
+                RESOURCE_DIR.fetchFrom(params));
+    }
+
+    private Source sendToConsumer(ResourceConsumer consumer) throws IOException {
+        for (var source: sources) {
+            if (source.getValue().apply(consumer)) {
+                return source.getKey();
+            }
+        }
+        return null;
+    }
+
+    private String getPrintableCategory() {
+        if (category != null) {
+            return String.format("[%s]", category);
+        }
+        return "";
+    }
+
+    private boolean useExternal(ResourceConsumer dest) throws IOException {
+        boolean used = externalPath != null && Files.exists(externalPath);
+        if (used && dest != null) {
+            Log.verbose(MessageFormat.format(I18N.getString(
+                    "message.using-custom-resource-from-file"),
+                    getPrintableCategory(),
+                    externalPath.toAbsolutePath().normalize()));
+
+            try (InputStream in = Files.newInputStream(externalPath)) {
+                processResourceStream(in, dest);
+            }
+        }
+        return used;
+    }
+
+    private boolean useResourceDir(ResourceConsumer dest) throws IOException {
+        boolean used = false;
+
+        if (dest == null && publicName == null) {
+            throw new IllegalStateException();
+        }
+
+        final Path resourceName = Optional.ofNullable(publicName).orElseGet(
+                () -> dest.publicName());
+
+        if (resourceDir != null) {
+            final Path customResource = resourceDir.resolve(resourceName);
+            used = Files.exists(customResource);
+            if (used && dest != null) {
+                final Path logResourceName = Optional.ofNullable(logPublicName).orElse(
+                        resourceName).normalize();
+
+                Log.verbose(MessageFormat.format(I18N.getString(
+                        "message.using-custom-resource"), getPrintableCategory(),
+                        logResourceName));
+
+                try (InputStream in = Files.newInputStream(customResource)) {
+                    processResourceStream(in, dest);
+                }
+            }
+        }
+
+        return used;
+    }
+
+    private boolean useDefault(ResourceConsumer dest) throws IOException {
+        boolean used = defaultName != null;
+        if (used && dest != null) {
+            final Path resourceName = Optional
+                    .ofNullable(logPublicName)
+                    .orElse(Optional
+                            .ofNullable(publicName)
+                            .orElseGet(() -> dest.publicName()));
+            Log.verbose(MessageFormat.format(
+                    I18N.getString("message.using-default-resource"),
+                    defaultName, getPrintableCategory(), resourceName));
+
+            try (InputStream in = readDefault(defaultName)) {
+                processResourceStream(in, dest);
+            }
+        }
+        return used;
+    }
+
+    private static Stream<String> substitute(Stream<String> lines,
+            Map<String, String> substitutionData) {
+        // Order substitution data by the length of keys.
+        // Longer keys go first.
+        // This is needed to properly handle cases when one key is
+        // a substring of another and try the later first.
+        var orderedEntries = substitutionData.entrySet().stream()
+                .sorted(Map.Entry.<String, String>comparingByKey(
+                        Comparator.comparingInt(String::length)).reversed())
+                .toList();
+        return lines.map(line -> {
+            String result = line;
+            var workEntries = orderedEntries;
+            var it = workEntries.listIterator();
+            while (it.hasNext()) {
+                var entry = it.next();
+                String newResult = result.replace(entry.getKey(),
+                        Optional.ofNullable(entry.getValue()).orElse(""));
+                if (!newResult.equals(result)) {
+                    // Substitution occurred.
+                    // Remove the matching substitution key from the list and
+                    // go over the list of substitution entries again.
+                    if (workEntries == orderedEntries) {
+                        workEntries = new ArrayList<>(orderedEntries);
+                        it = workEntries.listIterator(it.nextIndex() - 1);
+                        it.next();
+                    }
+                    it.remove();
+                    it = workEntries.listIterator();
+                    result = newResult;
+                }
+            }
+            return result;
+        });
+    }
+
+    private static Path toPath(File v) {
+        if (v != null) {
+            return v.toPath();
+        }
+        return null;
+    }
+
+    private void processResourceStream(InputStream rawResource,
+            ResourceConsumer dest) throws IOException {
+        if (substitutionData == null) {
+            dest.consume(rawResource);
+        } else {
+            // Utf8 in and out
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(rawResource, StandardCharsets.UTF_8))) {
+                String data = substitute(reader.lines(), substitutionData).collect(
+                        Collectors.joining("\n", "", "\n"));
+                try (InputStream in = new ByteArrayInputStream(data.getBytes(
+                        StandardCharsets.UTF_8))) {
+                    dest.consume(in);
+                }
+            }
+        }
+    }
+
+    private SourceHandler getHandler(Source sourceType) {
+        switch (sourceType) {
+            case DefaultResource:
+                return this::useDefault;
+
+            case External:
+                return this::useExternal;
+
+            case ResourceDir:
+                return this::useResourceDir;
+
+            default:
+                throw new IllegalArgumentException();
+        }
+    }
+
+    private Map<String, String> substitutionData;
+    private String category;
+    private Path resourceDir;
+    private Path publicName;
+    private Path logPublicName;
+    private Path externalPath;
+    private final String defaultName;
+    private List<Map.Entry<Source, SourceHandler>> sources;
+
+    @FunctionalInterface
+    private static interface SourceHandler {
+        public boolean apply(ResourceConsumer dest) throws IOException;
+    }
+
+    private static interface ResourceConsumer {
+        public Path publicName();
+        public void consume(InputStream in) throws IOException;
+    }
+}
