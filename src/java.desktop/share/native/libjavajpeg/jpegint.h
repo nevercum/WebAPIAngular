@@ -317,4 +317,80 @@ struct jpeg_color_quantizer {
 #define jinit_marker_reader     jIMReader
 #define jinit_huff_decoder      jIHDecoder
 #define jinit_phuff_decoder     jIPHDecoder
-#define jinit_inverse_dct       jII
+#define jinit_inverse_dct       jIIDCT
+#define jinit_upsampler         jIUpsampler
+#define jinit_color_deconverter jIDColor
+#define jinit_1pass_quantizer   jI1Quant
+#define jinit_2pass_quantizer   jI2Quant
+#define jinit_merged_upsampler  jIMUpsampler
+#define jinit_memory_mgr        jIMemMgr
+#define jdiv_round_up           jDivRound
+#define jround_up               jRound
+#define jcopy_sample_rows       jCopySamples
+#define jcopy_block_row         jCopyBlocks
+#define jzero_far               jZeroFar
+#define jpeg_zigzag_order       jZIGTable
+#define jpeg_natural_order      jZAGTable
+#endif /* NEED_SHORT_EXTERNAL_NAMES */
+
+
+/* Compression module initialization routines */
+EXTERN(void) jinit_compress_master JPP((j_compress_ptr cinfo));
+EXTERN(void) jinit_c_master_control JPP((j_compress_ptr cinfo,
+                                         boolean transcode_only));
+EXTERN(void) jinit_c_main_controller JPP((j_compress_ptr cinfo,
+                                          boolean need_full_buffer));
+EXTERN(void) jinit_c_prep_controller JPP((j_compress_ptr cinfo,
+                                          boolean need_full_buffer));
+EXTERN(void) jinit_c_coef_controller JPP((j_compress_ptr cinfo,
+                                          boolean need_full_buffer));
+EXTERN(void) jinit_color_converter JPP((j_compress_ptr cinfo));
+EXTERN(void) jinit_downsampler JPP((j_compress_ptr cinfo));
+EXTERN(void) jinit_forward_dct JPP((j_compress_ptr cinfo));
+EXTERN(void) jinit_huff_encoder JPP((j_compress_ptr cinfo));
+EXTERN(void) jinit_phuff_encoder JPP((j_compress_ptr cinfo));
+EXTERN(void) jinit_marker_writer JPP((j_compress_ptr cinfo));
+/* Decompression module initialization routines */
+EXTERN(void) jinit_master_decompress JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_d_main_controller JPP((j_decompress_ptr cinfo,
+                                          boolean need_full_buffer));
+EXTERN(void) jinit_d_coef_controller JPP((j_decompress_ptr cinfo,
+                                          boolean need_full_buffer));
+EXTERN(void) jinit_d_post_controller JPP((j_decompress_ptr cinfo,
+                                          boolean need_full_buffer));
+EXTERN(void) jinit_input_controller JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_marker_reader JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_huff_decoder JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_phuff_decoder JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_inverse_dct JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_upsampler JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_color_deconverter JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_1pass_quantizer JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_2pass_quantizer JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_merged_upsampler JPP((j_decompress_ptr cinfo));
+/* Memory manager initialization */
+EXTERN(void) jinit_memory_mgr JPP((j_common_ptr cinfo));
+
+/* Utility routines in jutils.c */
+EXTERN(long) jdiv_round_up JPP((long a, long b));
+EXTERN(long) jround_up JPP((long a, long b));
+EXTERN(void) jcopy_sample_rows JPP((JSAMPARRAY input_array, int source_row,
+                                    JSAMPARRAY output_array, int dest_row,
+                                    int num_rows, JDIMENSION num_cols));
+EXTERN(void) jcopy_block_row JPP((JBLOCKROW input_row, JBLOCKROW output_row,
+                                  JDIMENSION num_blocks));
+EXTERN(void) jzero_far JPP((void FAR * target, size_t bytestozero));
+/* Constant tables in jutils.c */
+#if 0                           /* This table is not actually needed in v6a */
+extern const int jpeg_zigzag_order[]; /* natural coef order to zigzag order */
+#endif
+extern const int jpeg_natural_order[]; /* zigzag coef order to natural order */
+
+/* Suppress undefined-structure complaints if necessary. */
+
+#ifdef INCOMPLETE_TYPES_BROKEN
+#ifndef AM_MEMORY_MANAGER       /* only jmemmgr.c defines these */
+struct jvirt_sarray_control { long dummy; };
+struct jvirt_barray_control { long dummy; };
+#endif
+#endif /* INCOMPLETE_TYPES_BROKEN */
