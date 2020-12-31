@@ -130,4 +130,191 @@ struct jpeg_marker_writer {
   /* These routines are exported to allow insertion of extra markers */
   /* Probably only COM and APPn markers should be written this way */
   JMETHOD(void, write_marker_header, (j_compress_ptr cinfo, int marker,
-                        
+                                      unsigned int datalen));
+  JMETHOD(void, write_marker_byte, (j_compress_ptr cinfo, int val));
+};
+
+
+/* Declarations for decompression modules */
+
+/* Master control module */
+struct jpeg_decomp_master {
+  JMETHOD(void, prepare_for_output_pass, (j_decompress_ptr cinfo));
+  JMETHOD(void, finish_output_pass, (j_decompress_ptr cinfo));
+
+  /* State variables made visible to other modules */
+  boolean is_dummy_pass;        /* True during 1st pass for 2-pass quant */
+};
+
+/* Input control module */
+struct jpeg_input_controller {
+  JMETHOD(int, consume_input, (j_decompress_ptr cinfo));
+  JMETHOD(void, reset_input_controller, (j_decompress_ptr cinfo));
+  JMETHOD(void, start_input_pass, (j_decompress_ptr cinfo));
+  JMETHOD(void, finish_input_pass, (j_decompress_ptr cinfo));
+
+  /* State variables made visible to other modules */
+  boolean has_multiple_scans;   /* True if file has multiple scans */
+  boolean eoi_reached;          /* True when EOI has been consumed */
+};
+
+/* Main buffer control (downsampled-data buffer) */
+struct jpeg_d_main_controller {
+  JMETHOD(void, start_pass, (j_decompress_ptr cinfo, J_BUF_MODE pass_mode));
+  JMETHOD(void, process_data, (j_decompress_ptr cinfo,
+                               JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
+                               JDIMENSION out_rows_avail));
+};
+
+/* Coefficient buffer control */
+struct jpeg_d_coef_controller {
+  JMETHOD(void, start_input_pass, (j_decompress_ptr cinfo));
+  JMETHOD(int, consume_data, (j_decompress_ptr cinfo));
+  JMETHOD(void, start_output_pass, (j_decompress_ptr cinfo));
+  JMETHOD(int, decompress_data, (j_decompress_ptr cinfo,
+                                 JSAMPIMAGE output_buf));
+  /* Pointer to array of coefficient virtual arrays, or NULL if none */
+  jvirt_barray_ptr *coef_arrays;
+};
+
+/* Decompression postprocessing (color quantization buffer control) */
+struct jpeg_d_post_controller {
+  JMETHOD(void, start_pass, (j_decompress_ptr cinfo, J_BUF_MODE pass_mode));
+  JMETHOD(void, post_process_data, (j_decompress_ptr cinfo,
+                                    JSAMPIMAGE input_buf,
+                                    JDIMENSION *in_row_group_ctr,
+                                    JDIMENSION in_row_groups_avail,
+                                    JSAMPARRAY output_buf,
+                                    JDIMENSION *out_row_ctr,
+                                    JDIMENSION out_rows_avail));
+};
+
+/* Marker reading & parsing */
+struct jpeg_marker_reader {
+  JMETHOD(void, reset_marker_reader, (j_decompress_ptr cinfo));
+  /* Read markers until SOS or EOI.
+   * Returns same codes as are defined for jpeg_consume_input:
+   * JPEG_SUSPENDED, JPEG_REACHED_SOS, or JPEG_REACHED_EOI.
+   */
+  JMETHOD(int, read_markers, (j_decompress_ptr cinfo));
+  /* Read a restart marker --- exported for use by entropy decoder only */
+  jpeg_marker_parser_method read_restart_marker;
+
+  /* State of marker reader --- nominally internal, but applications
+   * supplying COM or APPn handlers might like to know the state.
+   */
+  boolean saw_SOI;              /* found SOI? */
+  boolean saw_SOF;              /* found SOF? */
+  int next_restart_num;         /* next restart number expected (0-7) */
+  unsigned int discarded_bytes; /* # of bytes skipped looking for a marker */
+};
+
+/* Entropy decoding */
+struct jpeg_entropy_decoder {
+  JMETHOD(void, start_pass, (j_decompress_ptr cinfo));
+  JMETHOD(boolean, decode_mcu, (j_decompress_ptr cinfo,
+                                JBLOCKROW *MCU_data));
+
+  /* This is here to share code between baseline and progressive decoders; */
+  /* other modules probably should not use it */
+  boolean insufficient_data;    /* set TRUE after emitting warning */
+};
+
+/* Inverse DCT (also performs dequantization) */
+typedef JMETHOD(void, inverse_DCT_method_ptr,
+                (j_decompress_ptr cinfo, jpeg_component_info * compptr,
+                 JCOEFPTR coef_block,
+                 JSAMPARRAY output_buf, JDIMENSION output_col));
+
+struct jpeg_inverse_dct {
+  JMETHOD(void, start_pass, (j_decompress_ptr cinfo));
+  /* It is useful to allow each component to have a separate IDCT method. */
+  inverse_DCT_method_ptr inverse_DCT[MAX_COMPONENTS];
+};
+
+/* Upsampling (note that upsampler must also call color converter) */
+struct jpeg_upsampler {
+  JMETHOD(void, start_pass, (j_decompress_ptr cinfo));
+  JMETHOD(void, upsample, (j_decompress_ptr cinfo,
+                           JSAMPIMAGE input_buf,
+                           JDIMENSION *in_row_group_ctr,
+                           JDIMENSION in_row_groups_avail,
+                           JSAMPARRAY output_buf,
+                           JDIMENSION *out_row_ctr,
+                           JDIMENSION out_rows_avail));
+
+  boolean need_context_rows;    /* TRUE if need rows above & below */
+};
+
+/* Colorspace conversion */
+struct jpeg_color_deconverter {
+  JMETHOD(void, start_pass, (j_decompress_ptr cinfo));
+  JMETHOD(void, color_convert, (j_decompress_ptr cinfo,
+                                JSAMPIMAGE input_buf, JDIMENSION input_row,
+                                JSAMPARRAY output_buf, int num_rows));
+};
+
+/* Color quantization or color precision reduction */
+struct jpeg_color_quantizer {
+  JMETHOD(void, start_pass, (j_decompress_ptr cinfo, boolean is_pre_scan));
+  JMETHOD(void, color_quantize, (j_decompress_ptr cinfo,
+                                 JSAMPARRAY input_buf, JSAMPARRAY output_buf,
+                                 int num_rows));
+  JMETHOD(void, finish_pass, (j_decompress_ptr cinfo));
+  JMETHOD(void, new_color_map, (j_decompress_ptr cinfo));
+};
+
+
+/* Miscellaneous useful macros */
+
+#undef MAX
+#define MAX(a,b)        ((a) > (b) ? (a) : (b))
+#undef MIN
+#define MIN(a,b)        ((a) < (b) ? (a) : (b))
+
+
+/* We assume that right shift corresponds to signed division by 2 with
+ * rounding towards minus infinity.  This is correct for typical "arithmetic
+ * shift" instructions that shift in copies of the sign bit.  But some
+ * C compilers implement >> with an unsigned shift.  For these machines you
+ * must define RIGHT_SHIFT_IS_UNSIGNED.
+ * RIGHT_SHIFT provides a proper signed right shift of an INT32 quantity.
+ * It is only applied with constant shift counts.  SHIFT_TEMPS must be
+ * included in the variables of any routine using RIGHT_SHIFT.
+ */
+
+#ifdef RIGHT_SHIFT_IS_UNSIGNED
+#define SHIFT_TEMPS     INT32 shift_temp;
+#define RIGHT_SHIFT(x,shft)  \
+        ((shift_temp = (x)) < 0 ? \
+         (shift_temp >> (shft)) | ((~((INT32) 0)) << (32-(shft))) : \
+         (shift_temp >> (shft)))
+#else
+#define SHIFT_TEMPS
+#define RIGHT_SHIFT(x,shft)     ((x) >> (shft))
+#endif
+
+
+/* Short forms of external names for systems with brain-damaged linkers. */
+
+#ifdef NEED_SHORT_EXTERNAL_NAMES
+#define jinit_compress_master   jICompress
+#define jinit_c_master_control  jICMaster
+#define jinit_c_main_controller jICMainC
+#define jinit_c_prep_controller jICPrepC
+#define jinit_c_coef_controller jICCoefC
+#define jinit_color_converter   jICColor
+#define jinit_downsampler       jIDownsampler
+#define jinit_forward_dct       jIFDCT
+#define jinit_huff_encoder      jIHEncoder
+#define jinit_phuff_encoder     jIPHEncoder
+#define jinit_marker_writer     jIMWriter
+#define jinit_master_decompress jIDMaster
+#define jinit_d_main_controller jIDMainC
+#define jinit_d_coef_controller jIDCoefC
+#define jinit_d_post_controller jIDPostC
+#define jinit_input_controller  jIInCtlr
+#define jinit_marker_reader     jIMReader
+#define jinit_huff_decoder      jIHDecoder
+#define jinit_phuff_decoder     jIPHDecoder
+#define jinit_inverse_dct       jII
