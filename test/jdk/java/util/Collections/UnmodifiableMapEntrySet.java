@@ -137,4 +137,28 @@ public class UnmodifiableMapEntrySet {
     }
 
     void testSpliterator(Supplier<Spliterator<Map.Entry<Integer, Integer>>> ss,
-                         // Higher order function that given a 
+                         // Higher order function that given a spliterator returns a
+                         // consumer for that spliterator which traverses elements
+                         // using an EntryConsumer
+                         Function<Spliterator<Map.Entry<Integer, Integer>>, Consumer<EntryConsumer>> sc) {
+        testWithEntryConsumer(sc.apply(ss.get()));
+
+        Spliterator<Map.Entry<Integer, Integer>> s = ss.get();
+        Spliterator<Map.Entry<Integer, Integer>> split = s.trySplit();
+        if (split != null) {
+            testWithEntryConsumer(sc.apply(split));
+            testWithEntryConsumer(sc.apply(s));
+        }
+    }
+
+    @Test(dataProvider = "maps")
+    public void testStreamForEach(String d, Supplier<Map<Integer, Integer>> ms) {
+        testWithEntryConsumer(ec -> ms.get().entrySet().stream().forEach(ec));
+    }
+
+    @Test(dataProvider = "maps")
+    public void testParallelStreamForEach(String d, Supplier<Map<Integer, Integer>> ms) {
+        testWithEntryConsumer(ec -> ms.get().entrySet().parallelStream().forEach(ec));
+    }
+}
+
