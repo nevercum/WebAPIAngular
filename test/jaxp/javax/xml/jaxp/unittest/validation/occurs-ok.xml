@@ -18,4 +18,16 @@
     <person>
         <full_name>Tove Refsnes</full_name>
         <child_name>Hege</child_name>
-        <child_name>Stale</child_name
+        <child_name>Stale</child_name>
+        <child_name>Jim</child_name>
+        <child_name>Sheldon</child_name>
+    </person>
+    <person>
+        <full_name>Stale Refsnes</full_name>
+        <child_name>Jim</child_name>
+        <child_name>Hege</child_name>
+        <child_name>Stale</child_name>
+        <child_name>Sheldon</child_name>
+        <child_name>Penny</child_name>
+    </person>
+</persons>
