@@ -209,3 +209,124 @@ public class LoggingMonitor extends Monitor {
 
                             return res;
                     }
+                    } catch (Exception e) {
+                            throw new Failure(e);
+                    }
+        case PROXY_MODE:
+            logger.trace(TRACE_LEVEL,"[getLoggerNames] "
+                       + "getLoggerNames() invoked through MBeanServer proxy");
+            return getProxy().getLoggerNames();
+        }
+
+        throw new TestBug("Unknown testMode " + mode);
+    }
+
+
+    /**
+     * Redirects the invocation to
+     * {@link java.util.logging.LoggingMXBean#getParentLoggerName(String)
+     * <code>LoggingMXBean.getParentLoggerName(String loggerName)</code>}.
+     *
+     * @param loggerName The name of a <tt>Logger</tt>.
+     *
+     * @return the name of the nearest existing parent logger;
+     *         an empty string if the specified logger is the root logger.
+     *         If the specified logger does not exist, <tt>null</tt>
+     *         is returned.
+     *
+     * @see java.util.logging.LoggingMXBean#getParentLoggerName(String)
+     */
+    public String getParentLoggerName(String loggerName) {
+
+        int mode = getTestMode();
+
+        switch (mode) {
+        case DIRECTLY_MODE:
+            logger.trace(TRACE_LEVEL,"[getParentLoggerName] "
+                       + "getParentLoggerName() directly invoked");
+            return mbean.getParentLoggerName(loggerName);
+
+        case SERVER_MODE:
+            logger.trace(TRACE_LEVEL,"[getParentLoggerName] "
+                       + "getParentLoggerName() invoked through MBeanServer");
+
+            try {
+
+                Object[] params = { loggerName };
+                String[] signature = { String.class.getName() };
+
+                String res = (String) getMBeanServer().invoke(
+                    mbeanObjectName,
+                    GET_PARENT_LOGGER_NAME,
+                    params,
+                    signature );
+                return res;
+
+            } catch (Exception e) {
+
+                throw new Failure(e);
+            }
+        case PROXY_MODE:
+            logger.trace(TRACE_LEVEL,"[getParentLoggerName] "
+                       + "getParentLoggerName() invoked through MBeanServer proxy");
+            return getProxy().getParentLoggerName(loggerName);
+        }
+
+        throw new TestBug("Unknown testMode " + mode);
+    }
+
+
+    /**
+     * Redirects the invocation to
+     * {@link java.util.logging.LoggingMXBean#setLoggerLevel(String,String)
+     * <code>LoggingMXBean.setLoggerLevel(String loggerName, String levelName)</code>}.
+     *
+     * @param loggerName The name of the <tt>Logger</tt> to be set.
+     *                   Must be non-null.
+     * @param levelName The name of the level to set the specified logger to,
+     *                 or <tt>null</tt> if to set the level to inherit
+     *                 from its nearest ancestor.
+     *
+     * @see java.util.logging.LoggingMXBean#setLoggerLevel(String,String)
+     */
+    public void setLoggerLevel(String loggerName, String levelName) {
+
+        int mode = getTestMode();
+
+        switch (mode) {
+        case DIRECTLY_MODE:
+            logger.trace(TRACE_LEVEL,"[setLoggerLevel] "
+                       + "setLoggerLevel() directly invoked");
+            mbean.setLoggerLevel(loggerName, levelName);
+            break;
+        case SERVER_MODE:
+            logger.trace(TRACE_LEVEL,"[setLoggerLevel] "
+                       + "setLoggerLevel() invoked through MBeanServer");
+
+            try {
+
+                Object[] params = { loggerName, levelName };
+                String[] signature = { String.class.getName(), String.class.getName() };
+
+                getMBeanServer().invoke(
+                    mbeanObjectName,
+                    SET_LOGGER_LEVEL,
+                    params,
+                    signature );
+
+            } catch (Exception e) {
+
+                throw new Failure(e);
+            }
+            break;
+        case PROXY_MODE:
+            logger.trace(TRACE_LEVEL,"[setLoggerLevel] "
+                       + "setLoggerLevel() invoked through MBeanServer proxy");
+            getProxy().setLoggerLevel(loggerName, levelName);
+            break;
+        }
+
+        throw new TestBug("Unknown testMode " + mode);
+    }
+
+} // LoggingMonitor
