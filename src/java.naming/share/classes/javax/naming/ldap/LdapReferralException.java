@@ -98,3 +98,65 @@ public abstract class LdapReferralException extends ReferralException {
      * properties and no controls.
      *<p>
      * This method is equivalent to
+     *<blockquote><pre>
+     * getReferralContext(env, null);
+     *</pre></blockquote>
+     *<p>
+     * It is overridden in this class for documentation purposes only.
+     * See {@code ReferralException} for how to use this method.
+     *
+     * @param env The possibly null environment to use when retrieving the
+     *          referral context. If null, no environment properties will be used.
+     *
+     * @return The non-null context at which to continue the method.
+     * @throws NamingException If a naming exception was encountered.
+     * Call either {@code retryReferral()} or {@code skipReferral()}
+     * to continue processing referrals.
+     */
+    public abstract Context
+        getReferralContext(Hashtable<?,?> env)
+        throws NamingException;
+
+    /**
+     * Retrieves the context at which to continue the method using
+     * request controls and environment properties.
+     * Regardless of whether a referral is encountered directly during a
+     * context operation, or indirectly, for example, during a search
+     * enumeration, the referral exception should provide a context
+     * at which to continue the operation.
+     * To continue the operation, the client program should re-invoke
+     * the method using the same arguments as the original invocation.
+     *<p>
+     * {@code reqCtls} is used when creating the connection to the referred
+     * server. These controls will be used as the connection request controls for
+     * the context and context instances
+     * derived from the context.
+     * {@code reqCtls} will also be the context's request controls for
+     * subsequent context operations. See the {@code LdapContext} class
+     * description for details.
+     *<p>
+     * This method should be used instead of the other two overloaded forms
+     * when the caller needs to supply request controls for creating
+     * the referral context. It might need to do this, for example, when
+     * it needs to supply special controls relating to authentication.
+     *<p>
+     * Service provider implementors should read the "Service Provider" section
+     * in the {@code LdapContext} class description for implementation details.
+     *
+     * @param reqCtls The possibly null request controls to use for the new context.
+     * If null or the empty array means use no request controls.
+     * @param env The possibly null environment properties to use when
+     * for the new context. If null, the context is initialized with no environment
+     * properties.
+     * @return The non-null context at which to continue the method.
+     * @throws NamingException If a naming exception was encountered.
+     * Call either {@code retryReferral()} or {@code skipReferral()}
+     * to continue processing referrals.
+     */
+    public abstract Context
+        getReferralContext(Hashtable<?,?> env,
+                           Control[] reqCtls)
+        throws NamingException;
+
+    private static final long serialVersionUID = -1668992791764950804L;
+}
