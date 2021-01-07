@@ -120,4 +120,42 @@ public class HeapDumpCompressedTest {
 
         // Check we detect an invalid compression level.
         OutputAnalyzer output = executor.execute("GC.heap_dump -gz=0 " +
-               
+                                                  dump.getAbsolutePath());
+        output.shouldContain("Compression level out of range");
+
+        // Check we can create a gzipped dump.
+        output = executor.execute("GC.heap_dump -gz=1 " + dump.getAbsolutePath());
+        output.shouldContain("Heap dump file created");
+
+        // Check we detect an already present heap dump.
+        output = executor.execute("GC.heap_dump -gz=1 " + dump.getAbsolutePath());
+        output.shouldContain("Unable to create ");
+
+        verifyHeapDump(dump);
+        dump.delete();
+    }
+
+    private static void verifyHeapDump(File dump) throws Exception {
+
+        Asserts.assertTrue(dump.exists() && dump.isFile(),
+                           "Could not create dump file " + dump.getAbsolutePath());
+
+        try {
+            File out = HprofParser.parse(dump);
+
+            Asserts.assertTrue(out != null && out.exists() && out.isFile(),
+                               "Could not find hprof parser output file");
+            List<String> lines = Files.readAllLines(out.toPath());
+            Asserts.assertTrue(lines.size() > 0, "hprof parser output file is empty");
+            for (String line : lines) {
+                Asserts.assertFalse(line.matches(".*WARNING(?!.*Failed to resolve " +
+                                                 "object.*constantPoolOop.*).*"));
+            }
+
+            out.delete();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Asserts.fail("Could not parse dump file " + dump.getAbsolutePath());
+        }
+    }
+}
