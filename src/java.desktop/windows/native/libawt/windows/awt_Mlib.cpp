@@ -55,4 +55,54 @@ extern "C"
             return MLIB_FAILURE;
         }
 
-        /* Initialize
+        /* Initialize pointers to medilib routines... */
+        tempSysFns.createFP = (MlibCreateFP_t)
+            ::GetProcAddress(hDLL, "j2d_mlib_ImageCreate");
+        if (tempSysFns.createFP == NULL) {
+            ret = MLIB_FAILURE;
+        }
+
+        if (ret == MLIB_SUCCESS) {
+            tempSysFns.createStructFP = (MlibCreateStructFP_t)
+                ::GetProcAddress(hDLL, "j2d_mlib_ImageCreateStruct");
+            if (tempSysFns.createStructFP == NULL) {
+                ret = MLIB_FAILURE;
+            }
+        }
+
+        if (ret == MLIB_SUCCESS) {
+            tempSysFns.deleteImageFP = (MlibDeleteFP_t)
+                ::GetProcAddress(hDLL, "j2d_mlib_ImageDelete");
+            if (tempSysFns.deleteImageFP == NULL) {
+                ret = MLIB_FAILURE;
+            }
+        }
+        if (ret == MLIB_SUCCESS) {
+            *sMlibSysFns = tempSysFns;
+        }
+
+        mlib_status (*fPtr)();
+        mlibFnS_t* pMlibFns = sMlibFns;
+        int i = 0;
+        while ((ret == MLIB_SUCCESS) && (pMlibFns[i].fname != NULL)) {
+            fPtr = (mlib_status (*)())
+                ::GetProcAddress(hDLL, pMlibFns[i].fname);
+            if (fPtr != NULL) {
+                pMlibFns[i].fptr = fPtr;
+            } else {
+                ret = MLIB_FAILURE;
+            }
+            i++;
+        }
+
+        return ret;
+    }
+
+    mlib_start_timer awt_setMlibStartTimer() {
+        return NULL;
+    }
+
+    mlib_stop_timer awt_setMlibStopTimer() {
+        return NULL;
+    }
+}
