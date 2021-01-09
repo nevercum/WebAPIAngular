@@ -8275,3 +8275,454 @@ Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/
 			</unit>
 			<unit type="torque-newton-meter">
 				<displayName>ନ୍ୟୁ.ମି.</displayName>
+				<unitPattern count="one">{0} ନ୍ୟୁ.ମି.</unitPattern>
+				<unitPattern count="other">{0} ନ୍ୟୁ.ମି.</unitPattern>
+			</unit>
+			<unit type="volume-cubic-kilometer">
+				<displayName>ଘନକି.ମି.</displayName>
+				<unitPattern count="one">{0}ଘନକି.ମି.</unitPattern>
+				<unitPattern count="other">{0}ଘନକି.ମି.</unitPattern>
+			</unit>
+			<unit type="volume-cubic-meter">
+				<displayName>ଘନମି</displayName>
+				<unitPattern count="one">{0}/ ଘନମି</unitPattern>
+				<unitPattern count="other">{0}/ ଘନମି</unitPattern>
+				<perUnitPattern>{0}/ ଘନମି</perUnitPattern>
+			</unit>
+			<unit type="volume-cubic-centimeter">
+				<displayName>ଘନସେମି</displayName>
+				<unitPattern count="one">{0}/ଘନସେମି</unitPattern>
+				<unitPattern count="other">{0}/ଘନସେମି</unitPattern>
+				<perUnitPattern>{0}/ଘନସେମି</perUnitPattern>
+			</unit>
+			<unit type="volume-cubic-mile">
+				<displayName>ଘନମାଇଲ୍</displayName>
+				<unitPattern count="one">{0}ଘନମାଇଲ୍</unitPattern>
+				<unitPattern count="other">{0}ଘନମାଇଲ୍</unitPattern>
+			</unit>
+			<unit type="volume-cubic-inch">
+				<displayName>ଘନଇଞ୍ଚ</displayName>
+				<unitPattern count="one">{0} ଘନଇଞ୍ଚ</unitPattern>
+				<unitPattern count="other">{0} ଘନଇଞ୍ଚ</unitPattern>
+			</unit>
+			<unit type="volume-liter">
+				<displayName>ଲିଟର୍</displayName>
+				<unitPattern count="one">{0}ଲି</unitPattern>
+				<unitPattern count="other">{0}ଲି</unitPattern>
+			</unit>
+			<unit type="volume-deciliter">
+				<displayName>ଡେ. ଲି.</displayName>
+				<unitPattern count="one">{0} ଡେ. ଲି.</unitPattern>
+				<unitPattern count="other">{0} ଡେ. ଲି.</unitPattern>
+			</unit>
+			<unit type="volume-centiliter">
+				<displayName>ସେ. ଲି.</displayName>
+				<unitPattern count="one">{0} ସେ. ଲି.</unitPattern>
+				<unitPattern count="other">{0} ସେ. ଲି.</unitPattern>
+			</unit>
+			<unit type="volume-milliliter">
+				<displayName>ମି. ଲି.</displayName>
+				<unitPattern count="one">{0} ମି. ଲି.</unitPattern>
+				<unitPattern count="other">{0} ମି. ଲି.</unitPattern>
+			</unit>
+			<unit type="volume-acre-foot">
+				<displayName>ଏକରଫୁଟ</displayName>
+				<unitPattern count="one">{0} ଏକରଫୁଟ</unitPattern>
+				<unitPattern count="other">{0} ଏକରଫୁଟ</unitPattern>
+			</unit>
+			<unit type="volume-gallon">
+				<displayName>ଗେଲନ୍</displayName>
+				<unitPattern count="one">{0} ଗେ</unitPattern>
+				<unitPattern count="other">{0} ଗେ</unitPattern>
+				<perUnitPattern>{0}/ ଗେ</perUnitPattern>
+			</unit>
+			<unit type="volume-gallon-imperial">
+				<displayName>ଇମ୍ପିଗେଲନ୍</displayName>
+				<unitPattern count="one">{0} ଇମ୍ପିଗେଲନ୍</unitPattern>
+				<unitPattern count="other">{0} ଇମ୍ପିଗେଲନ୍</unitPattern>
+				<perUnitPattern>{0}/ ଇମ୍ପିଗେଲନ୍</perUnitPattern>
+			</unit>
+			<unit type="volume-cup">
+				<unitPattern count="one">{0} କପ</unitPattern>
+				<unitPattern count="other">{0} କପ</unitPattern>
+			</unit>
+			<unit type="volume-barrel">
+				<displayName>ବ୍ୟାରେଲ୍</displayName>
+				<unitPattern count="one">{0} ବ୍ୟାରେଲ୍</unitPattern>
+				<unitPattern count="other">{0} ବ୍ୟାରେଲ୍</unitPattern>
+			</unit>
+			<unit type="volume-drop">
+				<displayName>dr</displayName>
+			</unit>
+			<unit type="volume-pinch">
+				<displayName>ଚିମୁଟ</displayName>
+				<unitPattern count="one">{0} ଚିମୁଟ</unitPattern>
+				<unitPattern count="other">{0} ଚିମୁଟ</unitPattern>
+			</unit>
+			<coordinateUnit>
+				<displayName>ଦିଗ</displayName>
+				<coordinateUnitPattern type="east">{0} ପୂ</coordinateUnitPattern>
+				<coordinateUnitPattern type="north">{0}ଉ</coordinateUnitPattern>
+				<coordinateUnitPattern type="south">{0} ଦ</coordinateUnitPattern>
+				<coordinateUnitPattern type="west">{0} ପ</coordinateUnitPattern>
+			</coordinateUnit>
+		</unitLength>
+		<durationUnit type="ms">
+			<durationUnitPattern>m:ss</durationUnitPattern>
+		</durationUnit>
+	</units>
+	<listPatterns>
+		<listPattern>
+			<listPatternPart type="start">{0}, {1}</listPatternPart>
+			<listPatternPart type="middle">{0}, {1}</listPatternPart>
+			<listPatternPart type="end">{0}, ଓ {1}</listPatternPart>
+			<listPatternPart type="2">{0} ଓ {1}</listPatternPart>
+		</listPattern>
+		<listPattern type="or">
+			<listPatternPart type="start">{0}, {1}</listPatternPart>
+			<listPatternPart type="middle">{0}, {1}</listPatternPart>
+			<listPatternPart type="end">{0} କିମ୍ବା {1}</listPatternPart>
+			<listPatternPart type="2">{0} କିମ୍ବା {1}</listPatternPart>
+		</listPattern>
+		<listPattern type="standard-short">
+			<listPatternPart type="end">{0}, ଓ {1}</listPatternPart>
+		</listPattern>
+		<listPattern type="unit">
+			<listPatternPart type="start">{0}, {1}</listPatternPart>
+			<listPatternPart type="middle">{0}, {1}</listPatternPart>
+			<listPatternPart type="end">{0}, {1}</listPatternPart>
+			<listPatternPart type="2">{0}, {1}</listPatternPart>
+		</listPattern>
+		<listPattern type="unit-narrow">
+			<listPatternPart type="start">{0} {1}</listPatternPart>
+			<listPatternPart type="middle">{0} {1}</listPatternPart>
+			<listPatternPart type="end">{0} {1}</listPatternPart>
+			<listPatternPart type="2">{0} {1}</listPatternPart>
+		</listPattern>
+		<listPattern type="unit-short">
+			<listPatternPart type="start">{0}, {1}</listPatternPart>
+			<listPatternPart type="middle">{0}, {1}</listPatternPart>
+			<listPatternPart type="end">{0}, {1}</listPatternPart>
+			<listPatternPart type="2">{0}, {1}</listPatternPart>
+		</listPattern>
+	</listPatterns>
+	<posix>
+		<messages>
+			<yesstr>ହଁ</yesstr>
+			<nostr>ନା</nostr>
+		</messages>
+	</posix>
+	<characterLabels>
+		<characterLabelPattern type="other">{0} — ଅନ୍ୟ</characterLabelPattern>
+		<characterLabelPattern type="subscript">ସବସ୍କ୍ରିପ୍ଟ {0}</characterLabelPattern>
+		<characterLabelPattern type="superscript">ସୁପରସ୍କ୍ରିପ୍ଟ {0}</characterLabelPattern>
+		<characterLabel type="activities">କାର୍ଯ୍ୟକଳାପ</characterLabel>
+		<characterLabel type="african_scripts">ଆଫ୍ରିକୀୟ ସ୍କ୍ରିପ୍ଟ</characterLabel>
+		<characterLabel type="american_scripts">ଆମେରିକୀୟ ସ୍କ୍ରିପ୍ଟ</characterLabel>
+		<characterLabel type="animal">ପଶୁ</characterLabel>
+		<characterLabel type="animals_nature">ପଶୁ କିମ୍ବା ପ୍ରକୃତି</characterLabel>
+		<characterLabel type="arrows">ତୀର</characterLabel>
+		<characterLabel type="body">ଶରୀର</characterLabel>
+		<characterLabel type="box_drawing">ବକ୍ସ ଅଙ୍କନ କରିବା</characterLabel>
+		<characterLabel type="braille">ବ୍ରେଲ୍</characterLabel>
+		<characterLabel type="building">ଅଟ୍ଟାଳିକା</characterLabel>
+		<characterLabel type="bullets_stars">ବୁଲେଟ୍‍ କିମ୍ବା ତାରା</characterLabel>
+		<characterLabel type="consonantal_jamo">ବ୍ୟଞ୍ଜନ ବର୍ଣ୍ଣ ସମ୍ବନ୍ଧୀୟ ଜାମୋ</characterLabel>
+		<characterLabel type="currency_symbols">ମୁଦ୍ରା ଚିହ୍ନ</characterLabel>
+		<characterLabel type="dash_connector">ଡ୍ୟାଶ୍‍ କିମ୍ବା ସଂଯୋଜକ</characterLabel>
+		<characterLabel type="digits">ଅଙ୍କ</characterLabel>
+		<characterLabel type="dingbats">ଡିଙ୍ଗବ୍ୟାଟ୍‍</characterLabel>
+		<characterLabel type="divination_symbols">ଅଲୌକିକ ଚିହ୍ନ</characterLabel>
+		<characterLabel type="downwards_arrows">ନିମ୍ନାଭିମୁଖୀ ତୀର</characterLabel>
+		<characterLabel type="downwards_upwards_arrows">ନିମ୍ନାଭିମୁଖୀ ଉର୍ଦ୍ଧ୍ୱମୁଖୀ ତୀର</characterLabel>
+		<characterLabel type="east_asian_scripts">ପୂର୍ବ ଏସିୟ ସ୍କ୍ରିପ୍ଟ</characterLabel>
+		<characterLabel type="emoji">ଇମୋଜି</characterLabel>
+		<characterLabel type="european_scripts">ୟୁରୋପିୟ ସ୍କ୍ରିପ୍ଟ</characterLabel>
+		<characterLabel type="female">ମହିଳା</characterLabel>
+		<characterLabel type="flag">ପତାକା</characterLabel>
+		<characterLabel type="flags">ପତାକାଗୁଡ଼ିକ</characterLabel>
+		<characterLabel type="food_drink">ଖାଦ୍ୟ ଏବଂ ପାନୀୟ</characterLabel>
+		<characterLabel type="format">ଫର୍ମାଟ୍‍</characterLabel>
+		<characterLabel type="format_whitespace">ଫର୍ମାଟ୍‍ ଏବଂ ଧଳା ଖାଲି ସ୍ଥାନ</characterLabel>
+		<characterLabel type="full_width_form_variant">ପୂର୍ଣ୍ଣ-ପ୍ରସ୍ଥ ଭିନ୍ନତା</characterLabel>
+		<characterLabel type="geometric_shapes">ଜ୍ୟାମିତିକ ଆକୃତି</characterLabel>
+		<characterLabel type="half_width_form_variant">ଅର୍ଦ୍ଧ-ପ୍ରସ୍ଥ ଭିନ୍ନତା</characterLabel>
+		<characterLabel type="han_characters">ହାନ୍‍ ବର୍ଣ୍ଣ</characterLabel>
+		<characterLabel type="han_radicals">ହାନ୍‍ ରାଡିକାଲ୍</characterLabel>
+		<characterLabel type="hanja">ହାଞ୍ଜା</characterLabel>
+		<characterLabel type="hanzi_simplified">ହାଞ୍ଜି (ସରଳୀକୃତ)</characterLabel>
+		<characterLabel type="hanzi_traditional">ହାଞ୍ଜି (ପାରମ୍ପରିକ)</characterLabel>
+		<characterLabel type="heart">ହୃଦୟ</characterLabel>
+		<characterLabel type="historic_scripts">ଐତିହାସିକ ସ୍କ୍ରିପ୍ଟ</characterLabel>
+		<characterLabel type="ideographic_desc_characters">ସାଙ୍କେତିକ ବର୍ଣ୍ଣନା ବର୍ଣ୍ଣ</characterLabel>
+		<characterLabel type="japanese_kana">ଜାପାନୀ କାନା</characterLabel>
+		<characterLabel type="kanbun">କାନବୁନ୍‍</characterLabel>
+		<characterLabel type="kanji">କାଞ୍ଜି</characterLabel>
+		<characterLabel type="keycap">କୀକ୍ୟାପ୍‍</characterLabel>
+		<characterLabel type="leftwards_arrows">ବାମମୁଖୀ ତୀର</characterLabel>
+		<characterLabel type="leftwards_rightwards_arrows">ବାମମୁଖୀ ଡାହାଣମୁଖୀ ତୀର</characterLabel>
+		<characterLabel type="letterlike_symbols">ଅକ୍ଷରପରି ଚିହ୍ନ</characterLabel>
+		<characterLabel type="limited_use">ସୀମିତ-ବ୍ୟବହାର</characterLabel>
+		<characterLabel type="male">ପୁରୁଷ</characterLabel>
+		<characterLabel type="math_symbols">ଗାଣିତିକ ଚିହ୍ନ</characterLabel>
+		<characterLabel type="middle_eastern_scripts">ମଧ୍ୟପ୍ରାଚ୍ୟ ସ୍କ୍ରିପ୍ଟ</characterLabel>
+		<characterLabel type="miscellaneous">ବିବିଧ</characterLabel>
+		<characterLabel type="modern_scripts">ଆଧୁନିକ ସ୍କ୍ରିପ୍ଟ</characterLabel>
+		<characterLabel type="modifier">ସଂଶୋଧକ</characterLabel>
+		<characterLabel type="musical_symbols">ସାଙ୍ଗୀତିକ ଚିହ୍ନ</characterLabel>
+		<characterLabel type="nature">ପ୍ରକୃତି</characterLabel>
+		<characterLabel type="nonspacing">ଅଣବ୍ୟବଧାନୀକରଣ</characterLabel>
+		<characterLabel type="numbers">ସଂଖ୍ୟାଗୁଡ଼ିକ</characterLabel>
+		<characterLabel type="objects">ପଦାର୍ଥ</characterLabel>
+		<characterLabel type="other">ଅନ୍ୟ</characterLabel>
+		<characterLabel type="paired">ଯୋଡ଼ା</characterLabel>
+		<characterLabel type="person">ବ୍ୟକ୍ତି</characterLabel>
+		<characterLabel type="phonetic_alphabet">ଫୋନେଟିକ୍‍ ବର୍ଣ୍ଣମାଳା</characterLabel>
+		<characterLabel type="pictographs">ପିକ୍ଟୋଗ୍ରାଫ୍</characterLabel>
+		<characterLabel type="place">ସ୍ଥାନ</characterLabel>
+		<characterLabel type="plant">ଗଛ</characterLabel>
+		<characterLabel type="punctuation">ବିରାମ ଚିହ୍ନ</characterLabel>
+		<characterLabel type="rightwards_arrows">ଡାହାଣମୁଖୀ ତୀର</characterLabel>
+		<characterLabel type="sign_standard_symbols">ଚିହ୍ନ କିମ୍ବା ସଙ୍କେତ</characterLabel>
+		<characterLabel type="small_form_variant">ଛୋଟ ଭିନ୍ନତା</characterLabel>
+		<characterLabel type="smiley">ସ୍ମାଇଲି</characterLabel>
+		<characterLabel type="smileys_people">ସ୍ମାଇଲି କିମ୍ବା ବ୍ୟକ୍ତି</characterLabel>
+		<characterLabel type="south_asian_scripts">ଦକ୍ଷିଣ ଏସିୟ ସ୍କ୍ରିପ୍ଟ</characterLabel>
+		<characterLabel type="southeast_asian_scripts">ଦକ୍ଷିଣପୂର୍ବ ଏସିୟ ସ୍କ୍ରିପ୍ଟ</characterLabel>
+		<characterLabel type="spacing">ବ୍ୟବଧାନୀକରଣ</characterLabel>
+		<characterLabel type="sport">କ୍ରୀଡ଼ା</characterLabel>
+		<characterLabel type="symbols">ସଙ୍କେତ</characterLabel>
+		<characterLabel type="technical_symbols">ବୈଷୟିକ ଚିହ୍ନ</characterLabel>
+		<characterLabel type="tone_marks">ସ୍ୱର ଚିହ୍ନ</characterLabel>
+		<characterLabel type="travel">ଯାତ୍ରା</characterLabel>
+		<characterLabel type="travel_places">ଯାତ୍ରା କିମ୍ବା ସ୍ଥାନ</characterLabel>
+		<characterLabel type="upwards_arrows">ଉର୍ଦ୍ଧ୍ୱମୁଖୀ ତୀରଗୁଡ଼ିକ</characterLabel>
+		<characterLabel type="variant_forms">ଭିନ୍ନତା</characterLabel>
+		<characterLabel type="vocalic_jamo">ସ୍ୱରବର୍ଣ୍ଣ ସମ୍ବନ୍ଧୀୟ ଜାମୋ</characterLabel>
+		<characterLabel type="weather">ପାଣିପାଗ</characterLabel>
+		<characterLabel type="western_asian_scripts">ପଶ୍ଚିମ ଏସିୟ ସ୍କ୍ରିପ୍ଟ</characterLabel>
+		<characterLabel type="whitespace">ଧଳା ଖାଲି ସ୍ଥାନ</characterLabel>
+	</characterLabels>
+	<typographicNames>
+		<axisName type="ital">ବକ୍ର</axisName>
+		<axisName type="opsz">ଅପ୍ଟିକାଲ୍‌ ଆକାର</axisName>
+		<axisName type="slnt">ତିର୍ଯ୍ୟକ୍‌ ଭାବରେ</axisName>
+		<axisName type="wdth">ଚ‍ଉଡା</axisName>
+		<axisName type="wght">ଓଜନ</axisName>
+		<styleName type="ital" subtype="1">କରଣୀ ଲେଖା</styleName>
+		<styleName type="opsz" subtype="8">ଶିରୋନାମା</styleName>
+		<styleName type="opsz" subtype="12">ପାଠ୍ୟ</styleName>
+		<styleName type="opsz" subtype="18">ଶୀର୍ଷକ</styleName>
+		<styleName type="opsz" subtype="72">ପ୍ରଦର୍ଶନ</styleName>
+		<styleName type="opsz" subtype="144">ପୋଷ୍ଟର</styleName>
+		<styleName type="slnt" subtype="-12">ବ୍ୟାକସ୍ଲାଣ୍ଟେଡ୍‌</styleName>
+		<styleName type="slnt" subtype="0">ଭୂଲମ୍ବ</styleName>
+		<styleName type="slnt" subtype="12">ତୀର୍ଯ୍ୟକ୍‌ ଭାବରେ</styleName>
+		<styleName type="slnt" subtype="24">ଅତିରିକ୍ତ-ତୀର୍ଯ୍ୟକ୍‌</styleName>
+		<styleName type="wdth" subtype="50">ଅତିସଂକ୍ଷିପ୍ତ</styleName>
+		<styleName type="wdth" subtype="50" alt="compressed">ଅତିସଂକୁଚିତ</styleName>
+		<styleName type="wdth" subtype="50" alt="narrow">ଅତିସଂକୀର୍ଣ୍ଣ</styleName>
+		<styleName type="wdth" subtype="62.5">ଅତିରିକ୍ତ-ସଂକ୍ଷିପ୍ତ</styleName>
+		<styleName type="wdth" subtype="62.5" alt="compressed">ଅତିରିକ୍ତ-ସଂକୁଚିତ</styleName>
+		<styleName type="wdth" subtype="62.5" alt="narrow">ଅତିରିକ୍ତ-ସଂକୀର୍ଣ୍ଣ</styleName>
+		<styleName type="wdth" subtype="75">ସଂକ୍ଷିପ୍ତ</styleName>
+		<styleName type="wdth" subtype="75" alt="compressed">ସଂକୁଚିତ</styleName>
+		<styleName type="wdth" subtype="75" alt="narrow">ସଂକୁଚିତ</styleName>
+		<styleName type="wdth" subtype="87.5">ଅର୍ଦ୍ଧସଂକ୍ଷିପ୍ତ</styleName>
+		<styleName type="wdth" subtype="87.5" alt="compressed">ଅର୍ଦ୍ଧସଂକୁଚିତ</styleName>
+		<styleName type="wdth" subtype="87.5" alt="narrow">ଅର୍ଦ୍ଧସଂକୀର୍ଣ୍ଣ</styleName>
+		<styleName type="wdth" subtype="100">ସାଧାରଣ</styleName>
+		<styleName type="wdth" subtype="112.5">ଅର୍ଦ୍ଧବିସ୍ତାର</styleName>
+		<styleName type="wdth" subtype="112.5" alt="extended">ଅର୍ଦ୍ଧବିସ୍ତୃତ</styleName>
+		<styleName type="wdth" subtype="112.5" alt="wide">ଅର୍ଦ୍ଧଚ‍ଉଡା</styleName>
+		<styleName type="wdth" subtype="125">ବିସ୍ତାର</styleName>
+		<styleName type="wdth" subtype="125" alt="extended">ବିସ୍ତୃତ</styleName>
+		<styleName type="wdth" subtype="125" alt="wide">ଚ‍ଉଡା</styleName>
+		<styleName type="wdth" subtype="150">ଅତିରିକ୍ତ-ବିସ୍ତାର</styleName>
+		<styleName type="wdth" subtype="150" alt="extended">ଅତିରିକ୍ତ-ବିସ୍ତୃତ</styleName>
+		<styleName type="wdth" subtype="150" alt="wide">ଅତିରିକ୍ତ-ଚ‍ଉଡା</styleName>
+		<styleName type="wdth" subtype="200">ଅତିବିସ୍ତାର</styleName>
+		<styleName type="wdth" subtype="200" alt="extended">ଅତିବିସ୍ତୃତ</styleName>
+		<styleName type="wdth" subtype="200" alt="wide">ଅତିଚ‍ଉଡା</styleName>
+		<styleName type="wght" subtype="100">ପତଳା</styleName>
+		<styleName type="wght" subtype="200">ଅତିରିକ୍ତ-ହାଲକା</styleName>
+		<styleName type="wght" subtype="200" alt="ultra">ଅତିହାଲକା</styleName>
+		<styleName type="wght" subtype="300">ହାଲକା</styleName>
+		<styleName type="wght" subtype="350">ଅର୍ଦ୍ଧହାଲକା</styleName>
+		<styleName type="wght" subtype="380">ବହି</styleName>
+		<styleName type="wght" subtype="400">ନିୟମିତ</styleName>
+		<styleName type="wght" subtype="500">ମଧ୍ୟମ</styleName>
+		<styleName type="wght" subtype="600">ସେମିବୋଲ୍ଡ</styleName>
+		<styleName type="wght" subtype="600" alt="demi">ଡେମିବୋଲ୍ଡ</styleName>
+		<styleName type="wght" subtype="700">ସାହାସୀ</styleName>
+		<styleName type="wght" subtype="800">ଅତିରିକ୍ତ-ସାହାସୀ</styleName>
+		<styleName type="wght" subtype="900">କଳା</styleName>
+		<styleName type="wght" subtype="900" alt="heavy">ଭାରୀ</styleName>
+		<styleName type="wght" subtype="950">ଅତିରିକ୍ତ-କଳା</styleName>
+		<styleName type="wght" subtype="950" alt="ultrablack">ଅତିକଳା</styleName>
+		<styleName type="wght" subtype="950" alt="ultraheavy">ଅତିଭାରୀ</styleName>
+		<featureName type="afrc">ଶୀର୍ଷ ଅଙ୍କ</featureName>
+		<featureName type="cpsp">କ୍ୟାପିଟାଲ୍‌ ସ୍ପେଶିଂ</featureName>
+		<featureName type="dlig">ବୈକଳ୍ପିକ ସମ୍ବନ୍ଧ</featureName>
+		<featureName type="frac">ବିକର୍ଣ୍ଣ ଅଙ୍କ</featureName>
+		<featureName type="lnum">ଅସ୍ତର ସଂଖ୍ୟା</featureName>
+		<featureName type="onum">ପୁରୁଣା-ଶୈଳୀ ର ଅଙ୍କ</featureName>
+		<featureName type="ordn">ଅର୍ଡିନାଲସ୍‌</featureName>
+		<featureName type="pnum">ଆନୁପାତିକ ସଂଖ୍ୟାଗୁଡ଼ିକ</featureName>
+		<featureName type="smcp">ଛୋଟ କ୍ୟାପିଟାଲ୍‌</featureName>
+		<featureName type="tnum">ସାରଣୀ ସଂଖ୍ୟାଗୁଡ଼ିକ</featureName>
+		<featureName type="zero">କଟା ଯାଇଥିବା ଶୂନ୍ୟ</featureName>
+	</typographicNames>
+	<personNames>
+		<nameOrderLocales order="givenFirst">und or</nameOrderLocales>
+		<nameOrderLocales order="surnameFirst">ko si ta te vi yue zh</nameOrderLocales>
+		<personName order="givenFirst" length="long" usage="referring" formality="formal">
+			<namePattern>{given} {given2} {surname} {suffix}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="long" usage="referring" formality="informal">
+			<namePattern>{given-informal} {surname}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="long" usage="addressing" formality="formal">
+			<namePattern>{prefix} {surname}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="long" usage="addressing" formality="informal">
+			<namePattern>{given-informal}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="long" usage="monogram" formality="formal">
+			<namePattern>{given-monogram-allCaps}{given2-monogram-allCaps}{surname-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="long" usage="monogram" formality="informal">
+			<namePattern>{given-informal-monogram-allCaps}{surname-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="medium" usage="referring" formality="formal">
+			<namePattern>{given} {given2-initial} {surname} {suffix}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="medium" usage="referring" formality="informal">
+			<namePattern>{given-informal} {surname}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="medium" usage="addressing" formality="formal">
+			<namePattern>{prefix} {surname}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="medium" usage="addressing" formality="informal">
+			<namePattern>{given-informal}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="medium" usage="monogram" formality="formal">
+			<namePattern>{surname-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="medium" usage="monogram" formality="informal">
+			<namePattern>{given-informal-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="short" usage="referring" formality="formal">
+			<namePattern>{given-initial} {given2-initial} {surname}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="short" usage="referring" formality="informal">
+			<namePattern>{given-informal} {surname-initial}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="short" usage="addressing" formality="formal">
+			<namePattern>{prefix} {surname}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="short" usage="addressing" formality="informal">
+			<namePattern>{given-informal}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="short" usage="monogram" formality="formal">
+			<namePattern>{surname-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="givenFirst" length="short" usage="monogram" formality="informal">
+			<namePattern>{given-informal-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="long" usage="referring" formality="formal">
+			<namePattern>{surname} {given} {given2} {suffix}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="long" usage="referring" formality="informal">
+			<namePattern>{surname} {given-informal}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="long" usage="addressing" formality="formal">
+			<namePattern>{prefix} {surname}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="long" usage="addressing" formality="informal">
+			<namePattern>{given-informal}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="long" usage="monogram" formality="formal">
+			<namePattern>{surname-monogram-allCaps}{given-monogram-allCaps}{given2-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="long" usage="monogram" formality="informal">
+			<namePattern>{surname-monogram-allCaps}{given-informal-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="medium" usage="referring" formality="formal">
+			<namePattern>{surname} {given} {given2-initial} {suffix}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="medium" usage="referring" formality="informal">
+			<namePattern>{surname} {given-informal}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="medium" usage="addressing" formality="formal">
+			<namePattern>{prefix} {surname}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="medium" usage="addressing" formality="informal">
+			<namePattern>{given-informal}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="medium" usage="monogram" formality="formal">
+			<namePattern>{surname-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="medium" usage="monogram" formality="informal">
+			<namePattern>{given-informal-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="short" usage="referring" formality="formal">
+			<namePattern>{surname} {given-initial} {given2-initial}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="short" usage="referring" formality="informal">
+			<namePattern>{surname} {given-initial}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="short" usage="addressing" formality="formal">
+			<namePattern>{prefix} {surname}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="short" usage="addressing" formality="informal">
+			<namePattern>{given-informal}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="short" usage="monogram" formality="formal">
+			<namePattern>{surname-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="surnameFirst" length="short" usage="monogram" formality="informal">
+			<namePattern>{given-informal-monogram-allCaps}</namePattern>
+		</personName>
+		<personName order="sorting" length="long" usage="referring" formality="formal">
+			<namePattern>{surname-core}, {given} {given2} {surname-prefix}</namePattern>
+		</personName>
+		<personName order="sorting" length="long" usage="referring" formality="informal">
+			<namePattern>{surname}, {given-informal}</namePattern>
+		</personName>
+		<personName order="sorting" length="medium" usage="referring" formality="formal">
+			<namePattern>{surname-core}, {given} {given2-initial} {surname-prefix}</namePattern>
+		</personName>
+		<personName order="sorting" length="medium" usage="referring" formality="informal">
+			<namePattern>{surname}, {given-informal}</namePattern>
+		</personName>
+		<personName order="sorting" length="short" usage="referring" formality="formal">
+			<namePattern>{surname-core}, {given-initial} {given2-initial} {surname-prefix}</namePattern>
+		</personName>
+		<personName order="sorting" length="short" usage="referring" formality="informal">
+			<namePattern>{surname}, {given-informal}</namePattern>
+		</personName>
+		<sampleName item="givenOnly">
+			<nameField type="given">ସିନବାଦ୍</nameField>
+		</sampleName>
+		<sampleName item="givenSurnameOnly">
+			<nameField type="given">ଆଇରେନ୍</nameField>
+			<nameField type="surname">ଆଡଲର୍</nameField>
+		</sampleName>
+		<sampleName item="given12Surname">
+			<nameField type="given">ଜନ୍</nameField>
+			<nameField type="given2">ହାମିଶ</nameField>
+			<nameField type="surname">ୱାଟସନ୍</nameField>
+		</sampleName>
+		<sampleName item="full">
+			<nameField type="prefix">ପ୍ରଫେସର ଡ.</nameField>
+			<nameField type="given">ଆଡା କର୍ଣ୍ଣେଲିଆ</nameField>
+			<nameField type="given-informal">ନୋଏଲ୍</nameField>
+			<nameField type="given2">ଇଭା ସୋଫିଆ</nameField>
+			<nameField type="surname-prefix">ୱାନ୍ ଡେନ୍</nameField>
+			<nameField type="surname-core">ୱୋଲ୍ଫ</nameField>
+			<nameField type="surname2">ବେକର୍ ସ୍ମିଥ୍</nameField>
+			<nameField type="suffix">ଏମ.ଡି.ପିଏଚ.ଡି</nameField>
+		</sampleName>
+	</personNames>
+</ldml>
