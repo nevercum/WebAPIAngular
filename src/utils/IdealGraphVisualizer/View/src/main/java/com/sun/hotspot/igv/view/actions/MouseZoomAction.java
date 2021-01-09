@@ -91,4 +91,30 @@ public class MouseZoomAction extends WidgetAction.Adapter implements MouseWheelL
     public State mouseWheelMoved(Widget widget, WidgetMouseWheelEvent event) {
         if ((event.getModifiersEx() & MODIFIER) != MODIFIER) {
             // If modifier key is not pressed, use wheel for panning
-            if (performPanning(event.getModifiersE
+            if (performPanning(event.getModifiersEx(), event.getWheelRotation())) {
+                return State.CONSUMED;
+            } else {
+                return State.REJECTED;
+            }
+        }
+
+        if (performZooming(widget.convertLocalToScene(event.getPoint()), event.getWheelRotation())) {
+            return State.CONSUMED;
+        } else {
+            return State.REJECTED;
+        }
+    }
+
+    /**
+     * Perform scene centered zooming
+     */
+    @Override
+    public void mouseWheelMoved(MouseWheelEvent event) {
+        if ((event.getModifiersEx() & MODIFIER) != MODIFIER) {
+            // If modifier key is not pressed, use wheel for panning
+            performPanning(event.getModifiersEx(), event.getWheelRotation());
+        } else {
+            performZooming(null, event.getWheelRotation());
+        }
+    }
+}
