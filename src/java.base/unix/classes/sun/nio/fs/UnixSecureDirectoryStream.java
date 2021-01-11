@@ -93,4 +93,216 @@ class UnixSecureDirectoryStream
         UnixPath child = ds.directory().resolve(file);
         boolean followLinks = Util.followLinks(options);
 
-        // permission check using name resol
+        // permission check using name resolved against original path of directory
+        @SuppressWarnings("removal")
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            child.checkRead();
+        }
+
+        ds.readLock().lock();
+        try {
+            if (!ds.isOpen())
+                throw new ClosedDirectoryStreamException();
+
+            // open directory and create new secure directory stream
+            int newdfd1 = -1;
+            int newdfd2 = -1;
+            long ptr = 0L;
+            try {
+                int flags = O_RDONLY;
+                if (!followLinks)
+                    flags |= O_NOFOLLOW;
+                newdfd1 = openat(dfd, file.asByteArray(), flags , 0);
+                newdfd2 = dup(newdfd1);
+                ptr = fdopendir(newdfd1);
+            } catch (UnixException x) {
+                IOException ioe = x.errno() == UnixConstants.ENOTDIR ?
+                    new NotDirectoryException(file.toString()) :
+                    x.asIOException(file);
+                if (newdfd1 != -1)
+                    UnixNativeDispatcher.close(newdfd1, e -> null);
+                if (newdfd2 != -1)
+                    UnixNativeDispatcher.close(newdfd1, e -> null);
+                throw ioe;
+            }
+            return new UnixSecureDirectoryStream(child, ptr, newdfd2, null);
+        } finally {
+            ds.readLock().unlock();
+        }
+    }
+
+    /**
+     * Opens file in this directory
+     */
+    @Override
+    public SeekableByteChannel newByteChannel(Path obj,
+                                              Set<? extends OpenOption> options,
+                                              FileAttribute<?>... attrs)
+        throws IOException
+    {
+        UnixPath file = getName(obj);
+
+        int mode = UnixFileModeAttribute
+            .toUnixMode(UnixFileModeAttribute.ALL_READWRITE, attrs);
+
+        // path for permission check
+        String pathToCheck = ds.directory().resolve(file).getPathForPermissionCheck();
+
+        ds.readLock().lock();
+        try {
+            if (!ds.isOpen())
+                throw new ClosedDirectoryStreamException();
+            try {
+                return UnixChannelFactory.newFileChannel(dfd, file, pathToCheck, options, mode);
+            } catch (UnixException x) {
+                x.rethrowAsIOException(file);
+                return null; // keep compiler happy
+            }
+        } finally {
+            ds.readLock().unlock();
+        }
+    }
+
+    /**
+     * Deletes file/directory in this directory. Works in a race-free manner
+     * when invoked with flags.
+     */
+    private void implDelete(Path obj, boolean haveFlags, int flags)
+        throws IOException
+    {
+        UnixPath file = getName(obj);
+
+        // permission check using name resolved against original path of directory
+        @SuppressWarnings("removal")
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            ds.directory().resolve(file).checkDelete();
+        }
+
+        ds.readLock().lock();
+        try {
+            if (!ds.isOpen())
+                throw new ClosedDirectoryStreamException();
+
+            if (!haveFlags) {
+                // need file attribute to know if file is directory. This creates
+                // a race in that the file may be replaced by a directory or a
+                // directory replaced by a file between the time we query the
+                // file type and unlink it.
+                UnixFileAttributes attrs = null;
+                try {
+                    attrs = UnixFileAttributes.get(dfd, file, false);
+                } catch (UnixException x) {
+                    x.rethrowAsIOException(file);
+                }
+                flags = (attrs.isDirectory()) ? AT_REMOVEDIR : 0;
+            }
+
+            try {
+                unlinkat(dfd, file.asByteArray(), flags);
+            } catch (UnixException x) {
+                if ((flags & AT_REMOVEDIR) != 0) {
+                    if (x.errno() == EEXIST || x.errno() == ENOTEMPTY) {
+                        throw new DirectoryNotEmptyException(null);
+                    }
+                }
+                x.rethrowAsIOException(file);
+            }
+        } finally {
+            ds.readLock().unlock();
+        }
+    }
+
+    @Override
+    public void deleteFile(Path file) throws IOException {
+        implDelete(file, true, 0);
+    }
+
+    @Override
+    public void deleteDirectory(Path dir) throws IOException {
+        implDelete(dir, true, AT_REMOVEDIR);
+    }
+
+    /**
+     * Rename/move file in this directory to another (open) directory
+     */
+    @Override
+    public void move(Path fromObj, SecureDirectoryStream<Path> dir, Path toObj)
+        throws IOException
+    {
+        UnixPath from = getName(fromObj);
+        UnixPath to = getName(toObj);
+        if (dir == null)
+            throw new NullPointerException();
+        if (!(dir instanceof UnixSecureDirectoryStream))
+            throw new ProviderMismatchException();
+        UnixSecureDirectoryStream that = (UnixSecureDirectoryStream)dir;
+
+        // permission check
+        @SuppressWarnings("removal")
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            this.ds.directory().resolve(from).checkWrite();
+            that.ds.directory().resolve(to).checkWrite();
+        }
+
+        // lock ordering doesn't matter
+        this.ds.readLock().lock();
+        try {
+            that.ds.readLock().lock();
+            try {
+                if (!this.ds.isOpen() || !that.ds.isOpen())
+                    throw new ClosedDirectoryStreamException();
+                try {
+                    renameat(this.dfd, from.asByteArray(), that.dfd, to.asByteArray());
+                } catch (UnixException x) {
+                    if (x.errno() == EXDEV) {
+                        throw new AtomicMoveNotSupportedException(
+                            from.toString(), to.toString(), x.errorString());
+                    }
+                    x.rethrowAsIOException(from, to);
+                }
+            } finally {
+                that.ds.readLock().unlock();
+            }
+        } finally {
+            this.ds.readLock().unlock();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <V extends FileAttributeView> V getFileAttributeViewImpl(UnixPath file,
+                                                                     Class<V> type,
+                                                                     boolean followLinks)
+    {
+        if (type == null)
+            throw new NullPointerException();
+        Class<?> c = type;
+        if (c == BasicFileAttributeView.class) {
+            return (V) new BasicFileAttributeViewImpl(file, followLinks);
+        }
+        if (c == PosixFileAttributeView.class || c == FileOwnerAttributeView.class) {
+            return (V) new PosixFileAttributeViewImpl(file, followLinks);
+        }
+        // TBD - should also support AclFileAttributeView
+        return (V) null;
+    }
+
+    /**
+     * Returns file attribute view bound to this directory
+     */
+    @Override
+    public <V extends FileAttributeView> V getFileAttributeView(Class<V> type) {
+        return getFileAttributeViewImpl(null, type, false);
+    }
+
+    /**
+     * Returns file attribute view bound to dfd/filename.
+     */
+    @Override
+    public <V extends FileAttributeView> V getFileAttributeView(Path obj,
+                                                                Class<V> type,
+                                                                LinkOption... options)
+    {
+        UnixPath file 
