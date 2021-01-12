@@ -49,4 +49,26 @@ SingleTransformerTest
     public static void
     main (String[] args)
         throws Throwable {
-        ATestCaseScaffold   te
+        ATestCaseScaffold   test = new SingleTransformerTest(args[0]);
+        test.runTest();
+    }
+
+    protected final void
+    doRunTest()
+        throws Throwable {
+        beVerbose(); // We are seeing problems on this test -- print what is happenning
+        testOneTransformer();
+    }
+
+
+    /**
+     * Add and check just one transformer to the manager
+     */
+    public void
+    testOneTransformer()
+    {
+        addTransformerToManager(fInst, getRandomTransformer());
+        verifyTransformers(fInst);
+    }
+
+}
