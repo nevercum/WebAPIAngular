@@ -305,4 +305,226 @@ class UnixSecureDirectoryStream
                                                                 Class<V> type,
                                                                 LinkOption... options)
     {
-        UnixPath file 
+        UnixPath file = getName(obj);
+        boolean followLinks = Util.followLinks(options);
+        return getFileAttributeViewImpl(file, type, followLinks);
+    }
+
+    /**
+     * A BasicFileAttributeView implementation that using a dfd/name pair.
+     */
+    private class BasicFileAttributeViewImpl
+        implements BasicFileAttributeView
+    {
+        final UnixPath file;
+        final boolean followLinks;
+
+        BasicFileAttributeViewImpl(UnixPath file, boolean followLinks)
+        {
+            this.file = file;
+            this.followLinks = followLinks;
+        }
+
+        int open() throws IOException {
+            int oflags = O_RDONLY;
+            if (!followLinks)
+                oflags |= O_NOFOLLOW;
+            try {
+                return openat(dfd, file.asByteArray(), oflags, 0);
+            } catch (UnixException x) {
+                x.rethrowAsIOException(file);
+                return -1; // keep compiler happy
+            }
+        }
+
+        private void checkWriteAccess() {
+            @SuppressWarnings("removal")
+            SecurityManager sm = System.getSecurityManager();
+            if (sm != null) {
+                if (file == null) {
+                    ds.directory().checkWrite();
+                } else {
+                    ds.directory().resolve(file).checkWrite();
+                }
+            }
+        }
+
+        @Override
+        public String name() {
+            return "basic";
+        }
+
+        @Override
+        public BasicFileAttributes readAttributes() throws IOException {
+            ds.readLock().lock();
+            try {
+                if (!ds.isOpen())
+                    throw new ClosedDirectoryStreamException();
+
+                @SuppressWarnings("removal")
+                SecurityManager sm = System.getSecurityManager();
+                if (sm != null) {
+                    if (file == null) {
+                        ds.directory().checkRead();
+                    } else {
+                        ds.directory().resolve(file).checkRead();
+                    }
+                }
+                try {
+                     UnixFileAttributes attrs = (file == null) ?
+                         UnixFileAttributes.get(dfd) :
+                         UnixFileAttributes.get(dfd, file, followLinks);
+
+                     // SECURITY: must return as BasicFileAttribute
+                     return attrs.asBasicFileAttributes();
+                } catch (UnixException x) {
+                    x.rethrowAsIOException(file);
+                    return null;    // keep compiler happy
+                }
+            } finally {
+                ds.readLock().unlock();
+            }
+        }
+
+        @Override
+        public void setTimes(FileTime lastModifiedTime,
+                             FileTime lastAccessTime,
+                             FileTime createTime) // ignore
+            throws IOException
+        {
+            checkWriteAccess();
+
+            ds.readLock().lock();
+            try {
+                if (!ds.isOpen())
+                    throw new ClosedDirectoryStreamException();
+
+                int fd = (file == null) ? dfd : open();
+                try {
+                    // if not changing both attributes then need existing attributes
+                    if (lastModifiedTime == null || lastAccessTime == null) {
+                        try {
+                            UnixFileAttributes attrs = UnixFileAttributes.get(fd);
+                            if (lastModifiedTime == null)
+                                lastModifiedTime = attrs.lastModifiedTime();
+                            if (lastAccessTime == null)
+                                lastAccessTime = attrs.lastAccessTime();
+                        } catch (UnixException x) {
+                            x.rethrowAsIOException(file);
+                        }
+                    }
+                    // update times
+                    try {
+                        futimes(fd,
+                                lastAccessTime.to(TimeUnit.MICROSECONDS),
+                                lastModifiedTime.to(TimeUnit.MICROSECONDS));
+                    } catch (UnixException x) {
+                        x.rethrowAsIOException(file);
+                    }
+                } finally {
+                    if (file != null)
+                        UnixNativeDispatcher.close(fd, e-> null);
+                }
+            } finally {
+                ds.readLock().unlock();
+            }
+        }
+    }
+
+    /**
+     * A PosixFileAttributeView implementation that using a dfd/name pair.
+     */
+    private class PosixFileAttributeViewImpl
+        extends BasicFileAttributeViewImpl implements PosixFileAttributeView
+    {
+        PosixFileAttributeViewImpl(UnixPath file, boolean followLinks) {
+            super(file, followLinks);
+        }
+
+        private void checkWriteAndUserAccess() {
+            @SuppressWarnings("removal")
+            SecurityManager sm = System.getSecurityManager();
+            if (sm != null) {
+                super.checkWriteAccess();
+                sm.checkPermission(new RuntimePermission("accessUserInformation"));
+            }
+        }
+
+        @Override
+        public String name() {
+            return "posix";
+        }
+
+        @Override
+        public PosixFileAttributes readAttributes() throws IOException {
+            @SuppressWarnings("removal")
+            SecurityManager sm = System.getSecurityManager();
+            if (sm != null) {
+                if (file == null)
+                    ds.directory().checkRead();
+                else
+                    ds.directory().resolve(file).checkRead();
+                sm.checkPermission(new RuntimePermission("accessUserInformation"));
+            }
+
+            ds.readLock().lock();
+            try {
+                if (!ds.isOpen())
+                    throw new ClosedDirectoryStreamException();
+
+                try {
+                     UnixFileAttributes attrs = (file == null) ?
+                         UnixFileAttributes.get(dfd) :
+                         UnixFileAttributes.get(dfd, file, followLinks);
+                     return attrs;
+                } catch (UnixException x) {
+                    x.rethrowAsIOException(file);
+                    return null;    // keep compiler happy
+                }
+            } finally {
+                ds.readLock().unlock();
+            }
+        }
+
+        @Override
+        public void setPermissions(Set<PosixFilePermission> perms)
+            throws IOException
+        {
+            // permission check
+            checkWriteAndUserAccess();
+
+            ds.readLock().lock();
+            try {
+                if (!ds.isOpen())
+                    throw new ClosedDirectoryStreamException();
+
+                int fd = (file == null) ? dfd : open();
+                try {
+                    fchmod(fd, UnixFileModeAttribute.toUnixMode(perms));
+                } catch (UnixException x) {
+                    x.rethrowAsIOException(file);
+                } finally {
+                    if (file != null && fd >= 0)
+                        UnixNativeDispatcher.close(fd, e-> null);
+                }
+            } finally {
+                ds.readLock().unlock();
+            }
+        }
+
+        private void setOwners(int uid, int gid) throws IOException {
+            // permission check
+            checkWriteAndUserAccess();
+
+            ds.readLock().lock();
+            try {
+                if (!ds.isOpen())
+                    throw new ClosedDirectoryStreamException();
+
+                int fd = (file == null) ? dfd : open();
+                try {
+                    fchown(fd, uid, gid);
+                } catch (UnixException x) {
+                    x.rethrowAsIOException(file);
+                } finally {
+                    if (file != null && fd >= 
