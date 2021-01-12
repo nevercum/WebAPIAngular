@@ -527,4 +527,39 @@ class UnixSecureDirectoryStream
                 } catch (UnixException x) {
                     x.rethrowAsIOException(file);
                 } finally {
-                    if (file != null && fd >= 
+                    if (file != null && fd >= 0)
+                        UnixNativeDispatcher.close(fd, e-> null);
+                }
+            } finally {
+                ds.readLock().unlock();
+            }
+        }
+
+        @Override
+        public UserPrincipal getOwner() throws IOException {
+            return readAttributes().owner();
+        }
+
+        @Override
+        public void setOwner(UserPrincipal owner)
+            throws IOException
+        {
+            if (!(owner instanceof UnixUserPrincipals.User))
+                throw new ProviderMismatchException();
+            if (owner instanceof UnixUserPrincipals.Group)
+                throw new IOException("'owner' parameter can't be a group");
+            int uid = ((UnixUserPrincipals.User)owner).uid();
+            setOwners(uid, -1);
+        }
+
+        @Override
+        public void setGroup(GroupPrincipal group)
+            throws IOException
+        {
+            if (!(group instanceof UnixUserPrincipals.Group))
+                throw new ProviderMismatchException();
+            int gid = ((UnixUserPrincipals.Group)group).gid();
+            setOwners(-1, gid);
+        }
+    }
+}
