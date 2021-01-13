@@ -29,4 +29,202 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputSt
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Properties;
+
+/** Translates a .properties file into a .java file containing the
+ *  definition of a java.util.Properties subclass which can then be
+ *  compiled with javac. <P>
+ *
+ *  Usage: java -jar compileproperties.jar [path to .properties file] [path to .java file to be output] [super class]
+ *
+ *  Infers the package by looking at the common suffix of the two
+ *  inputs, eliminating "classes" from it.
+ *
+ * @author Scott Violet
+ * @author Kenneth Russell
+ */
+
+public class CompileProperties {
+    private static final String FORMAT =
+            "{0}" +
+            "import java.util.ListResourceBundle;\n\n" +
+            "public final class {1} extends {2} '{'\n" +
+            "    protected final Object[][] getContents() '{'\n" +
+            "        return new Object[][] '{'\n" +
+            "{3}" +
+            "        };\n" +
+            "    }\n" +
+            "}\n";
+
+
+    // This comes from Properties
+    private static final char[] hexDigit = {
+        '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'
+    };
+
+    // Note: different from that in Properties
+    private static final String specialSaveChars = "\"";
+
+    // This comes from Properties
+    private static char toHex(int nibble) {
+        return hexDigit[(nibble & 0xF)];
+    }
+
+    private static void error(String msg, Exception e) {
+        System.err.println("ERROR: compileproperties: " + msg);
+        if ( e != null ) {
+            System.err.println("EXCEPTION: " + e.toString());
+            e.printStackTrace();
+        }
+    }
+
+    private static String propfiles[];
+    private static String outfiles[] ;
+    private static String supers[]   ;
+    private static int compileCount = 0;
+    private static boolean quiet = false;
+
+    private static boolean parseOptions(String args[]) {
+        boolean ok = true;
+        if ( compileCount > 0 ) {
+            String new_propfiles[] = new String[compileCount + args.length];
+            String new_outfiles[]  = new String[compileCount + args.length];
+            String new_supers[]    = new String[compileCount + args.length];
+            System.arraycopy(propfiles, 0, new_propfiles, 0, compileCount);
+            System.arraycopy(outfiles, 0, new_outfiles, 0, compileCount);
+            System.arraycopy(supers, 0, new_supers, 0, compileCount);
+            propfiles = new_propfiles;
+            outfiles  = new_outfiles;
+            supers    = new_supers;
+        } else {
+            propfiles = new String[args.length];
+            outfiles  = new String[args.length];
+            supers    = new String[args.length];
+        }
+        for ( int i = 0; i < args.length ; i++ ) {
+            if ( "-compile".equals(args[i]) && i+3 < args.length ) {
+                propfiles[compileCount] = args[++i];
+                outfiles[compileCount]  = args[++i];
+                supers[compileCount]    = args[++i];
+                compileCount++;
+            } else if ( args[i].charAt(0) == '@') {
+                String filename = args[i].substring(1);
+                FileInputStream finput = null;
+                byte contents[] = null;
+                try {
+                    finput = new FileInputStream(filename);
+                    int byteCount = finput.available();
+                    if ( byteCount <= 0 ) {
+                        error("The @file is empty", null);
+                        ok = false;
+                    } else {
+                        contents = new byte[byteCount];
+                        int bytesRead = finput.read(contents);
+                        if ( byteCount != bytesRead ) {
+                            error("Cannot read all of @file", null);
+                            ok = false;
+                        }
+                    }
+                } catch ( IOException e ) {
+                    error("cannot open " + filename, e);
+                    ok = false;
+                }
+                if ( finput != null ) {
+                    try {
+                        finput.close();
+                    } catch ( IOException e ) {
+                        ok = false;
+                        error("cannot close " + filename, e);
+                    }
+                }
+                if ( ok && contents != null ) {
+                    String tokens[] = (new String(contents)).split("\\s+");
+                    if ( tokens.length > 0 ) {
+                        ok = parseOptions(tokens);
+                    }
+                }
+                if ( !ok ) {
+                    break;
+                }
+            } else {
+                error("argument error", null);
+                ok = false;
+            }
+        }
+        return ok;
+    }
+
+    public static void main(String[] args) {
+        boolean ok = true;
+        if (args.length >= 1 && args[0].equals("-quiet"))
+        {
+            quiet = true;
+            String[] newargs = new String[args.length-1];
+            System.arraycopy(args, 1, newargs, 0, newargs.length);
+            args = newargs;
+        }
+        /* Original usage */
+        if (args.length == 2 && args[0].charAt(0) != '-' ) {
+            ok = createFile(args[0], args[1], "ListResourceBundle");
+        } else if (args.length == 3) {
+            ok = createFile(args[0], args[1], args[2]);
+        } else if (args.length == 0) {
+            usage();
+            ok = false;
+        } else {
+            /* New batch usage */
+            ok = parseOptions(args);
+            if ( ok && compileCount == 0 ) {
+                error("options parsed but no files to compile", null);
+                ok = false;
+            }
+            /* Need at least one file. */
+            if ( !ok ) {
+                usage();
+            } else {
+                /* Process files */
+                for ( int i = 0; i < compileCount && ok ; i++ ) {
+                    ok = createFile(propfiles[i], outfiles[i], supers[i]);
+                }
+            }
+        }
+        if ( !ok ) {
+            System.exit(1);
+        }
+    }
+
+    private static void usage() {
+        System.err.println("usage:");
+        System.err.println("    java -jar compileproperties.jar path_to_properties_file path_to_java_output_file [super_class]");
+        System.err.println("      -OR-");
+        System.err.println("    java -jar compileproperties.jar {-compile path_to_properties_file path_to_java_output_file super_class} -or- @filename");
+        System.err.println("");
+        System.err.println("Example:");
+        System.err.println("    java -jar compileproperties.jar -compile test.properties test.java ListResourceBundle");
+        System.err.println("    java -jar compileproperties.jar @option_file");
+        System.err.println("option_file contains: -compile test.properties test.java ListResourceBundle");
+    }
+
+    private static boolean createFile(String propertiesPath, String outputPath,
+            String superClass) {
+        boolean ok = true;
+        if (!quiet) {
+            System.out.println("parsing: " + propertiesPath);
+        }
+        Properties p = new Properties();
+        try {
+            p.load(new FileInputStream(propertiesPath));
+        } catch ( FileNotFoundException e ) {
+            ok = false;
+            error("Cannot find file " + propertiesPath, e);
+        } catch ( IOException e ) {
+            ok = false;
+            error("IO error on file " + properti
