@@ -227,4 +227,161 @@ public class CompileProperties {
             error("Cannot find file " + propertiesPath, e);
         } catch ( IOException e ) {
             ok = false;
-            error("IO error on file " + properti
+            error("IO error on file " + propertiesPath, e);
+        }
+        if ( ok ) {
+            String packageName = inferPackageName(propertiesPath, outputPath);
+            if (!quiet) {
+                System.out.println("inferred package name: " + packageName);
+            }
+            List<String> sortedKeys = new ArrayList<>();
+            for ( Object key : p.keySet() ) {
+                sortedKeys.add((String)key);
+            }
+            Collections.sort(sortedKeys);
+
+            StringBuffer data = new StringBuffer();
+
+            for (String key : sortedKeys) {
+                data.append("            { \"" + escape(key) + "\", \"" +
+                        escape((String)p.get(key)) + "\" },\n");
+            }
+
+            // Get class name from java filename, not the properties filename.
+            //   (zh_TW properties might be used to create zh_HK files)
+            File file = new File(outputPath);
+            String name = file.getName();
+            int dotIndex = name.lastIndexOf('.');
+            String className;
+            if (dotIndex == -1) {
+                className = name;
+            } else {
+                className = name.substring(0, dotIndex);
+            }
+
+            String packageString = "";
+            if (packageName != null && !packageName.equals("")) {
+                packageString = "package " + packageName + ";\n\n";
+            }
+
+            Writer writer = null;
+            try {
+                writer = new BufferedWriter(
+                        new OutputStreamWriter(new FileOutputStream(outputPath), "8859_1"));
+                MessageFormat format = new MessageFormat(FORMAT);
+                writer.write(format.format(new Object[] { packageString, className, superClass, data }));
+            } catch ( IOException e ) {
+                ok = false;
+                error("IO error writing to file " + outputPath, e);
+            }
+            if ( writer != null ) {
+                try {
+                    writer.flush();
+                } catch ( IOException e ) {
+                    ok = false;
+                    error("IO error flush " + outputPath, e);
+                }
+                try {
+                    writer.close();
+                } catch ( IOException e ) {
+                    ok = false;
+                    error("IO error close " + outputPath, e);
+                }
+            }
+            if (!quiet) {
+                System.out.println("wrote: " + outputPath);
+            }
+        }
+        return ok;
+    }
+
+    private static String escape(String theString) {
+        // This is taken from Properties.saveConvert with changes for Java strings
+        int len = theString.length();
+        StringBuffer outBuffer = new StringBuffer(len*2);
+
+        for(int x=0; x<len; x++) {
+            char aChar = theString.charAt(x);
+            switch(aChar) {
+                case '\\':outBuffer.append('\\'); outBuffer.append('\\');
+                break;
+                case '\t':outBuffer.append('\\'); outBuffer.append('t');
+                break;
+                case '\n':outBuffer.append('\\'); outBuffer.append('n');
+                break;
+                case '\r':outBuffer.append('\\'); outBuffer.append('r');
+                break;
+                case '\f':outBuffer.append('\\'); outBuffer.append('f');
+                break;
+                default:
+                    if ((aChar < 0x0020) || (aChar > 0x007e)) {
+                        outBuffer.append('\\');
+                        outBuffer.append('u');
+                        outBuffer.append(toHex((aChar >> 12) & 0xF));
+                        outBuffer.append(toHex((aChar >>  8) & 0xF));
+                        outBuffer.append(toHex((aChar >>  4) & 0xF));
+                        outBuffer.append(toHex( aChar        & 0xF));
+                    } else {
+                        if (specialSaveChars.indexOf(aChar) != -1) {
+                            outBuffer.append('\\');
+                        }
+                        outBuffer.append(aChar);
+                    }
+            }
+        }
+        return outBuffer.toString();
+    }
+
+    private static String inferPackageName(String inputPath, String outputPath) {
+        // Normalize file names
+        inputPath  = new File(inputPath).getPath();
+        outputPath = new File(outputPath).getPath();
+        // Split into components
+        String sep;
+        if (File.separatorChar == '\\') {
+            sep = "\\\\";
+        } else {
+            sep = File.separator;
+        }
+        String[] inputs  = inputPath.split(sep);
+        String[] outputs = outputPath.split(sep);
+        // Match common names, eliminating first "classes" entry from
+        // each if present
+        int inStart  = 0;
+        int inEnd    = inputs.length - 2;
+        int outEnd   = outputs.length - 2;
+        int i = inEnd;
+        int j = outEnd;
+        while (i >= 0 && j >= 0) {
+            if (!inputs[i].equals(outputs[j]) ||
+                    (inputs[i].equals("gensrc") && inputs[j].equals("gensrc"))) {
+                ++i;
+                ++j;
+                break;
+            }
+            --i;
+            --j;
+        }
+        String result;
+        if (i < 0 || j < 0 || i >= inEnd || j >= outEnd) {
+            result = "";
+        } else {
+            if (inputs[i].equals("classes") && outputs[j].equals("classes")) {
+                ++i;
+            }
+            if (i > 0 && inputs[i-1].equals("modules")) {
+                ++i;
+            }
+            inStart = i;
+            StringBuffer buf = new StringBuffer();
+            for (i = inStart; i <= inEnd; i++) {
+                buf.append(inputs[i]);
+                if (i < inEnd) {
+                    buf.append('.');
+                }
+            }
+            result = buf.toString();
+        }
+        return result;
+    }
+}
