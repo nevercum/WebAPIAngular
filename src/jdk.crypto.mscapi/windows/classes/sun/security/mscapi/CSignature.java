@@ -147,4 +147,222 @@ abstract class CSignature extends SignatureSpi {
             // This signature accepts only RSAPublicKey
             if ((key instanceof RSAPublicKey) == false) {
                 throw new InvalidKeyException("Key type not supported: "
-                        + key.getClas
+                        + key.getClass());
+            }
+
+
+            if ((key instanceof CPublicKey) == false) {
+
+                // convert key to MSCAPI format
+                java.security.interfaces.RSAPublicKey rsaKey =
+                        (java.security.interfaces.RSAPublicKey) key;
+
+                BigInteger modulus = rsaKey.getModulus();
+                BigInteger exponent =  rsaKey.getPublicExponent();
+
+                // Check against the local and global values to make sure
+                // the sizes are ok.  Round up to the nearest byte.
+                RSAKeyFactory.checkKeyLengths(((modulus.bitLength() + 7) & ~7),
+                        exponent, -1, CKeyPairGenerator.RSA.KEY_SIZE_MAX);
+
+                byte[] modulusBytes = modulus.toByteArray();
+                byte[] exponentBytes = exponent.toByteArray();
+
+                // Adjust key length due to sign bit
+                int keyBitLength = (modulusBytes[0] == 0)
+                        ? (modulusBytes.length - 1) * 8
+                        : modulusBytes.length * 8;
+
+                byte[] keyBlob = generatePublicKeyBlob(
+                        keyBitLength, modulusBytes, exponentBytes);
+
+                try {
+                    publicKey = importPublicKey("RSA", keyBlob, keyBitLength);
+
+                } catch (KeyStoreException e) {
+                    throw new InvalidKeyException(e);
+                }
+
+            } else {
+                publicKey = (CPublicKey) key;
+            }
+
+            this.privateKey = null;
+            resetDigest();
+        }
+
+        /**
+         * Returns the signature bytes of all the data
+         * updated so far.
+         * The format of the signature depends on the underlying
+         * signature scheme.
+         *
+         * @return the signature bytes of the signing operation's result.
+         *
+         * @exception SignatureException if the engine is not
+         * initialized properly or if this signature algorithm is unable to
+         * process the input data provided.
+         */
+        @Override
+        protected byte[] engineSign() throws SignatureException {
+
+            byte[] hash = getDigestValue();
+
+            if (privateKey.getHCryptKey() == 0) {
+                return signCngHash(1, hash, hash.length,
+                        0,
+                        this instanceof NONEwithRSA ? null : messageDigestAlgorithm,
+                        privateKey.getHCryptProvider(), 0);
+            } else {
+                // Omit the hash OID when generating a NONEwithRSA signature
+                boolean noHashOID = this instanceof NONEwithRSA;
+                // Sign hash using MS Crypto APIs
+                byte[] result = signHash(noHashOID, hash, hash.length,
+                        messageDigestAlgorithm, privateKey.getHCryptProvider(),
+                        privateKey.getHCryptKey());
+
+                // Convert signature array from little endian to big endian
+                return convertEndianArray(result);
+            }
+        }
+
+        /**
+         * Verifies the passed-in signature.
+         *
+         * @param sigBytes the signature bytes to be verified.
+         *
+         * @return true if the signature was verified, false if not.
+         *
+         * @exception SignatureException if the engine is not
+         * initialized properly, the passed-in signature is improperly
+         * encoded or of the wrong type, if this signature algorithm is unable to
+         * process the input data provided, etc.
+         */
+        @Override
+        protected boolean engineVerify(byte[] sigBytes)
+                throws SignatureException {
+            byte[] hash = getDigestValue();
+
+            if (publicKey.getHCryptKey() == 0) {
+                return verifyCngSignedHash(
+                        1, hash, hash.length,
+                        sigBytes, sigBytes.length,
+                        0,
+                        messageDigestAlgorithm,
+                        publicKey.getHCryptProvider(),
+                        0);
+            } else {
+                return verifySignedHash(hash, hash.length,
+                        messageDigestAlgorithm, convertEndianArray(sigBytes),
+                        sigBytes.length, publicKey.getHCryptProvider(),
+                        publicKey.getHCryptKey());
+            }
+        }
+
+        /**
+         * Generates a public-key BLOB from a key's components.
+         */
+        // used by CRSACipher
+        static native byte[] generatePublicKeyBlob(
+                int keyBitLength, byte[] modulus, byte[] publicExponent)
+                throws InvalidKeyException;
+
+    }
+
+    // Nested class for NONEwithRSA signatures
+    public static final class NONEwithRSA extends RSA {
+
+        // the longest supported digest is 512 bits (SHA-512)
+        private static final int RAW_RSA_MAX = 64;
+
+        private final byte[] precomputedDigest;
+        private int offset = 0;
+
+        public NONEwithRSA() {
+            super(null);
+            precomputedDigest = new byte[RAW_RSA_MAX];
+        }
+
+        // Stores the precomputed message digest value.
+        @Override
+        protected void engineUpdate(byte b) throws SignatureException {
+            if (offset >= precomputedDigest.length) {
+                offset = RAW_RSA_MAX + 1;
+                return;
+            }
+            precomputedDigest[offset++] = b;
+        }
+
+        // Stores the precomputed message digest value.
+        @Override
+        protected void engineUpdate(byte[] b, int off, int len)
+                throws SignatureException {
+            if (len > (precomputedDigest.length - offset)) {
+                offset = RAW_RSA_MAX + 1;
+                return;
+            }
+            System.arraycopy(b, off, precomputedDigest, offset, len);
+            offset += len;
+        }
+
+        // Stores the precomputed message digest value.
+        @Override
+        protected void engineUpdate(ByteBuffer byteBuffer) {
+            int len = byteBuffer.remaining();
+            if (len <= 0) {
+                return;
+            }
+            if (len > (precomputedDigest.length - offset)) {
+                offset = RAW_RSA_MAX + 1;
+                return;
+            }
+            byteBuffer.get(precomputedDigest, offset, len);
+            offset += len;
+        }
+
+        @Override
+        protected void resetDigest(){
+            offset = 0;
+        }
+
+        // Returns the precomputed message digest value.
+        @Override
+        protected byte[] getDigestValue() throws SignatureException {
+            if (offset > RAW_RSA_MAX) {
+                throw new SignatureException("Message digest is too long");
+            }
+
+            // Determine the digest algorithm from the digest length
+            if (offset == 20) {
+                setDigestName("SHA1");
+            } else if (offset == 36) {
+                setDigestName("SHA1+MD5");
+            } else if (offset == 32) {
+                setDigestName("SHA-256");
+            } else if (offset == 48) {
+                setDigestName("SHA-384");
+            } else if (offset == 64) {
+                setDigestName("SHA-512");
+            } else if (offset == 16) {
+                setDigestName("MD5");
+            } else {
+                throw new SignatureException(
+                    "Message digest length is not supported");
+            }
+
+            byte[] result = new byte[offset];
+            System.arraycopy(precomputedDigest, 0, result, 0, offset);
+            offset = 0;
+
+            return result;
+        }
+    }
+
+    public static final class SHA1withRSA extends RSA {
+        public SHA1withRSA() {
+            super("SHA1");
+        }
+    }
+
+    public static final class SHA256withRSA extends RSA {
+      
