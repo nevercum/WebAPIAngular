@@ -815,4 +815,140 @@ abstract class CSignature extends SignatureSpi {
 
     /**
      * Updates the data to be signed or verified, using the
-     * specified 
+     * specified ByteBuffer.
+     *
+     * @param input the ByteBuffer
+     */
+    @Override
+    protected void engineUpdate(ByteBuffer input) {
+        messageDigest.update(input);
+        needsReset = true;
+    }
+
+    /**
+     * Convert array from big endian to little endian, or vice versa.
+     */
+    private static byte[] convertEndianArray(byte[] byteArray) {
+        if (byteArray == null || byteArray.length == 0)
+            return byteArray;
+
+        byte [] retval = new byte[byteArray.length];
+
+        // make it big endian
+        for (int i=0;i < byteArray.length;i++)
+            retval[i] = byteArray[byteArray.length - i - 1];
+
+        return retval;
+    }
+
+    /**
+     * Sign hash using Microsoft Crypto API with HCRYPTKEY.
+     * The returned data is in little-endian.
+     */
+    private static native byte[] signHash(boolean noHashOID, byte[] hash,
+        int hashSize, String hashAlgorithm, long hCryptProv, long hCryptKey)
+            throws SignatureException;
+
+    /**
+     * Verify a signed hash using Microsoft Crypto API with HCRYPTKEY.
+     */
+    private static native boolean verifySignedHash(byte[] hash, int hashSize,
+        String hashAlgorithm, byte[] signature, int signatureSize,
+        long hCryptProv, long hCryptKey) throws SignatureException;
+
+    /**
+     * Sets the specified algorithm parameter to the specified
+     * value. This method supplies a general-purpose mechanism through
+     * which it is possible to set the various parameters of this object.
+     * A parameter may be any settable parameter for the algorithm, such as
+     * a parameter size, or a source of random bits for signature generation
+     * (if appropriate), or an indication of whether or not to perform
+     * a specific but optional computation. A uniform algorithm-specific
+     * naming scheme for each parameter is desirable but left unspecified
+     * at this time.
+     *
+     * @param param the string identifier of the parameter.
+     *
+     * @param value the parameter value.
+     *
+     * @exception InvalidParameterException if <code>param</code> is an
+     * invalid parameter for this signature algorithm engine,
+     * the parameter is already set
+     * and cannot be set again, a security exception occurs, and so on.
+     *
+     * @deprecated Replaced by {@link
+     * #engineSetParameter(java.security.spec.AlgorithmParameterSpec)
+     * engineSetParameter}.
+     */
+    @Override
+    @Deprecated
+    protected void engineSetParameter(String param, Object value)
+            throws InvalidParameterException {
+        throw new InvalidParameterException("Parameter not supported");
+    }
+
+    /**
+     * Sets this signature engine with the specified algorithm parameter.
+     *
+     * @param params the parameters
+     *
+     * @exception InvalidAlgorithmParameterException if the given
+     * parameter is invalid
+     */
+    @Override
+    protected void engineSetParameter(AlgorithmParameterSpec params)
+            throws InvalidAlgorithmParameterException {
+        if (params != null) {
+            throw new InvalidAlgorithmParameterException("No parameter accepted");
+        }
+    }
+
+    /**
+     * Gets the value of the specified algorithm parameter.
+     * This method supplies a general-purpose mechanism through which it
+     * is possible to get the various parameters of this object. A parameter
+     * may be any settable parameter for the algorithm, such as a parameter
+     * size, or  a source of random bits for signature generation (if
+     * appropriate), or an indication of whether or not to perform a
+     * specific but optional computation. A uniform algorithm-specific
+     * naming scheme for each parameter is desirable but left unspecified
+     * at this time.
+     *
+     * @param param the string name of the parameter.
+     *
+     * @return the object that represents the parameter value, or null if
+     * there is none.
+     *
+     * @exception InvalidParameterException if <code>param</code> is an
+     * invalid parameter for this engine, or another exception occurs while
+     * trying to get this parameter.
+     *
+     * @deprecated
+     */
+    @Override
+    @Deprecated
+    protected Object engineGetParameter(String param)
+           throws InvalidParameterException {
+        throw new InvalidParameterException("Parameter not supported");
+    }
+
+    /**
+     * Gets the algorithm parameter from this signature engine.
+     *
+     * @return the parameter, or null if no parameter is used.
+     */
+    @Override
+    protected AlgorithmParameters engineGetParameters() {
+        return null;
+    }
+
+    /**
+     * Imports a public-key BLOB.
+     */
+    // used by CRSACipher
+    static native CPublicKey importPublicKey(
+            String alg, byte[] keyBlob, int keySize) throws KeyStoreException;
+
+    static native CPublicKey importECPublicKey(
+            String alg, byte[] keyBlob, int keySize) throws KeyStoreException;
+}
