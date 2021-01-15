@@ -365,4 +365,242 @@ abstract class CSignature extends SignatureSpi {
     }
 
     public static final class SHA256withRSA extends RSA {
-      
+        public SHA256withRSA() {
+            super("SHA-256");
+        }
+    }
+
+    public static final class SHA384withRSA extends RSA {
+        public SHA384withRSA() {
+            super("SHA-384");
+        }
+    }
+
+    public static final class SHA512withRSA extends RSA {
+        public SHA512withRSA() {
+            super("SHA-512");
+        }
+    }
+
+    public static final class MD5withRSA extends RSA {
+        public MD5withRSA() {
+            super("MD5");
+        }
+    }
+
+    public static final class MD2withRSA extends RSA {
+        public MD2withRSA() {
+            super("MD2");
+        }
+    }
+
+    public static final class SHA1withECDSA extends ECDSA {
+        public SHA1withECDSA() {
+            super("SHA-1");
+        }
+    }
+
+    public static final class SHA224withECDSA extends ECDSA {
+        public SHA224withECDSA() {
+            super("SHA-224");
+        }
+    }
+
+    public static final class SHA256withECDSA extends ECDSA {
+        public SHA256withECDSA() {
+            super("SHA-256");
+        }
+    }
+
+    public static final class SHA384withECDSA extends ECDSA {
+        public SHA384withECDSA() {
+            super("SHA-384");
+        }
+    }
+
+    public static final class SHA512withECDSA extends ECDSA {
+        public SHA512withECDSA() {
+            super("SHA-512");
+        }
+    }
+
+    static class ECDSA extends CSignature {
+
+        public ECDSA(String messageDigestAlgorithm) {
+            super("EC", messageDigestAlgorithm);
+        }
+
+        // initialize for signing. See JCA doc
+        @Override
+        protected void engineInitSign(PrivateKey key) throws InvalidKeyException {
+            if (key == null) {
+                throw new InvalidKeyException("Key cannot be null");
+            }
+            if ((key instanceof CPrivateKey) == false
+                    || !key.getAlgorithm().equalsIgnoreCase("EC")) {
+                throw new InvalidKeyException("Key type not supported: "
+                        + key.getClass() + " " + key.getAlgorithm());
+            }
+            privateKey = (CPrivateKey) key;
+
+            this.publicKey = null;
+            resetDigest();
+        }
+
+        // initialize for signing. See JCA doc
+        @Override
+        protected void engineInitVerify(PublicKey key) throws InvalidKeyException {
+            if (key == null) {
+                throw new InvalidKeyException("Key cannot be null");
+            }
+            // This signature accepts only ECPublicKey
+            if ((key instanceof ECPublicKey) == false) {
+                throw new InvalidKeyException("Key type not supported: "
+                        + key.getClass());
+            }
+
+            if ((key instanceof CPublicKey) == false) {
+                try {
+                    publicKey = importECPublicKey("EC",
+                            CKey.generateECBlob(key),
+                            KeyUtil.getKeySize(key));
+                } catch (KeyStoreException e) {
+                    throw new InvalidKeyException(e);
+                }
+            } else {
+                publicKey = (CPublicKey) key;
+            }
+
+            this.privateKey = null;
+            resetDigest();
+        }
+
+        @Override
+        protected byte[] engineSign() throws SignatureException {
+            byte[] hash = getDigestValue();
+            byte[] raw = signCngHash(0, hash, hash.length,
+                    0,
+                    null,
+                    privateKey.getHCryptProvider(), 0);
+            return ECUtil.encodeSignature(raw);
+        }
+
+        @Override
+        protected boolean engineVerify(byte[] sigBytes) throws SignatureException {
+            byte[] hash = getDigestValue();
+            sigBytes = ECUtil.decodeSignature(sigBytes);
+            return verifyCngSignedHash(
+                    0,
+                    hash, hash.length,
+                    sigBytes, sigBytes.length,
+                    0,
+                    null,
+                    publicKey.getHCryptProvider(),
+                    0
+            );
+        }
+    }
+
+    public static final class PSS extends RSA {
+
+        private PSSParameterSpec pssParams = null;
+
+        // Workaround: Cannot import raw public key to CNG. This signature
+        // will be used for verification if key is not from MSCAPI.
+        private Signature fallbackSignature;
+
+        public PSS() {
+            super(null);
+        }
+
+        @Override
+        protected void engineInitSign(PrivateKey key) throws InvalidKeyException {
+            super.engineInitSign(key);
+            fallbackSignature = null;
+        }
+
+        @Override
+        protected void engineInitVerify(PublicKey key) throws InvalidKeyException {
+            if (key == null) {
+                throw new InvalidKeyException("Key cannot be null");
+            }
+            // This signature accepts only RSAPublicKey
+            if ((key instanceof java.security.interfaces.RSAPublicKey) == false) {
+                throw new InvalidKeyException("Key type not supported: "
+                        + key.getClass());
+            }
+
+            this.privateKey = null;
+
+            if (key instanceof CPublicKey) {
+                fallbackSignature = null;
+                publicKey = (CPublicKey) key;
+            } else {
+                if (fallbackSignature == null) {
+                    try {
+                        fallbackSignature = Signature.getInstance(
+                                "RSASSA-PSS", "SunRsaSign");
+                    } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
+                        throw new InvalidKeyException("Invalid key", e);
+                    }
+                }
+                fallbackSignature.initVerify(key);
+                if (pssParams != null) {
+                    try {
+                        fallbackSignature.setParameter(pssParams);
+                    } catch (InvalidAlgorithmParameterException e) {
+                        throw new InvalidKeyException("Invalid params", e);
+                    }
+                }
+                publicKey = null;
+            }
+            resetDigest();
+        }
+
+        @Override
+        protected void engineUpdate(byte b) throws SignatureException {
+            ensureInit();
+            if (fallbackSignature != null) {
+                fallbackSignature.update(b);
+            } else {
+                messageDigest.update(b);
+            }
+            needsReset = true;
+        }
+
+        @Override
+        protected void engineUpdate(byte[] b, int off, int len) throws SignatureException {
+            ensureInit();
+            if (fallbackSignature != null) {
+                fallbackSignature.update(b, off, len);
+            } else {
+                messageDigest.update(b, off, len);
+            }
+            needsReset = true;
+        }
+
+        @Override
+        protected void engineUpdate(ByteBuffer input) {
+            try {
+                ensureInit();
+            } catch (SignatureException se) {
+                // workaround for API bug
+                throw new RuntimeException(se.getMessage());
+            }
+            if (fallbackSignature != null) {
+                try {
+                    fallbackSignature.update(input);
+                } catch (SignatureException se) {
+                    // workaround for API bug
+                    throw new RuntimeException(se.getMessage());
+                }
+            } else {
+                messageDigest.update(input);
+            }
+            needsReset = true;
+        }
+
+        @Override
+        protected byte[] engineSign() throws SignatureException {
+            ensureInit();
+     
