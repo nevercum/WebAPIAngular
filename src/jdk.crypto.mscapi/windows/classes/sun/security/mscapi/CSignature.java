@@ -603,4 +603,216 @@ abstract class CSignature extends SignatureSpi {
         @Override
         protected byte[] engineSign() throws SignatureException {
             ensureInit();
-     
+            byte[] hash = getDigestValue();
+            return signCngHash(2, hash, hash.length,
+                    pssParams.getSaltLength(),
+                    ((MGF1ParameterSpec)
+                            pssParams.getMGFParameters()).getDigestAlgorithm(),
+                    privateKey.getHCryptProvider(), privateKey.getHCryptKey());
+        }
+
+        @Override
+        protected boolean engineVerify(byte[] sigBytes) throws SignatureException {
+            ensureInit();
+            if (fallbackSignature != null) {
+                needsReset = false;
+                return fallbackSignature.verify(sigBytes);
+            } else {
+                byte[] hash = getDigestValue();
+                return verifyCngSignedHash(
+                        2, hash, hash.length,
+                        sigBytes, sigBytes.length,
+                        pssParams.getSaltLength(),
+                        ((MGF1ParameterSpec)
+                                pssParams.getMGFParameters()).getDigestAlgorithm(),
+                        publicKey.getHCryptProvider(),
+                        publicKey.getHCryptKey()
+                );
+            }
+        }
+
+        @Override
+        protected void engineSetParameter(AlgorithmParameterSpec params)
+                throws InvalidAlgorithmParameterException {
+            if (needsReset) {
+                throw new ProviderException
+                        ("Cannot set parameters during operations");
+            }
+            this.pssParams = validateSigParams(params);
+            if (fallbackSignature != null) {
+                fallbackSignature.setParameter(params);
+            }
+        }
+
+        @Override
+        protected AlgorithmParameters engineGetParameters() {
+            AlgorithmParameters ap = null;
+            if (this.pssParams != null) {
+                try {
+                    ap = AlgorithmParameters.getInstance("RSASSA-PSS");
+                    ap.init(this.pssParams);
+                } catch (GeneralSecurityException gse) {
+                    throw new ProviderException(gse.getMessage());
+                }
+            }
+            return ap;
+        }
+
+        private void ensureInit() throws SignatureException {
+            if (this.privateKey == null && this.publicKey == null
+                    && fallbackSignature == null) {
+                throw new SignatureException("Missing key");
+            }
+            if (this.pssParams == null) {
+                // Parameters are required for signature verification
+                throw new SignatureException
+                        ("Parameters required for RSASSA-PSS signatures");
+            }
+            if (fallbackSignature == null && messageDigest == null) {
+                // This could happen if initVerify(softKey), setParameter(),
+                // and initSign() were called. No messageDigest. Create it.
+                try {
+                    messageDigest = MessageDigest
+                            .getInstance(pssParams.getDigestAlgorithm());
+                } catch (NoSuchAlgorithmException e) {
+                    throw new SignatureException(e);
+                }
+            }
+        }
+
+        /**
+         * Validate the specified Signature PSS parameters.
+         */
+        private PSSParameterSpec validateSigParams(AlgorithmParameterSpec p)
+                throws InvalidAlgorithmParameterException {
+
+            if (p == null) {
+                throw new InvalidAlgorithmParameterException
+                        ("Parameters cannot be null");
+            }
+
+            if (!(p instanceof PSSParameterSpec)) {
+                throw new InvalidAlgorithmParameterException
+                        ("parameters must be type PSSParameterSpec");
+            }
+
+            // no need to validate again if same as current signature parameters
+            PSSParameterSpec params = (PSSParameterSpec) p;
+            if (params == this.pssParams) return params;
+
+            // now sanity check the parameter values
+            if (!(params.getMGFAlgorithm().equalsIgnoreCase("MGF1"))) {
+                throw new InvalidAlgorithmParameterException("Only supports MGF1");
+
+            }
+
+            if (params.getTrailerField() != PSSParameterSpec.TRAILER_FIELD_BC) {
+                throw new InvalidAlgorithmParameterException
+                        ("Only supports TrailerFieldBC(1)");
+            }
+
+            AlgorithmParameterSpec algSpec = params.getMGFParameters();
+            if (!(algSpec instanceof MGF1ParameterSpec)) {
+                throw new InvalidAlgorithmParameterException
+                        ("Only support MGF1ParameterSpec");
+            }
+
+            MGF1ParameterSpec mgfSpec = (MGF1ParameterSpec)algSpec;
+
+            String msgHashAlg = params.getDigestAlgorithm()
+                    .toLowerCase(Locale.ROOT).replaceAll("-", "");
+            if (msgHashAlg.equals("sha")) {
+                msgHashAlg = "sha1";
+            }
+            String mgf1HashAlg = mgfSpec.getDigestAlgorithm()
+                    .toLowerCase(Locale.ROOT).replaceAll("-", "");
+            if (mgf1HashAlg.equals("sha")) {
+                mgf1HashAlg = "sha1";
+            }
+
+            if (!mgf1HashAlg.equals(msgHashAlg)) {
+                throw new InvalidAlgorithmParameterException
+                        ("MGF1 hash must be the same as message hash");
+            }
+
+            return params;
+        }
+    }
+
+    /**
+     * Sign hash using CNG API with HCRYPTKEY.
+     * @param type 0 no padding, 1, pkcs1, 2, pss
+     */
+    static native byte[] signCngHash(
+            int type, byte[] hash,
+            int hashSize, int saltLength, String hashAlgorithm,
+            long hCryptProv, long nCryptKey)
+            throws SignatureException;
+
+    /**
+     * Verify a signed hash using CNG API with HCRYPTKEY.
+     * @param type 0 no padding, 1, pkcs1, 2, pss
+     */
+    private static native boolean verifyCngSignedHash(
+            int type, byte[] hash, int hashSize,
+            byte[] signature, int signatureSize,
+            int saltLength, String hashAlgorithm,
+            long hCryptProv, long hKey) throws SignatureException;
+
+    /**
+     * Resets the message digest if needed.
+     */
+    protected void resetDigest() {
+        if (needsReset) {
+            if (messageDigest != null) {
+                messageDigest.reset();
+            }
+            needsReset = false;
+        }
+    }
+
+    protected byte[] getDigestValue() throws SignatureException {
+        needsReset = false;
+        return messageDigest.digest();
+    }
+
+    protected void setDigestName(String name) {
+        messageDigestAlgorithm = name;
+    }
+
+    /**
+     * Updates the data to be signed or verified
+     * using the specified byte.
+     *
+     * @param b the byte to use for the update.
+     *
+     * @exception SignatureException if the engine is not initialized
+     * properly.
+     */
+    @Override
+    protected void engineUpdate(byte b) throws SignatureException {
+        messageDigest.update(b);
+        needsReset = true;
+    }
+
+    /**
+     * Updates the data to be signed or verified, using the
+     * specified array of bytes, starting at the specified offset.
+     *
+     * @param b the array of bytes
+     * @param off the offset to start from in the array of bytes
+     * @param len the number of bytes to use, starting at offset
+     *
+     * @exception SignatureException if the engine is not initialized
+     * properly
+     */
+    @Override
+    protected void engineUpdate(byte[] b, int off, int len)
+            throws SignatureException {
+        messageDigest.update(b, off, len);
+        needsReset = true;
+    }
+
+    /**
+     * Updates the data to be signed or verified, using the
+     * specified 
