@@ -1,12 +1,11 @@
+
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2004, 2008, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,17 +22,25 @@
  * questions.
  */
 
-package build.tools.cldrconverter;
+/*
+ * @test
+ * @bug 4984158
+ * @summary two inherited methods with same signature
+ * @author gafter, Maurizio Cimadamore
+ *
+ * @compile  InheritanceConflict2.java
+ */
 
-class IgnoredContainer extends Container {
+package inheritance.conflict2;
 
-    IgnoredContainer(String qName, Container parent) {
-            super(qName, parent);
-    }
+class A<T> {
+    void f(String s) {}
+}
 
-    @Override
-    void addCharacters(char[] characters, int start, int length) {
-        // ignore
-    }
+class B<T> extends A<T> {
+    void f(T t) {}
+}
 
+class C extends B<String> {
+    void f(String s) {}
 }
