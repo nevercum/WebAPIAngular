@@ -116,3 +116,108 @@ public class ParserTest {
 
         parse(name, "true", name + "=true", args);
         parse(name, "false", name + "=false", args);
+        parse(name, "true", name, args);
+
+        //Empty commandline to parse, tests default value
+        //of the parameter "name"
+        parse(name, "false", "", args);
+    }
+
+    public void testQuotes() throws Exception {
+        String name = "name";
+        DiagnosticCommand arg1 = new DiagnosticCommand(name,
+                "desc", DiagnosticArgumentType.STRING,
+                false, null);
+        DiagnosticCommand arg2 = new DiagnosticCommand("arg",
+                "desc", DiagnosticArgumentType.STRING,
+                false, null);
+        DiagnosticCommand[] args = {arg1, arg2};
+
+        // try with a quoted value
+        parse(name, "Recording 1", name + "=\"Recording 1\"", args);
+        // try with a quoted argument
+        parse(name, "myrec", "\"" + name + "\"" + "=myrec", args);
+        // try with both a quoted value and a quoted argument
+        parse(name, "Recording 1", "\"" + name + "\"" + "=\"Recording 1\"", args);
+
+        // now the same thing but with other arguments after
+
+        // try with a quoted value
+        parse(name, "Recording 1", name + "=\"Recording 1\",arg=value", args);
+        // try with a quoted argument
+        parse(name, "myrec", "\"" + name + "\"" + "=myrec,arg=value", args);
+        // try with both a quoted value and a quoted argument
+        parse(name, "Recording 1", "\"" + name + "\"" + "=\"Recording 1\",arg=value", args);
+    }
+
+    public void testSingleLetterArg() throws Exception {
+        DiagnosticCommand[] args = new DiagnosticCommand[]{
+            new DiagnosticCommand("flag", "desc", DiagnosticArgumentType.STRING, true, false, null),
+            new DiagnosticCommand("value", "desc", DiagnosticArgumentType.STRING, true, false, null)
+        };
+        parse("flag", "flag", "flag v", ' ', args);
+        parse("value", "v", "flag v", ' ', args);
+    }
+
+    public void testMemorySize() throws Exception {
+        String name = "name";
+        String defaultValue = "1024";
+        DiagnosticCommand arg = new DiagnosticCommand(name,
+                "desc", DiagnosticArgumentType.MEMORYSIZE,
+                false, defaultValue);
+        DiagnosticCommand[] args = {arg};
+
+        BigInteger bi = new BigInteger("7");
+        parse(name, bi.toString(), name + "=7b", args);
+
+        bi = bi.multiply(BigInteger.valueOf(1024));
+        parse(name, bi.toString(), name + "=7k", args);
+
+        bi = bi.multiply(BigInteger.valueOf(1024));
+        parse(name, bi.toString(), name + "=7m", args);
+
+        bi = bi.multiply(BigInteger.valueOf(1024));
+        parse(name, bi.toString(), name + "=7g", args);
+        parse(name, defaultValue, "", args);
+
+        //shouldFail(name + "=7gg", args); <---- should fail, doesn't
+        //shouldFail(name + "=7t", args);  <----- should fail, doesn't
+    }
+
+    public void parse(String searchName, String expectedValue,
+            String cmdLine, DiagnosticCommand[] argumentTypes) throws Exception {
+        parse(searchName, expectedValue, cmdLine, ',', argumentTypes);
+    }
+    public void parse(String searchName, String expectedValue,
+            String cmdLine, char delim, DiagnosticCommand[] argumentTypes) throws Exception {
+        //parseCommandLine will return an object array that looks like
+        //{<name of parsed object>, <of parsed object> ... }
+        Object[] res = wb.parseCommandLine(cmdLine, delim, argumentTypes);
+        for (int i = 0; i < res.length-1; i+=2) {
+            String parsedName = (String) res[i];
+            if (searchName.equals(parsedName)) {
+                String parsedValue = (String) res[i+1];
+                if (expectedValue.equals(parsedValue)) {
+                    return;
+                } else {
+                    throw new Exception("Parsing of cmdline '" + cmdLine + "' failed!\n"
+                            + searchName + " parsed as " + parsedValue
+                            + "! Expected: " + expectedValue);
+                }
+            }
+        }
+        throw new Exception(searchName + " not found as a parsed Argument!");
+    }
+
+    private void shouldFail(String argument, DiagnosticCommand[] argumentTypes) throws Exception {
+        shouldFail(argument, ',', argumentTypes);
+    }
+    private void shouldFail(String argument, char delim, DiagnosticCommand[] argumentTypes) throws Exception {
+        try {
+            wb.parseCommandLine(argument, delim, argumentTypes);
+            throw new Exception("Parser accepted argument: " + argument);
+        } catch (IllegalArgumentException e) {
+            //expected
+        }
+    }
+}
