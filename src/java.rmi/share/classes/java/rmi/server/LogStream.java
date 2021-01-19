@@ -156,4 +156,118 @@ public class LogStream extends PrintStream {
     {
         logOut = out;
         // Maintain an OutputStreamWriter with default CharToByteConvertor
-        // (just like new PrintStre
+        // (just like new PrintStream) for writing log message prefixes.
+        logWriter = new OutputStreamWriter(logOut);
+    }
+
+    /**
+     * Write a byte of data to the stream.  If it is not a newline, then
+     * the byte is appended to the internal buffer.  If it is a newline,
+     * then the currently buffered line is sent to the log's output
+     * stream, prefixed with the appropriate logging information.
+     * @since 1.1
+     * @deprecated no replacement
+     */
+    @Deprecated
+    public void write(int b)
+    {
+        if (b == '\n') {
+            // synchronize on "this" first to avoid potential deadlock
+            synchronized (this) {
+                synchronized (logOut) {
+                    // construct prefix for log messages:
+                    buffer.setLength(0);
+                    buffer.append(              // date/time stamp...
+                        (new Date()).toString());
+                    buffer.append(':');
+                    buffer.append(name);        // ...log name...
+                    buffer.append(':');
+                    buffer.append(Thread.currentThread().getName());
+                    buffer.append(':'); // ...and thread name
+
+                    try {
+                        // write prefix through to underlying byte stream
+                        logWriter.write(buffer.toString());
+                        logWriter.flush();
+
+                        // finally, write the already converted bytes of
+                        // the log message
+                        bufOut.writeTo(logOut);
+                        logOut.write(b);
+                        logOut.flush();
+                    } catch (IOException e) {
+                        setError();
+                    } finally {
+                        bufOut.reset();
+                    }
+                }
+            }
+        }
+        else
+            super.write(b);
+    }
+
+    /**
+     * Write a subarray of bytes.  Pass each through write byte method.
+     * @since 1.1
+     * @deprecated no replacement
+     */
+    @Deprecated
+    public void write(byte b[], int off, int len)
+    {
+        if (len < 0)
+            throw new ArrayIndexOutOfBoundsException(len);
+        for (int i = 0; i < len; ++ i)
+            write(b[off + i]);
+    }
+
+    /**
+     * Return log name as string representation.
+     * @return log name
+     * @since 1.1
+     * @deprecated no replacement
+     */
+    @Deprecated
+    public String toString()
+    {
+        return name;
+    }
+
+    /** log level constant (no logging). */
+    public static final int SILENT  = 0;
+    /** log level constant (brief logging). */
+    public static final int BRIEF   = 10;
+    /** log level constant (verbose logging). */
+    public static final int VERBOSE = 20;
+
+    /**
+     * Convert a string name of a logging level to its internal
+     * integer representation.
+     * @param s name of logging level (e.g., 'SILENT', 'BRIEF', 'VERBOSE')
+     * @return corresponding integer log level
+     * @since 1.1
+     * @deprecated no replacement
+     */
+    @Deprecated
+    public static int parseLevel(String s)
+    {
+        if ((s == null) || (s.length() < 1))
+            return -1;
+
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+        }
+        if (s.length() < 1)
+            return -1;
+
+        if ("SILENT".startsWith(s.toUpperCase()))
+            return SILENT;
+        else if ("BRIEF".startsWith(s.toUpperCase()))
+            return BRIEF;
+        else if ("VERBOSE".startsWith(s.toUpperCase()))
+            return VERBOSE;
+
+        return -1;
+    }
+}
