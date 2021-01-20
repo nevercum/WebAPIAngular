@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<eOtherPayment>
+  <OtherPaymentSerialID>b972115d-829e-43ff-aebb-c7157ef25c71</OtherPaymentSerialID>
+  <CustomsCode>01AP</CustomsCode>
+  <DeclarantCode>A9901017</DeclarantCode>
+  <CompanyCode>A0500823</CompanyCode>
+  <BankCode>221</BankCode>
+  <Transactions>
+    <TransactionRecord>
+      <Code>89</Code>
+      <RefOffice>01AP</RefOffice>
+      <RefYear>2008</RefYear>
+      <RefSerial>A</RefSerial>
+      <RefNumber>68</RefNumber>
+      <TransactionReference>KJ091</TransactionReference>
+      <Amount>5000</Amount>
+    </TransactionRecord>
+    <Transaction
