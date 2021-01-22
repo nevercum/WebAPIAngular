@@ -89,4 +89,207 @@ public class InputContext extends java.awt.im.InputContext
     private boolean   isInputMethodActive;
     private Subset[]  characterSubsets = null;
 
-    // true if composition area has been set to invisible when focus was los
+    // true if composition area has been set to invisible when focus was lost
+    private boolean compositionAreaHidden = false;
+
+    // The input context for whose input method we may have to call hideWindows
+    private static InputContext inputMethodWindowContext;
+
+    // Previously active input method to decide whether we need to call
+    // InputMethodAdapter.stopListening() on activateInputMethod()
+    private static InputMethod previousInputMethod = null;
+
+    // true if the current input method requires client window change notification
+    private boolean clientWindowNotificationEnabled = false;
+    // client window to which this input context is listening
+    private Window clientWindowListened;
+    // cache location notification
+    private Rectangle clientWindowLocation = null;
+    // holding the state of clientWindowNotificationEnabled of only non-current input methods
+    private HashMap<InputMethod, Boolean> perInputMethodState;
+
+    // Input Method selection hot key stuff
+    private static AWTKeyStroke inputMethodSelectionKey;
+    private static boolean inputMethodSelectionKeyInitialized = false;
+    private static final String inputMethodSelectionKeyPath = "/java/awt/im/selectionKey";
+    private static final String inputMethodSelectionKeyCodeName = "keyCode";
+    private static final String inputMethodSelectionKeyModifiersName = "modifiers";
+
+    /**
+     * Constructs an InputContext.
+     */
+    protected InputContext() {
+        InputMethodManager imm = InputMethodManager.getInstance();
+        synchronized (InputContext.class) {
+            if (!inputMethodSelectionKeyInitialized) {
+                inputMethodSelectionKeyInitialized = true;
+                if (imm.hasMultipleInputMethods()) {
+                    initializeInputMethodSelectionKey();
+                }
+            }
+        }
+        selectInputMethod(imm.getDefaultKeyboardLocale());
+    }
+
+    /**
+     * @see java.awt.im.InputContext#selectInputMethod
+     * @throws NullPointerException when the locale is null.
+     */
+    public synchronized boolean selectInputMethod(Locale locale) {
+        if (locale == null) {
+            throw new NullPointerException();
+        }
+
+        // see whether the current input method supports the locale
+        if (inputMethod != null) {
+            if (inputMethod.setLocale(locale)) {
+                return true;
+            }
+        } else if (inputMethodLocator != null) {
+            // This is not 100% correct, since the input method
+            // may support the locale without advertising it.
+            // But before we try instantiations and setLocale,
+            // we look for an input method that's more confident.
+            if (inputMethodLocator.isLocaleAvailable(locale)) {
+                inputMethodLocator = inputMethodLocator.deriveLocator(locale);
+                return true;
+            }
+        }
+
+        // see whether there's some other input method that supports the locale
+        InputMethodLocator newLocator = InputMethodManager.getInstance().findInputMethod(locale);
+        if (newLocator != null) {
+            changeInputMethod(newLocator);
+            return true;
+        }
+
+        // make one last desperate effort with the current input method
+        // ??? is this good? This is pretty high cost for something that's likely to fail.
+        if (inputMethod == null && inputMethodLocator != null) {
+            inputMethod = getInputMethod();
+            if (inputMethod != null) {
+                return inputMethod.setLocale(locale);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @see java.awt.im.InputContext#getLocale
+     */
+    public Locale getLocale() {
+        if (inputMethod != null) {
+            return inputMethod.getLocale();
+        } else if (inputMethodLocator != null) {
+            return inputMethodLocator.getLocale();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * @see java.awt.im.InputContext#setCharacterSubsets
+     */
+    public void setCharacterSubsets(Subset[] subsets) {
+        if (subsets == null) {
+            characterSubsets = null;
+        } else {
+            characterSubsets = new Subset[subsets.length];
+            System.arraycopy(subsets, 0,
+                             characterSubsets, 0, characterSubsets.length);
+        }
+        if (inputMethod != null) {
+            inputMethod.setCharacterSubsets(subsets);
+        }
+    }
+
+    /**
+     * @see java.awt.im.InputContext#reconvert
+     * @since 1.3
+     * @throws UnsupportedOperationException when input method is null
+     */
+    public synchronized void reconvert() {
+        InputMethod inputMethod = getInputMethod();
+        if (inputMethod == null) {
+            throw new UnsupportedOperationException();
+        }
+        inputMethod.reconvert();
+    }
+
+    /**
+     * @see java.awt.im.InputContext#dispatchEvent
+     */
+    @SuppressWarnings("fallthrough")
+    public void dispatchEvent(AWTEvent event) {
+
+        if (event instanceof InputMethodEvent) {
+            return;
+        }
+
+        // Ignore focus events that relate to the InputMethodWindow of this context.
+        // This is a workaround.  Should be removed after 4452384 is fixed.
+        if (event instanceof FocusEvent) {
+            Component opposite = ((FocusEvent)event).getOppositeComponent();
+            if ((opposite != null) &&
+                (getComponentWindow(opposite) instanceof InputMethodWindow) &&
+                (opposite.getInputContext() == this)) {
+                return;
+            }
+        }
+
+        InputMethod inputMethod = getInputMethod();
+        int id = event.getID();
+
+        switch (id) {
+        case FocusEvent.FOCUS_GAINED:
+            focusGained((Component) event.getSource());
+            break;
+
+        case FocusEvent.FOCUS_LOST:
+            focusLost((Component) event.getSource(), ((FocusEvent) event).isTemporary());
+            break;
+
+        case KeyEvent.KEY_PRESSED:
+            if (checkInputMethodSelectionKey((KeyEvent)event)) {
+                // pop up the input method selection menu
+                InputMethodManager.getInstance().notifyChangeRequestByHotKey((Component)event.getSource());
+                break;
+            }
+
+            // fall through
+
+        default:
+            if ((inputMethod != null) && (event instanceof InputEvent)) {
+                inputMethod.dispatchEvent(event);
+            }
+        }
+    }
+
+    /**
+     * Handles focus gained events for any component that's using
+     * this input context.
+     * These events are generated by AWT when the keyboard focus
+     * moves to a component.
+     * Besides actual client components, the source components
+     * may also be the composition area or any component in an
+     * input method window.
+     * <p>
+     * When handling the focus event for a client component, this
+     * method checks whether the input context was previously
+     * active for a different client component, and if so, calls
+     * endComposition for the previous client component.
+     *
+     * @param source the component gaining the focus
+     */
+    private void focusGained(Component source) {
+
+        /*
+         * NOTE: When a Container is removing its Component which
+         * invokes this.removeNotify(), the Container has the global
+         * Component lock. It is possible to happen that an
+         * application thread is calling this.removeNotify() while an
+         * AWT event queue thread is dispatching a focus event via
+         * this.dispatchEvent(). If an input method uses AWT
+         * components (e.g., IIIMP status window), it causes deadlock,
+         * for example, Component.show()/hide() in this situation
+         * because hide
