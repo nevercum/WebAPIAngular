@@ -292,4 +292,177 @@ public class InputContext extends java.awt.im.InputContext
          * this.dispatchEvent(). If an input method uses AWT
          * components (e.g., IIIMP status window), it causes deadlock,
          * for example, Component.show()/hide() in this situation
-         * because hide
+         * because hide/show tried to obtain the lock.  Therefore,
+         * it's necessary to obtain the global Component lock before
+         * activating or deactivating an input method.
+         */
+        synchronized (source.getTreeLock()) {
+            synchronized (this) {
+                if ("sun.awt.im.CompositionArea".equals(source.getClass().getName())) {
+                    // no special handling for this one
+                } else if (getComponentWindow(source) instanceof InputMethodWindow) {
+                    // no special handling for this one either
+                } else {
+                    if (!source.isDisplayable()) {
+                        // Component is being disposed
+                        return;
+                    }
+
+                    // Focus went to a real client component.
+                    // Check whether we're switching between client components
+                    // that share an input context. We can't do that earlier
+                    // than here because we don't want to end composition
+                    // until we really know we're switching to a different component
+                    if (inputMethod != null) {
+                        if (currentClientComponent != null && currentClientComponent != source) {
+                            if (!isInputMethodActive) {
+                                activateInputMethod(false);
+                            }
+                            endComposition();
+                            deactivateInputMethod(false);
+                        }
+                    }
+
+                    currentClientComponent = source;
+                }
+
+                awtFocussedComponent = source;
+                if (inputMethod instanceof InputMethodAdapter) {
+                    ((InputMethodAdapter) inputMethod).setAWTFocussedComponent(source);
+                }
+
+                // it's possible that the input method is still active because
+                // we suppressed a deactivate cause by an input method window
+                // coming up
+                if (!isInputMethodActive) {
+                    activateInputMethod(true);
+                }
+
+
+                // If the client component is an active client with the below-the-spot
+                // input style, then make the composition window undecorated without a title bar.
+                InputMethodContext inputContext = ((InputMethodContext)this);
+                if (!inputContext.isCompositionAreaVisible()) {
+                      InputMethodRequests req = source.getInputMethodRequests();
+                      if (req != null && inputContext.useBelowTheSpotInput()) {
+                          inputContext.setCompositionAreaUndecorated(true);
+                      } else {
+                          inputContext.setCompositionAreaUndecorated(false);
+                      }
+                }
+                // restores the composition area if it was set to invisible
+                // when focus got lost
+                if (compositionAreaHidden == true) {
+                    ((InputMethodContext)this).setCompositionAreaVisible(true);
+                    compositionAreaHidden = false;
+                }
+            }
+        }
+    }
+
+    /**
+     * Activates the current input method of this input context, and grabs
+     * the composition area for use by this input context.
+     * If updateCompositionArea is true, the text in the composition area
+     * is updated (set to false if the text is going to change immediately
+     * to avoid screen flicker).
+     */
+    private void activateInputMethod(boolean updateCompositionArea) {
+        // call hideWindows() if this input context uses a different
+        // input method than the previously activated one
+        if (inputMethodWindowContext != null && inputMethodWindowContext != this &&
+                inputMethodWindowContext.inputMethodLocator != null &&
+                !inputMethodWindowContext.inputMethodLocator.sameInputMethod(inputMethodLocator) &&
+                inputMethodWindowContext.inputMethod != null) {
+            inputMethodWindowContext.inputMethod.hideWindows();
+        }
+        inputMethodWindowContext = this;
+
+        if (inputMethod != null) {
+            if (previousInputMethod != inputMethod &&
+                    previousInputMethod instanceof InputMethodAdapter) {
+                // let the host adapter pass through the input events for the
+                // new input method
+                ((InputMethodAdapter) previousInputMethod).stopListening();
+            }
+            previousInputMethod = null;
+
+            if (log.isLoggable(PlatformLogger.Level.FINE)) {
+                log.fine("Current client component " + currentClientComponent);
+            }
+            if (inputMethod instanceof InputMethodAdapter) {
+                ((InputMethodAdapter) inputMethod).setClientComponent(currentClientComponent);
+            }
+            inputMethod.activate();
+            isInputMethodActive = true;
+
+            if (perInputMethodState != null) {
+                Boolean state = perInputMethodState.remove(inputMethod);
+                if (state != null) {
+                    clientWindowNotificationEnabled = state.booleanValue();
+                }
+            }
+            if (clientWindowNotificationEnabled) {
+                if (!addedClientWindowListeners()) {
+                    addClientWindowListeners();
+                }
+                synchronized(this) {
+                    if (clientWindowListened != null) {
+                        notifyClientWindowChange(clientWindowListened);
+                    }
+                }
+            } else {
+                if (addedClientWindowListeners()) {
+                    removeClientWindowListeners();
+                }
+            }
+        }
+        InputMethodManager.getInstance().setInputContext(this);
+
+        ((InputMethodContext) this).grabCompositionArea(updateCompositionArea);
+    }
+
+    static Window getComponentWindow(Component component) {
+        while (true) {
+            if (component == null) {
+                return null;
+            } else if (component instanceof Window) {
+                return (Window) component;
+            } else {
+                component = component.getParent();
+            }
+        }
+    }
+
+    /**
+     * Handles focus lost events for any component that's using
+     * this input context.
+     * These events are generated by AWT when the keyboard focus
+     * moves away from a component.
+     * Besides actual client components, the source components
+     * may also be the composition area or any component in an
+     * input method window.
+     *
+     * @param source the component losing the focus
+     * @isTemporary whether the focus change is temporary
+     */
+    private void focusLost(Component source, boolean isTemporary) {
+
+        // see the note on synchronization in focusGained
+        synchronized (source.getTreeLock()) {
+            synchronized (this) {
+
+                // We need to suppress deactivation if removeNotify has been called earlier.
+                // This is indicated by isInputMethodActive == false.
+                if (isInputMethodActive) {
+                    deactivateInputMethod(isTemporary);
+                }
+
+                awtFocussedComponent = null;
+                if (inputMethod instanceof InputMethodAdapter) {
+                    ((InputMethodAdapter) inputMethod).setAWTFocussedComponent(null);
+                }
+
+                // hides the composition area if currently it is visible
+                InputMethodContext inputContext = ((InputMethodContext)this);
+                if (inputContext.isCompositionA
