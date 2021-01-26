@@ -465,4 +465,192 @@ public class InputContext extends java.awt.im.InputContext
 
                 // hides the composition area if currently it is visible
                 InputMethodContext inputContext = ((InputMethodContext)this);
-                if (inputContext.isCompositionA
+                if (inputContext.isCompositionAreaVisible()) {
+                    inputContext.setCompositionAreaVisible(false);
+                    compositionAreaHidden = true;
+                }
+            }
+        }
+    }
+
+    /**
+     * Checks the key event is the input method selection key or not.
+     */
+    private boolean checkInputMethodSelectionKey(KeyEvent event) {
+        if (inputMethodSelectionKey != null) {
+            AWTKeyStroke aKeyStroke = AWTKeyStroke.getAWTKeyStrokeForEvent(event);
+            return inputMethodSelectionKey.equals(aKeyStroke);
+        } else {
+            return false;
+        }
+    }
+
+    private void deactivateInputMethod(boolean isTemporary) {
+        InputMethodManager.getInstance().setInputContext(null);
+        if (inputMethod != null) {
+            isInputMethodActive = false;
+            inputMethod.deactivate(isTemporary);
+            previousInputMethod = inputMethod;
+        }
+    }
+
+    /**
+     * Switches from the current input method to the one described by newLocator.
+     * The current input method, if any, is asked to end composition, deactivated,
+     * and saved for future use. The newLocator is made the current locator. If
+     * the input context is active, an input method instance for the new locator
+     * is obtained; otherwise this is deferred until required.
+     */
+    synchronized void changeInputMethod(InputMethodLocator newLocator) {
+        // If we don't have a locator yet, this must be a new input context.
+        // If we created a new input method here, we might get into an
+        // infinite loop: create input method -> create some input method window ->
+        // create new input context -> add input context to input method manager's context list ->
+        // call changeInputMethod on it.
+        // So, just record the locator. dispatchEvent will create the input method when needed.
+        if (inputMethodLocator == null) {
+            inputMethodLocator = newLocator;
+            inputMethodCreationFailed = false;
+            return;
+        }
+
+        // If the same input method is specified, just keep it.
+        // Adjust the locale if necessary.
+        if (inputMethodLocator.sameInputMethod(newLocator)) {
+            Locale newLocale = newLocator.getLocale();
+            if (newLocale != null && inputMethodLocator.getLocale() != newLocale) {
+                if (inputMethod != null) {
+                    inputMethod.setLocale(newLocale);
+                }
+                inputMethodLocator = newLocator;
+            }
+            return;
+        }
+
+        // Switch out the old input method
+        Locale savedLocale = inputMethodLocator.getLocale();
+        boolean wasInputMethodActive = isInputMethodActive;
+        boolean wasCompositionEnabledSupported = false;
+        boolean wasCompositionEnabled = false;
+        if (inputMethod != null) {
+            try {
+                wasCompositionEnabled = inputMethod.isCompositionEnabled();
+                wasCompositionEnabledSupported = true;
+            } catch (UnsupportedOperationException e) { }
+
+            if (currentClientComponent != null) {
+                if (!isInputMethodActive) {
+                    activateInputMethod(false);
+                }
+                endComposition();
+                deactivateInputMethod(false);
+                if (inputMethod instanceof InputMethodAdapter) {
+                    ((InputMethodAdapter) inputMethod).setClientComponent(null);
+                }
+                if (null == currentClientComponent.getInputMethodRequests())
+                    wasCompositionEnabledSupported = false;
+            }
+            savedLocale = inputMethod.getLocale();
+
+            // keep the input method instance around for future use
+            if (usedInputMethods == null) {
+                usedInputMethods = new HashMap<>(5);
+            }
+            if (perInputMethodState == null) {
+                perInputMethodState = new HashMap<>(5);
+            }
+            usedInputMethods.put(inputMethodLocator.deriveLocator(null), inputMethod);
+            perInputMethodState.put(inputMethod,
+                                    Boolean.valueOf(clientWindowNotificationEnabled));
+            enableClientWindowNotification(inputMethod, false);
+            if (this == inputMethodWindowContext) {
+                inputMethod.hideWindows();
+                inputMethod.removeNotify();
+                inputMethodWindowContext = null;
+            }
+            inputMethodLocator = null;
+            inputMethod = null;
+            inputMethodCreationFailed = false;
+        }
+
+        // Switch in the new input method
+        if (newLocator.getLocale() == null && savedLocale != null &&
+                newLocator.isLocaleAvailable(savedLocale)) {
+            newLocator = newLocator.deriveLocator(savedLocale);
+        }
+        inputMethodLocator = newLocator;
+        inputMethodCreationFailed = false;
+
+        // activate the new input method if the old one was active
+        if (wasInputMethodActive) {
+            inputMethod = getInputMethodInstance();
+            if (inputMethod instanceof InputMethodAdapter) {
+                ((InputMethodAdapter) inputMethod).setAWTFocussedComponent(awtFocussedComponent);
+            }
+            activateInputMethod(true);
+        }
+
+        // enable/disable composition if the old one supports querying enable/disable
+        if (wasCompositionEnabledSupported) {
+            inputMethod = getInputMethod();
+            if (inputMethod != null) {
+                try {
+                    inputMethod.setCompositionEnabled(wasCompositionEnabled);
+                } catch (UnsupportedOperationException e) { }
+            }
+        }
+    }
+
+    /**
+     * Returns the client component.
+     */
+    Component getClientComponent() {
+        return currentClientComponent;
+    }
+
+    /**
+     * @see java.awt.im.InputContext#removeNotify
+     * @throws NullPointerException when the component is null.
+     */
+    public synchronized void removeNotify(Component component) {
+        if (component == null) {
+            throw new NullPointerException();
+        }
+
+        if (inputMethod == null) {
+            if (component == currentClientComponent) {
+                currentClientComponent = null;
+            }
+            return;
+        }
+
+        // We may or may not get a FOCUS_LOST event for this component,
+        // so do the deactivation stuff here too.
+        if (component == awtFocussedComponent) {
+            focusLost(component, false);
+        }
+
+        if (component == currentClientComponent) {
+            if (isInputMethodActive) {
+                // component wasn't the one that had the focus
+                deactivateInputMethod(false);
+            }
+            inputMethod.removeNotify();
+            if (clientWindowNotificationEnabled && addedClientWindowListeners()) {
+                removeClientWindowListeners();
+            }
+            currentClientComponent = null;
+            if (inputMethod instanceof InputMethodAdapter) {
+                ((InputMethodAdapter) inputMethod).setClientComponent(null);
+            }
+
+            // removeNotify() can be issued from a thread other than the event dispatch
+            // thread.  In that case, avoid possible deadlock between Component.AWTTreeLock
+            // and InputMethodContext.compositionAreaHandlerLock by releasing the composition
+            // area on the event dispatch thread.
+            if (EventQueue.isDispatchThread()) {
+                ((InputMethodContext)this).releaseCompositionArea();
+            } else {
+                EventQueue.invokeLater(new Runnable() {
+                    public void run() {
+              
