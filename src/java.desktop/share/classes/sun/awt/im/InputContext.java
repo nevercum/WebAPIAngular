@@ -653,4 +653,219 @@ public class InputContext extends java.awt.im.InputContext
             } else {
                 EventQueue.invokeLater(new Runnable() {
                     public void run() {
-              
+                        ((InputMethodContext)InputContext.this).releaseCompositionArea();
+                    }
+                });
+            }
+        }
+    }
+
+    /**
+     * @see java.awt.im.InputContext#dispose
+     * @throws IllegalStateException when the currentClientComponent is not null
+     */
+    public synchronized void dispose() {
+        if (currentClientComponent != null) {
+            throw new IllegalStateException("Can't dispose InputContext while it's active");
+        }
+        if (inputMethod != null) {
+            if (this == inputMethodWindowContext) {
+                inputMethod.hideWindows();
+                inputMethodWindowContext = null;
+            }
+            if (inputMethod == previousInputMethod) {
+                previousInputMethod = null;
+            }
+            if (clientWindowNotificationEnabled) {
+                if (addedClientWindowListeners()) {
+                    removeClientWindowListeners();
+                }
+                clientWindowNotificationEnabled = false;
+            }
+            inputMethod.dispose();
+
+            // in case the input method enabled the client window
+            // notification in dispose(), which shouldn't happen, it
+            // needs to be cleaned up again.
+            if (clientWindowNotificationEnabled) {
+                enableClientWindowNotification(inputMethod, false);
+            }
+
+            inputMethod = null;
+        }
+        inputMethodLocator = null;
+        if (usedInputMethods != null && !usedInputMethods.isEmpty()) {
+            Collection<InputMethod> methods = usedInputMethods.values();
+            usedInputMethods = null;
+            for (InputMethod method : methods) {
+                method.dispose();
+            }
+        }
+
+        // cleanup client window notification variables
+        clientWindowNotificationEnabled = false;
+        clientWindowListened = null;
+        perInputMethodState = null;
+    }
+
+    /**
+     * @see java.awt.im.InputContext#getInputMethodControlObject
+     */
+    public synchronized Object getInputMethodControlObject() {
+        InputMethod inputMethod = getInputMethod();
+
+        if (inputMethod != null) {
+            return inputMethod.getControlObject();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * @see java.awt.im.InputContext#setCompositionEnabled(boolean)
+     * @throws UnsupportedOperationException when input method is null
+     */
+    public void setCompositionEnabled(boolean enable) {
+        InputMethod inputMethod = getInputMethod();
+
+        if (inputMethod == null) {
+            throw new UnsupportedOperationException();
+        }
+        inputMethod.setCompositionEnabled(enable);
+    }
+
+    /**
+     * @see java.awt.im.InputContext#isCompositionEnabled
+     * @throws UnsupportedOperationException when input method is null
+     */
+    public boolean isCompositionEnabled() {
+        InputMethod inputMethod = getInputMethod();
+
+        if (inputMethod == null) {
+            throw new UnsupportedOperationException();
+        }
+        return inputMethod.isCompositionEnabled();
+    }
+
+    /**
+     * @return a string with information about the current input method.
+     * @throws UnsupportedOperationException when input method is null
+     */
+    public String getInputMethodInfo() {
+        InputMethod inputMethod = getInputMethod();
+
+        if (inputMethod == null) {
+            throw new UnsupportedOperationException("Null input method");
+        }
+
+        String inputMethodInfo = null;
+        if (inputMethod instanceof InputMethodAdapter) {
+            // returns the information about the host native input method.
+            inputMethodInfo = ((InputMethodAdapter)inputMethod).
+                getNativeInputMethodInfo();
+        }
+
+        // extracts the information from the InputMethodDescriptor
+        // associated with the current java input method.
+        if (inputMethodInfo == null && inputMethodLocator != null) {
+            inputMethodInfo = inputMethodLocator.getDescriptor().
+                getInputMethodDisplayName(getLocale(), SunToolkit.
+                                          getStartupLocale());
+        }
+
+        if (inputMethodInfo != null && !inputMethodInfo.isEmpty()) {
+            return inputMethodInfo;
+        }
+
+        // do our best to return something useful.
+        return inputMethod.toString() + "-" + inputMethod.getLocale().toString();
+    }
+
+    /**
+     * Turns off the native IM. The native IM is disabled when
+     * the deactivate method of InputMethod is called. It is
+     * delayed until the active method is called on a different
+     * peer component. This method is provided to explicitly disable
+     * the native IM.
+     */
+    public void disableNativeIM() {
+        InputMethod inputMethod = getInputMethod();
+        if (inputMethod instanceof InputMethodAdapter adapter) {
+            adapter.stopListening();
+        }
+    }
+
+
+    private synchronized InputMethod getInputMethod() {
+        if (inputMethod != null) {
+            return inputMethod;
+        }
+
+        if (inputMethodCreationFailed) {
+            return null;
+        }
+
+        inputMethod = getInputMethodInstance();
+        return inputMethod;
+    }
+
+    /**
+     * Returns an instance of the input method described by
+     * the current input method locator. This may be an input
+     * method that was previously used and switched out of,
+     * or a new instance. The locale, character subsets, and
+     * input method context of the input method are set.
+     *
+     * The inputMethodCreationFailed field is set to true if the
+     * instantiation failed.
+     *
+     * @return an InputMethod instance
+     * @see java.awt.im.spi.InputMethod#setInputMethodContext
+     * @see java.awt.im.spi.InputMethod#setLocale
+     * @see java.awt.im.spi.InputMethod#setCharacterSubsets
+     */
+    private InputMethod getInputMethodInstance() {
+        InputMethodLocator locator = inputMethodLocator;
+        if (locator == null) {
+            inputMethodCreationFailed = true;
+            return null;
+        }
+
+        Locale locale = locator.getLocale();
+        InputMethod inputMethodInstance = null;
+
+        // see whether we have a previously used input method
+        if (usedInputMethods != null) {
+            inputMethodInstance = usedInputMethods.remove(locator.deriveLocator(null));
+            if (inputMethodInstance != null) {
+                if (locale != null) {
+                    inputMethodInstance.setLocale(locale);
+                }
+                inputMethodInstance.setCharacterSubsets(characterSubsets);
+                Boolean state = perInputMethodState.remove(inputMethodInstance);
+                if (state != null) {
+                    enableClientWindowNotification(inputMethodInstance, state.booleanValue());
+                }
+                ((InputMethodContext) this).setInputMethodSupportsBelowTheSpot(
+                        (!(inputMethodInstance instanceof InputMethodAdapter)) ||
+                        ((InputMethodAdapter) inputMethodInstance).supportsBelowTheSpot());
+                return inputMethodInstance;
+            }
+        }
+
+        // need to create new instance
+        try {
+            inputMethodInstance = locator.getDescriptor().createInputMethod();
+
+            if (locale != null) {
+                inputMethodInstance.setLocale(locale);
+            }
+            inputMethodInstance.setInputMethodContext((InputMethodContext) this);
+            inputMethodInstance.setCharacterSubsets(characterSubsets);
+
+        } catch (Exception e) {
+            logCreationFailed(e);
+
+            // there are a number of bad things that can happen while creating
+            // the input method. In any case, we just continue without an
+    
