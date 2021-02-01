@@ -868,4 +868,205 @@ public class InputContext extends java.awt.im.InputContext
 
             // there are a number of bad things that can happen while creating
             // the input method. In any case, we just continue without an
-    
+            // input method.
+            inputMethodCreationFailed = true;
+
+            // if the instance has been created, then it means either
+            // setLocale() or setInputMethodContext() failed.
+            if (inputMethodInstance != null) {
+                inputMethodInstance = null;
+            }
+        } catch (LinkageError e) {
+            logCreationFailed(e);
+
+            // same as above
+            inputMethodCreationFailed = true;
+        }
+        ((InputMethodContext) this).setInputMethodSupportsBelowTheSpot(
+                (!(inputMethodInstance instanceof InputMethodAdapter)) ||
+                ((InputMethodAdapter) inputMethodInstance).supportsBelowTheSpot());
+        return inputMethodInstance;
+    }
+
+    private void logCreationFailed(Throwable throwable) {
+        PlatformLogger logger = PlatformLogger.getLogger("sun.awt.im");
+        if (logger.isLoggable(PlatformLogger.Level.CONFIG)) {
+            String errorTextFormat = Toolkit.getProperty("AWT.InputMethodCreationFailed",
+                                                         "Could not create {0}. Reason: {1}");
+            Object[] args =
+                {inputMethodLocator.getDescriptor().getInputMethodDisplayName(null, Locale.getDefault()),
+                 throwable.getLocalizedMessage()};
+            MessageFormat mf = new MessageFormat(errorTextFormat);
+            logger.config(mf.format(args));
+        }
+    }
+
+    InputMethodLocator getInputMethodLocator() {
+        if (inputMethod != null) {
+            return inputMethodLocator.deriveLocator(inputMethod.getLocale());
+        }
+        return inputMethodLocator;
+    }
+
+    /**
+     * @see java.awt.im.InputContext#endComposition
+     */
+    public synchronized void endComposition() {
+        if (inputMethod != null) {
+            inputMethod.endComposition();
+        }
+    }
+
+    /**
+     * @see java.awt.im.spi.InputMethodContext#enableClientWindowNotification
+     */
+    synchronized void enableClientWindowNotification(InputMethod requester,
+                                                     boolean enable) {
+        // in case this request is not from the current input method,
+        // store the request and handle it when this requesting input
+        // method becomes the current one.
+        if (requester != inputMethod) {
+            if (perInputMethodState == null) {
+                perInputMethodState = new HashMap<>(5);
+            }
+            perInputMethodState.put(requester, Boolean.valueOf(enable));
+            return;
+        }
+
+        if (clientWindowNotificationEnabled != enable) {
+            clientWindowLocation = null;
+            clientWindowNotificationEnabled = enable;
+        }
+        if (clientWindowNotificationEnabled) {
+            if (!addedClientWindowListeners()) {
+                addClientWindowListeners();
+            }
+            if (clientWindowListened != null) {
+                clientWindowLocation = null;
+                notifyClientWindowChange(clientWindowListened);
+            }
+        } else {
+            if (addedClientWindowListeners()) {
+                removeClientWindowListeners();
+            }
+        }
+    }
+
+    private synchronized void notifyClientWindowChange(Window window) {
+        if (inputMethod == null) {
+            return;
+        }
+
+        // if the window is invisible or iconified, send null to the input method.
+        if (!window.isVisible() ||
+            ((window instanceof Frame) && ((Frame)window).getState() == Frame.ICONIFIED)) {
+            clientWindowLocation = null;
+            inputMethod.notifyClientWindowChange(null);
+            return;
+        }
+        Rectangle location = window.getBounds();
+        if (clientWindowLocation == null || !clientWindowLocation.equals(location)) {
+            clientWindowLocation = location;
+            inputMethod.notifyClientWindowChange(clientWindowLocation);
+        }
+    }
+
+    private synchronized void addClientWindowListeners() {
+        Component client = getClientComponent();
+        if (client == null) {
+            return;
+        }
+        Window window = getComponentWindow(client);
+        if (window == null) {
+            return;
+        }
+        window.addComponentListener(this);
+        window.addWindowListener(this);
+        clientWindowListened = window;
+    }
+
+    private synchronized void removeClientWindowListeners() {
+        clientWindowListened.removeComponentListener(this);
+        clientWindowListened.removeWindowListener(this);
+        clientWindowListened = null;
+    }
+
+    /**
+     * Returns true if listeners have been set up for client window
+     * change notification.
+     */
+    private boolean addedClientWindowListeners() {
+        return clientWindowListened != null;
+    }
+
+    /*
+     * ComponentListener and WindowListener implementation
+     */
+    public void componentResized(ComponentEvent e) {
+        notifyClientWindowChange((Window)e.getComponent());
+    }
+
+    public void componentMoved(ComponentEvent e) {
+        notifyClientWindowChange((Window)e.getComponent());
+    }
+
+    public void componentShown(ComponentEvent e) {
+        notifyClientWindowChange((Window)e.getComponent());
+    }
+
+    public void componentHidden(ComponentEvent e) {
+        notifyClientWindowChange((Window)e.getComponent());
+    }
+
+    public void windowOpened(WindowEvent e) {}
+    public void windowClosing(WindowEvent e) {}
+    public void windowClosed(WindowEvent e) {}
+
+    public void windowIconified(WindowEvent e) {
+        notifyClientWindowChange(e.getWindow());
+    }
+
+    public void windowDeiconified(WindowEvent e) {
+        notifyClientWindowChange(e.getWindow());
+    }
+
+    public void windowActivated(WindowEvent e) {}
+    public void windowDeactivated(WindowEvent e) {}
+
+    /**
+     * Initializes the input method selection key definition in preference trees
+     */
+    @SuppressWarnings("removal")
+    private void initializeInputMethodSelectionKey() {
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            public Object run() {
+                // Look in user's tree
+                Preferences root = Preferences.userRoot();
+                inputMethodSelectionKey = getInputMethodSelectionKeyStroke(root);
+
+                if (inputMethodSelectionKey == null) {
+                    // Look in system's tree
+                    root = Preferences.systemRoot();
+                    inputMethodSelectionKey = getInputMethodSelectionKeyStroke(root);
+                }
+                return null;
+            }
+        });
+    }
+
+    private AWTKeyStroke getInputMethodSelectionKeyStroke(Preferences root) {
+        try {
+            if (root.nodeExists(inputMethodSelectionKeyPath)) {
+                Preferences node = root.node(inputMethodSelectionKeyPath);
+                int keyCode = node.getInt(inputMethodSelectionKeyCodeName, KeyEvent.VK_UNDEFINED);
+                if (keyCode != KeyEvent.VK_UNDEFINED) {
+                    int modifiers = node.getInt(inputMethodSelectionKeyModifiersName, 0);
+                    return AWTKeyStroke.getAWTKeyStroke(keyCode, modifiers);
+                }
+            }
+        } catch (BackingStoreException bse) {
+        }
+
+        return null;
+    }
+}
