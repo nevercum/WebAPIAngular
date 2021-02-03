@@ -608,4 +608,121 @@ public class DefaultTreeModel implements Serializable, TreeModel {
         // Process the listeners last to first, notifying
         // those that are interested in this event
         for (int i = listeners.length-2; i>=0; i-=2) {
-            i
+            if (listeners[i]==TreeModelListener.class) {
+                // Lazily create the event:
+                if (e == null)
+                    e = new TreeModelEvent(source, path,
+                                           childIndices, children);
+                ((TreeModelListener)listeners[i+1]).treeStructureChanged(e);
+            }
+        }
+    }
+
+    /**
+     * Notifies all listeners that have registered interest for
+     * notification on this event type.  The event instance
+     * is lazily created using the parameters passed into
+     * the fire method.
+     *
+     * @param source the source of the {@code TreeModelEvent};
+     *               typically {@code this}
+     * @param path the path to the parent of the structure that has changed;
+     *             use {@code null} to identify the root has changed
+     */
+    private void fireTreeStructureChanged(Object source, TreePath path) {
+        // Guaranteed to return a non-null array
+        Object[] listeners = listenerList.getListenerList();
+        TreeModelEvent e = null;
+        // Process the listeners last to first, notifying
+        // those that are interested in this event
+        for (int i = listeners.length-2; i>=0; i-=2) {
+            if (listeners[i]==TreeModelListener.class) {
+                // Lazily create the event:
+                if (e == null)
+                    e = new TreeModelEvent(source, path);
+                ((TreeModelListener)listeners[i+1]).treeStructureChanged(e);
+            }
+        }
+    }
+
+    /**
+     * Returns an array of all the objects currently registered
+     * as <code><em>Foo</em>Listener</code>s
+     * upon this model.
+     * <code><em>Foo</em>Listener</code>s are registered using the
+     * <code>add<em>Foo</em>Listener</code> method.
+     *
+     * <p>
+     *
+     * You can specify the <code>listenerType</code> argument
+     * with a class literal,
+     * such as
+     * <code><em>Foo</em>Listener.class</code>.
+     * For example, you can query a
+     * <code>DefaultTreeModel</code> <code>m</code>
+     * for its tree model listeners with the following code:
+     *
+     * <pre>TreeModelListener[] tmls = (TreeModelListener[])(m.getListeners(TreeModelListener.class));</pre>
+     *
+     * If no such listeners exist, this method returns an empty array.
+     *
+     * @param <T> the listener type
+     * @param listenerType the type of listeners requested
+     * @return an array of all objects registered as
+     *          <code><em>Foo</em>Listener</code>s on this component,
+     *          or an empty array if no such
+     *          listeners have been added
+     * @throws ClassCastException if <code>listenerType</code>
+     *          doesn't specify a class or interface that implements
+     *          <code>java.util.EventListener</code>
+     *
+     * @see #getTreeModelListeners
+     *
+     * @since 1.3
+     */
+    public <T extends EventListener> T[] getListeners(Class<T> listenerType) {
+        return listenerList.getListeners(listenerType);
+    }
+
+    // Serialization support.
+    @Serial
+    private void writeObject(ObjectOutputStream s) throws IOException {
+        Vector<Object> values = new Vector<Object>();
+
+        s.defaultWriteObject();
+        // Save the root, if it's Serializable.
+        if (root instanceof Serializable) {
+            values.addElement("root");
+            values.addElement(root);
+        }
+        s.writeObject(values);
+    }
+
+    @Serial
+    private void readObject(ObjectInputStream s)
+        throws IOException, ClassNotFoundException {
+        ObjectInputStream.GetField f = s.readFields();
+        EventListenerList newListenerList = (EventListenerList) f.get("listenerList", null);
+        if (newListenerList == null) {
+            throw new InvalidObjectException("Null listenerList");
+        }
+        listenerList = newListenerList;
+        asksAllowsChildren = f.get("asksAllowsChildren", false);
+
+        Vector<?>       values = (Vector)s.readObject();
+        int             indexCounter = 0;
+        int             maxCounter = values.size();
+
+        if(indexCounter < maxCounter && values.elementAt(indexCounter).
+           equals("root")) {
+            TreeNode newRoot  = (TreeNode)values.elementAt(++indexCounter);
+            if (newRoot == null) {
+                throw new InvalidObjectException("Null root");
+            }
+            root = newRoot;
+            indexCounter++;
+        }
+    }
+
+
+} // End of class DefaultTreeModel
