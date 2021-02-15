@@ -1,0 +1,108 @@
+<!--
+Copyright © 1991-2022 Unicode, Inc.
+For terms of use, see http://www.unicode.org/copyright.html
+SPDX-License-Identifier: Unicode-DFS-2016
+CLDR data files are interpreted according to the LDML specification (http://unicode.org/reports/tr35/)
+-->
+
+<!ELEMENT supplementalData ( version, generation?, cldrVersion?, currencyData?, territoryContainment?, subdivisionContainment?, languageData?, territoryInfo?, postalCodeData?, calendarData?, calendarPreferenceData?, weekData?, timeData?, measurementData?, unitIdComponents?, unitConstants*, unitQuantities*, convertUnits*, unitPreferenceData?, timezoneData?, characters?, transforms?, metadata?, codeMappings?, parentLocales?, personNamesDefaults?, likelySubtags?, metazoneInfo?, plurals?, telephoneCodeData?, numberingSystems?, bcp47KeywordMappings?, gender?, references?, languageMatching?, dayPeriodRuleSet*, metaZones?, primaryZones?, windowsZones?, coverageLevels?, idValidity?, rgScope?, languageGroups?, grammaticalData? ) >
+
+<!ELEMENT version EMPTY >
+    <!--@METADATA-->
+<!ATTLIST version number CDATA #REQUIRED >
+    <!--@MATCH:any-->
+    <!--@METADATA-->
+<!ATTLIST version cldrVersion CDATA #FIXED "42" >
+    <!--@MATCH:version-->
+    <!--@VALUE-->
+<!ATTLIST version unicodeVersion CDATA #FIXED "15.0.0" >
+    <!--@MATCH:version-->
+    <!--@VALUE-->
+
+<!ELEMENT generation EMPTY >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+<!ATTLIST generation date CDATA #REQUIRED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT cldrVersion EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST cldrVersion version CDATA #REQUIRED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT currencyData ( fractions*, region+ ) >
+<!ATTLIST currencyData draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT fractions ( info+ ) >
+<!ATTLIST fractions draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT info EMPTY >
+<!ATTLIST info iso4217 NMTOKEN #REQUIRED >
+    <!--@MATCH:or/validity/currency||literal/DEFAULT-->
+<!ATTLIST info digits NMTOKEN #IMPLIED >
+    <!--@MATCH:range/0~5-->
+    <!--@VALUE-->
+<!ATTLIST info rounding NMTOKEN #IMPLIED >
+    <!--@MATCH:range/0~5-->
+    <!--@VALUE-->
+<!ATTLIST info cashDigits NMTOKEN #IMPLIED >
+    <!--@MATCH:range/0~100-->
+    <!--@VALUE-->
+<!ATTLIST info cashRounding NMTOKEN #IMPLIED >
+    <!--@MATCH:literal/0, 5, 50-->
+    <!--@VALUE-->
+<!ATTLIST info draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED:true, false-->
+<!ATTLIST info references CDATA #IMPLIED >
+    <!--@METADATA-->
+
+<!ELEMENT region ( currency* ) >
+<!ATTLIST region iso3166 NMTOKEN #REQUIRED >
+    <!--@MATCH:validity/region-->
+<!ATTLIST region draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT currency ( alternate* ) >
+<!ATTLIST currency before NMTOKEN #IMPLIED >
+    <!-- use from and to instead. -->
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST currency from NMTOKEN #IMPLIED >
+    <!--@MATCH:time/yyyy-MM-dd-->
+<!ATTLIST currency to NMTOKEN #IMPLIED >
+    <!--@MATCH:time/yyyy-MM-dd-->
+<!ATTLIST currency iso4217 NMTOKEN #REQUIRED >
+    <!--@MATCH:validity/currency-->
+<!ATTLIST currency digits NMTOKEN #IMPLIED >
+    <!--@VALUE-->
+<!ATTLIST currency rounding NMTOKEN #IMPLIED >
+    <!--@VALUE-->
+<!ATTLIST currency cashRounding NMTOKEN #IMPLIED >
+    <!--@VALUE-->
+<!ATTLIST currency tender (true | false) #IMPLIED >
+    <!--@VALUE-->
+<!ATTLIST currency draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+<!ATTLIST currency references CDATA #IMPLIED >
+    <!--@METADATA-->
+
+<!ELEMENT alternate EMPTY >
+    <!-- use from and to instead. -->
+    <!--@DEPRECATED-->
+<!ATTLIST alternate iso4217 NMTOKEN #REQUIRED >
+    <!--@DEPRECATED-->
+
+<!ELEMENT territoryContainment ( group* ) >
+
+<!ELEMENT group EMPTY >
+<!ATTLIST group type NMTOKEN #REQUIRED >
+    <!--@MATCH:valid
