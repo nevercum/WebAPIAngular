@@ -529,4 +529,166 @@ CLDR data files are interpreted according to the LDML specification (http://unic
     <!--@DEPRECATED-->
 <!ATTLIST character references CDATA #IMPLIED >
     <!--@METADATA-->
-<!ATTLIST character alt NMTOKEN
+<!ATTLIST character alt NMTOKENS #IMPLIED >
+    <!--@MATCH:literal/variant-->
+
+<!ELEMENT substitute ( #PCDATA ) >
+    <!--@ORDERED-->
+<!ATTLIST substitute draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED:true, false-->
+<!ATTLIST substitute standard CDATA #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+<!ATTLIST substitute references CDATA #IMPLIED >
+    <!--@METADATA-->
+<!ATTLIST substitute alt NMTOKENS #IMPLIED >
+    <!--@MATCH:literal/variant-->
+
+<!ELEMENT transforms ( transform* ) >
+
+<!ELEMENT transform ( ( comment | tRule )* ) >
+<!ATTLIST transform source CDATA #IMPLIED >
+    <!--@MATCH:any/TODO-->
+<!ATTLIST transform target CDATA #IMPLIED >
+    <!--@MATCH:any/TODO-->
+<!ATTLIST transform variant CDATA #IMPLIED >
+    <!--@MATCH:any/TODO-->
+<!ATTLIST transform direction (forward | backward | both) "both" >
+<!ATTLIST transform alias CDATA #IMPLIED >
+    <!--@MATCH:any/TODO-->
+    <!--@VALUE-->
+<!ATTLIST transform backwardAlias CDATA #IMPLIED >
+    <!--@MATCH:any/TODO-->
+    <!--@VALUE-->
+<!ATTLIST transform visibility (internal | external) "external" >
+    <!--@VALUE-->
+<!ATTLIST transform draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+<!ATTLIST transform references CDATA #IMPLIED >
+    <!--@METADATA-->
+<!ATTLIST transform alt NMTOKENS #IMPLIED >
+    <!--@MATCH:literal/variant-->
+
+<!ELEMENT comment ( #PCDATA ) >
+    <!--@ORDERED-->
+    <!--@METADATA-->
+
+<!ELEMENT tRule ( #PCDATA ) >
+    <!--@ORDERED-->
+
+<!ELEMENT metadata ( attributeOrder?, elementOrder?, serialElements?, suppress?, validity?, alias?, deprecated?, distinguishing?, blocking?, coverageAdditions?, skipDefaultLocale?, defaultContent? ) >
+<!ATTLIST metadata draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT attributeOrder ( #PCDATA ) >
+    <!--@DEPRECATED-->
+<!ATTLIST attributeOrder draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT elementOrder ( #PCDATA ) >
+    <!--@DEPRECATED-->
+<!ATTLIST elementOrder draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT serialElements ( #PCDATA ) >
+    <!--@METADATA-->
+<!ATTLIST serialElements draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED:true, false-->
+
+<!ELEMENT suppress ( attributes* ) >
+    <!--@METADATA-->
+<!ATTLIST suppress draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT attributes EMPTY >
+    <!--@ORDERED-->
+<!ATTLIST attributes element NMTOKENS #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@VALUE-->
+<!ATTLIST attributes attribute NMTOKENS #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@VALUE-->
+<!ATTLIST attributes attributeValue CDATA #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@VALUE-->
+<!ATTLIST attributes draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED:true, false-->
+
+<!ELEMENT validity ( variable*, attributeValues* ) >
+    <!--@METADATA-->
+<!ATTLIST validity draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT variable ( #PCDATA ) >
+    <!--@ORDERED-->
+<!ATTLIST variable type NMTOKEN #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@VALUE-->
+<!ATTLIST variable id CDATA #REQUIRED >
+    <!--@MATCH:any-->
+<!ATTLIST variable draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED:true, false-->
+
+<!ELEMENT attributeValues ( #PCDATA ) >
+    <!--@ORDERED-->
+<!ATTLIST attributeValues dtds NMTOKEN #IMPLIED >
+    <!--@MATCH:any-->
+<!ATTLIST attributeValues type NMTOKEN #IMPLIED >
+    <!--@MATCH:any-->
+<!ATTLIST attributeValues elements NMTOKENS #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@VALUE-->
+<!ATTLIST attributeValues attributes NMTOKENS #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@VALUE-->
+<!ATTLIST attributeValues order NMTOKEN #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@VALUE-->
+<!ATTLIST attributeValues draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED:true, false-->
+
+<!ELEMENT alias ( languageAlias*, scriptAlias*, territoryAlias*, subdivisionAlias*, variantAlias*, zoneAlias*, unitAlias*, usageAlias* ) >
+<!ATTLIST alias draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT languageAlias EMPTY >
+<!ATTLIST languageAlias type NMTOKEN #REQUIRED >
+    <!--@MATCH:or/validity/locale||literal/aa_saaho, aar, abk, afr, aka, alb, amh, ara, arg, arm, art_lojban, asm, ava, ave, aym, aze, bak, bam, baq, bel, ben, bih, bis, bod, bos, bre, bul, bur, cat, ces, cha, che, chi, chu, chv, cor, cos, cre, cym, cze, dan, deu, div, dut, dzo, ell, eng, epo, est, eus, ewe, fao, fas, fij, fin, fra, fre, fry, ful, geo, ger, gla, gle, glg, glv, gre, grn, guj, hat, hau, hbs, heb, her, hin, hmo, hrv, hun, hye, i_ami, i_bnn, i_hak, i_klingon, i_lux, i_navajo, i_pwn, i_tao, i_tay, i_tsu, ibo, ice, ido, iii, iku, ile, ina, ind, ipk, isl, ita, jav, jpn, kal, kan, kas, kat, kau, kaz, khm, kik, kin, kir, kom, kon, kor, kua, kur, lao, lat, lav, lim, lin, lit, ltz, lub, lug, mac, mah, mal, mao, mar, may, mkd, mlg, mlt, mol, mon, mri, msa, mya, nau, nav, nbl, nde, ndo, nep, nld, nno, no_bokmal, no_nynorsk, no_bok, no_nyn, nob, nor, nya, oci, oji, ori, orm, oss, pan, per, pli, pol, por, pus, que, roh, ron, rum, run, rus, sag, san, scc, scr, sgn_BE_FR, sgn_BE_NL, sgn_CH_DE, sin, slk, slo, slv, sme, smo, sna, snd, som, sot, spa, sqi, srd, srp, ssw, sun, swa, swe, tah, tam, tat, tel, tgk, tgl, tha, tib, tir, ton, tsn, tso, tuk, tur, twi, uig, ukr, urd, uzb, ven, vie, vol, wel, wln, wol, xho, yid, yor, zh_guoyu, zh_hakka, zh_min_nan, zh_xiang, zha, zho, zul, cel_gaulish, i_default, i_enochian, i_mingo, und_aaland, und_bokmal, und_hakka, und_lojban, und_nynorsk, und_saaho, und_xiang, zh_min, en_GB_oed, zh_cmn, zh_cmn_Hans, zh_cmn_Hant, zh_gan, zh_wuu, zh_yue-->
+<!ATTLIST languageAlias replacement NMTOKEN #REQUIRED >
+    <!--@MATCH:or/validity/locale||literal/en_x_i_default, nan_x_zh_min, see_x_i_mingo, und_x_i_enochian, xtg_x_cel_gaulish-->
+    <!--@VALUE-->
+<!ATTLIST languageAlias reason (deprecated | overlong | macrolanguage | legacy | bibliographic) #IMPLIED >
+    <!--@VALUE-->
+
+<!ELEMENT scriptAlias EMPTY >
+<!ATTLIST scriptAlias type NMTOKEN #REQUIRED >
+    <!--@MATCH:validity/script-->
+<!ATTLIST scriptAlias replacement NMTOKEN #REQUIRED >
+    <!--@MATCH:validity/script-->
+    <!--@VALUE-->
+<!ATTLIST scriptAlias reason (deprecated | overlong) #IMPLIED >
+    <!--@VALUE-->
+
+<!ELEMENT territoryAlias EMPTY >
+<!ATTLIST territoryAlias type NMTOKEN #REQUIRED >
+    <!--@MATCH:set/or/validity/region||regex/[0-9]{3}|[A-Z]{3}||literal/CT, DY, FQ, HV, JT, MI, NH, NQ, PC, PU, PZ, RH, UK, VD, WK-->
+<!ATTLIST territoryAlias replacement NMTOKENS #REQUIRED >
+    <!--@MATCH:set/validity/region-->
+    <!--@VALUE-->
+<!ATTLIST territoryAlias reason (deprecated | overlong) #IMPLIED >
+    <!--@VALUE-->
+
+<!ELEMENT subdivisionAlias EMPTY >
+<!ATTLIST subdivisionAlias type NMTOKEN #REQUIRED >
+    <!--@MATCH:validity/subdivision--
