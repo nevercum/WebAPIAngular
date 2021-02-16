@@ -309,4 +309,224 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 <!ATTLIST weekendEnd territories NMTOKENS #REQUIRED >
     <!--@MATCH:set/validity/region-->
     <!--@VALUE-->
-<!ATTLIST weekendEnd draft (approv
+<!ATTLIST weekendEnd draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED:true, false-->
+<!ATTLIST weekendEnd references CDATA #IMPLIED >
+    <!--@METADATA-->
+<!ATTLIST weekendEnd alt NMTOKENS #IMPLIED >
+    <!--@MATCH:literal/variant-->
+
+<!ELEMENT weekOfPreference EMPTY >
+<!ATTLIST weekOfPreference locales NMTOKENS #REQUIRED >
+    <!--@MATCH:set/validity/locale-->
+<!ATTLIST weekOfPreference ordering NMTOKENS #REQUIRED >
+    <!--@MATCH:set/literal/weekOfDate, weekOfInterval, weekOfMonth, weekOfYear-->
+    <!--@VALUE-->
+
+<!ELEMENT timeData ( hours* ) >
+
+<!ELEMENT hours EMPTY >
+<!ATTLIST hours allowed NMTOKENS #REQUIRED >
+    <!--@MATCH:set/literal/H, h, K, k, hB, hb-->
+<!ATTLIST hours preferred NMTOKEN #REQUIRED >
+    <!--@MATCH:literal/H, h-->
+<!ATTLIST hours regions NMTOKENS #REQUIRED >
+    <!--@MATCH:set/or/validity/region||validity/locale-->
+    <!--@VALUE-->
+<!ATTLIST hours draft (approved | contributed | provisional | unconfirmed) #IMPLIED >
+    <!--@METADATA-->
+<!ATTLIST hours references CDATA #IMPLIED >
+    <!--@METADATA-->
+
+<!ELEMENT measurementData ( measurementSystem*, paperSize* ) >
+
+<!ELEMENT measurementSystem EMPTY >
+<!ATTLIST measurementSystem type (metric | US | UK) #REQUIRED >
+<!ATTLIST measurementSystem category (temperature) #IMPLIED >
+<!ATTLIST measurementSystem territories NMTOKENS #REQUIRED >
+    <!--@MATCH:set/validity/region-->
+    <!--@VALUE-->
+<!ATTLIST measurementSystem draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED:true, false-->
+<!ATTLIST measurementSystem references CDATA #IMPLIED >
+    <!--@METADATA-->
+<!ATTLIST measurementSystem alt NMTOKENS #IMPLIED >
+    <!--@MATCH:literal/variant-->
+
+<!ELEMENT paperSize EMPTY >
+<!ATTLIST paperSize type (A4 | US-Letter) #REQUIRED >
+<!ATTLIST paperSize territories NMTOKENS #REQUIRED >
+    <!--@MATCH:set/validity/region-->
+    <!--@VALUE-->
+<!ATTLIST paperSize draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED:true, false-->
+<!ATTLIST paperSize references CDATA #IMPLIED >
+    <!--@METADATA-->
+<!ATTLIST paperSize alt NMTOKENS #IMPLIED >
+    <!--@MATCH:literal/variant-->
+
+<!ELEMENT unitIdComponents ( unitIdComponent* ) >
+
+<!ELEMENT unitIdComponent EMPTY >
+<!ATTLIST unitIdComponent type NMTOKEN #REQUIRED >
+    <!--@MATCH:literal/prefix, suffix, power, and, per-->
+<!ATTLIST unitIdComponent values NMTOKENS #REQUIRED >
+    <!--@MATCH:set/regex/[a-z]+[0-9]*-->
+    <!--@VALUE-->
+
+<!ELEMENT unitConstants ( unitConstant* ) >
+
+<!ELEMENT unitConstant EMPTY >
+<!ATTLIST unitConstant constant NMTOKEN #REQUIRED >
+    <!--@MATCH:regex/[A-Za-z][_A-Za-z0-9]*-->
+<!ATTLIST unitConstant value CDATA #REQUIRED >
+    <!--@MATCH:regex/[-+*/\._ 0-9a-zA-Z]+-->
+    <!--@VALUE-->
+<!ATTLIST unitConstant status NMTOKEN #IMPLIED >
+    <!--@MATCH:literal/approximate, exact-->
+    <!--@VALUE-->
+<!ATTLIST unitConstant description CDATA #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@METADATA-->
+
+<!ELEMENT unitQuantities ( unitQuantity* ) >
+
+<!ELEMENT unitQuantity EMPTY >
+<!ATTLIST unitQuantity baseUnit NMTOKEN #REQUIRED >
+    <!--@MATCH:regex/[A-Za-z][-A-Za-z0-9]*-->
+<!ATTLIST unitQuantity quantity NMTOKENS #REQUIRED >
+    <!--@MATCH:regex/[A-Za-z][-A-Za-z0-9]*-->
+    <!--@VALUE-->
+<!ATTLIST unitQuantity status NMTOKEN #IMPLIED >
+    <!--@MATCH:regex/simple-->
+    <!--@VALUE-->
+<!ATTLIST unitQuantity description CDATA #IMPLIED >
+    <!--@METADATA-->
+
+<!ELEMENT convertUnits ( convertUnit* ) >
+
+<!ELEMENT convertUnit EMPTY >
+<!ATTLIST convertUnit source NMTOKEN #REQUIRED >
+    <!--@MATCH:regex/(100-)?[A-Za-z][-A-Za-z0-9]*-->
+<!ATTLIST convertUnit baseUnit NMTOKEN #REQUIRED >
+    <!--@MATCH:regex/[A-Za-z][-A-Za-z0-9]*-->
+    <!--@VALUE-->
+<!ATTLIST convertUnit factor CDATA #IMPLIED >
+    <!--@MATCH:regex/[-+*/\._ 0-9a-zA-Z]+-->
+    <!--@VALUE-->
+<!ATTLIST convertUnit offset CDATA #IMPLIED >
+    <!--@MATCH:regex/[-+*/\._ 0-9a-zA-Z]+-->
+    <!--@VALUE-->
+<!ATTLIST convertUnit systems NMTOKENS #IMPLIED >
+    <!--@MATCH:set/literal/ussystem, uksystem, metric, si, other-->
+    <!--@VALUE-->
+<!ATTLIST convertUnit description CDATA #IMPLIED >
+    <!--@METADATA-->
+
+<!ELEMENT unitPreferenceData ( unitPreferences* ) >
+<!ATTLIST unitPreferenceData draft (approved | contributed | provisional | unconfirmed) #IMPLIED >
+    <!--@METADATA-->
+
+<!ELEMENT unitPreferences ( unitPreference* ) >
+<!ATTLIST unitPreferences category NMTOKEN #REQUIRED >
+    <!--@MATCH:regex/[a-z]+([-][a-z]+)*-->
+<!ATTLIST unitPreferences usage NMTOKENS #REQUIRED >
+    <!--@MATCH:regex/[a-z]+([-][a-z]+)*-->
+<!ATTLIST unitPreferences scope (small) #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST unitPreferences draft (approved | contributed | provisional | unconfirmed) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT unitPreference ( #PCDATA ) >
+    <!--@ORDERED-->
+<!ATTLIST unitPreference regions NMTOKENS #REQUIRED >
+    <!--@MATCH:set/validity/region-->
+<!ATTLIST unitPreference geq NMTOKEN #IMPLIED >
+    <!--@MATCH:any-->
+<!ATTLIST unitPreference skeleton CDATA #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@VALUE-->
+<!ATTLIST unitPreference draft (approved | contributed | provisional | unconfirmed) #IMPLIED >
+    <!--@METADATA-->
+<!ATTLIST unitPreference references CDATA #IMPLIED >
+    <!--@METADATA-->
+<!ATTLIST unitPreference alt NMTOKENS #IMPLIED >
+    <!--@MATCH:literal/informal, variant-->
+
+<!ELEMENT timezoneData ( mapTimezones*, zoneFormatting* ) >
+    <!--@DEPRECATED-->
+
+<!ELEMENT mapTimezones ( mapZone* ) >
+<!ATTLIST mapTimezones type NMTOKEN #IMPLIED >
+    <!--@MATCH:literal/metazones-->
+<!ATTLIST mapTimezones otherVersion CDATA #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@METADATA-->
+<!ATTLIST mapTimezones typeVersion CDATA #IMPLIED >
+    <!--@MATCH:regex/[0-9]{4}[a-z]+-->
+    <!--@METADATA-->
+<!ATTLIST mapTimezones references CDATA #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@METADATA-->
+
+<!ELEMENT mapZone EMPTY >
+<!ATTLIST mapZone type CDATA #REQUIRED >
+    <!--@MATCH:set/bcp47/tz-->
+    <!--@VALUE-->
+<!ATTLIST mapZone other CDATA #REQUIRED >
+    <!--@MATCH:any-->
+<!ATTLIST mapZone territory CDATA #IMPLIED >
+    <!--@MATCH:validity/region-->
+<!ATTLIST mapZone references CDATA #IMPLIED >
+    <!--@MATCH:any-->
+    <!--@METADATA-->
+
+<!ELEMENT zoneFormatting ( zoneItem* ) >
+    <!--@DEPRECATED-->
+<!ATTLIST zoneFormatting multizone NMTOKENS #REQUIRED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST zoneFormatting tzidVersion CDATA #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+<!ATTLIST zoneFormatting references CDATA #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT zoneItem EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST zoneItem type CDATA #REQUIRED >
+    <!--@DEPRECATED-->
+<!ATTLIST zoneItem territory NMTOKEN #REQUIRED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST zoneItem aliases CDATA #IMPLIED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST zoneItem references CDATA #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT characters ( character-fallback* ) >
+<!ATTLIST characters draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT character-fallback ( character* ) >
+
+<!ELEMENT character ( substitute* ) >
+<!ATTLIST character value CDATA #REQUIRED >
+    <!--@MATCH:any-->
+<!ATTLIST character draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+<!ATTLIST character standard CDATA #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+<!ATTLIST character references CDATA #IMPLIED >
+    <!--@METADATA-->
+<!ATTLIST character alt NMTOKEN
