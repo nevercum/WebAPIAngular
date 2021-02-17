@@ -691,4 +691,223 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 
 <!ELEMENT subdivisionAlias EMPTY >
 <!ATTLIST subdivisionAlias type NMTOKEN #REQUIRED >
-    <!--@MATCH:validity/subdivision--
+    <!--@MATCH:validity/subdivision-->
+<!ATTLIST subdivisionAlias replacement NMTOKENS #REQUIRED >
+    <!--@MATCH:set/or/validity/region||validity/subdivision||literal/cnmn, cz663, no50-->
+    <!--@VALUE-->
+<!ATTLIST subdivisionAlias reason (deprecated | overlong) #IMPLIED >
+    <!--@VALUE-->
+
+<!ELEMENT variantAlias EMPTY >
+<!ATTLIST variantAlias type NMTOKEN #REQUIRED >
+    <!--@MATCH:or/validity/variant||literal/aaland, polytoni-->
+<!ATTLIST variantAlias replacement NMTOKEN #REQUIRED >
+    <!--@MATCH:or/validity/variant||validity/region||literal/hy, hyw-->
+    <!--@VALUE-->
+<!ATTLIST variantAlias reason (deprecated | overlong) #IMPLIED >
+    <!--@VALUE-->
+
+<!ELEMENT zoneAlias EMPTY >
+<!ATTLIST zoneAlias type CDATA #REQUIRED >
+    <!--@MATCH:or/bcp47/tz||literal/SystemV/AST4, SystemV/AST4ADT, SystemV/CST6, SystemV/CST6CDT, SystemV/EST5, SystemV/EST5EDT, SystemV/HST10, SystemV/MST7, SystemV/MST7MDT, SystemV/PST8, SystemV/PST8PDT, SystemV/YST9, SystemV/YST9YDT-->
+<!ATTLIST zoneAlias replacement CDATA #REQUIRED >
+    <!--@MATCH:bcp47/tz-->
+    <!--@VALUE-->
+<!ATTLIST zoneAlias reason (deprecated | overlong) #IMPLIED >
+    <!--@VALUE-->
+
+<!ELEMENT unitAlias EMPTY >
+<!ATTLIST unitAlias type NMTOKEN #REQUIRED >
+    <!--@MATCH:validity/short-unit/deprecated-->
+<!ATTLIST unitAlias replacement NMTOKEN #REQUIRED >
+    <!--@MATCH:regex/[A-Za-z][-A-Za-z0-9]*-->
+    <!--@VALUE-->
+<!ATTLIST unitAlias reason (deprecated) #IMPLIED >
+    <!--@VALUE-->
+
+<!ELEMENT usageAlias EMPTY >
+<!ATTLIST usageAlias type NMTOKEN #REQUIRED >
+    <!--@MATCH:regex/[A-Za-z][-A-Za-z0-9]*-->
+<!ATTLIST usageAlias replacement NMTOKEN #REQUIRED >
+    <!--@MATCH:regex/[A-Za-z][-A-Za-z0-9]*-->
+    <!--@VALUE-->
+<!ATTLIST usageAlias reason (deprecated) #IMPLIED >
+    <!--@VALUE-->
+
+<!ELEMENT deprecated ( deprecatedItems* ) >
+    <!--@DEPRECATED-->
+<!ATTLIST deprecated draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT deprecatedItems EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST deprecatedItems type (standard | supplemental | ldml | supplementalData | ldmlBCP47) #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST deprecatedItems elements NMTOKENS #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST deprecatedItems attributes NMTOKENS #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST deprecatedItems values CDATA #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST deprecatedItems draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT distinguishing ( distinguishingItems* ) >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+<!ATTLIST distinguishing draft (approved | contributed | provisional | unconfirmed) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT distinguishingItems EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST distinguishingItems exclude (true | false) #IMPLIED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST distinguishingItems elements NMTOKENS #IMPLIED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST distinguishingItems attributes NMTOKENS #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST distinguishingItems draft (approved | contributed | provisional | unconfirmed) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT blocking ( blockingItems* ) >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+<!ATTLIST blocking draft (approved | contributed | provisional | unconfirmed) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT blockingItems EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST blockingItems elements NMTOKENS #IMPLIED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST blockingItems draft (approved | contributed | provisional | unconfirmed) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT coverageAdditions ( languageCoverage*, scriptCoverage*, territoryCoverage*, currencyCoverage*, timezoneCoverage* ) >
+    <!--@DEPRECATED-->
+<!ATTLIST coverageAdditions draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT languageCoverage EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST languageCoverage type NMTOKEN #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST languageCoverage values NMTOKENS #IMPLIED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST languageCoverage draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT scriptCoverage EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST scriptCoverage type NMTOKEN #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST scriptCoverage values NMTOKENS #IMPLIED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST scriptCoverage draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT territoryCoverage EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST territoryCoverage type NMTOKEN #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST territoryCoverage values NMTOKENS #IMPLIED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST territoryCoverage draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT currencyCoverage EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST currencyCoverage type NMTOKEN #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST currencyCoverage values NMTOKENS #IMPLIED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST currencyCoverage draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT timezoneCoverage EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST timezoneCoverage type NMTOKEN #IMPLIED >
+    <!--@DEPRECATED-->
+<!ATTLIST timezoneCoverage values CDATA #IMPLIED >
+    <!-- would be NMTOKENS, but needs to allow / -->
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+<!ATTLIST timezoneCoverage draft (approved | contributed | provisional | unconfirmed | true | false) #IMPLIED >
+    <!--@METADATA-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT skipDefaultLocale EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST skipDefaultLocale services NMTOKENS #IMPLIED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT defaultContent EMPTY >
+<!ATTLIST defaultContent locales NMTOKENS #IMPLIED >
+    <!--@MATCH:set/validity/locale-->
+    <!--@VALUE-->
+
+<!ELEMENT codeMappings ( languageCodes*, territoryCodes*, currencyCodes* ) >
+
+<!ELEMENT languageCodes EMPTY >
+    <!--@DEPRECATED-->
+<!ATTLIST languageCodes type NMTOKEN #REQUIRED >
+    <!--@DEPRECATED-->
+<!ATTLIST languageCodes alpha3 NMTOKEN #REQUIRED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT territoryCodes EMPTY >
+<!ATTLIST territoryCodes type NMTOKEN #REQUIRED >
+    <!--@MATCH:validity/region-->
+<!ATTLIST territoryCodes numeric NMTOKEN #IMPLIED >
+    <!--@MATCH:range/1~999-->
+    <!--@VALUE-->
+<!ATTLIST territoryCodes alpha3 NMTOKEN #IMPLIED >
+    <!--@MATCH:regex/[A-Z]{3}-->
+    <!--@VALUE-->
+<!ATTLIST territoryCodes fips10 NMTOKEN #IMPLIED >
+    <!--@MATCH:regex/[A-Z]{2}-->
+    <!--@VALUE-->
+<!ATTLIST territoryCodes internet NMTOKENS #IMPLIED >
+    <!--@VALUE-->
+    <!--@DEPRECATED-->
+
+<!ELEMENT currencyCodes EMPTY >
+<!ATTLIST currencyCodes type NMTOKEN #REQUIRED >
+    <!--@MATCH:validity/currency-->
+<!ATTLIST currencyCodes numeric NMTOKEN #REQUIRED >
+    <!--@MATCH:range/1~999-->
+    <!--@VALUE-->
+
+<!-- # Parent locales -->
+
+<!ELEMENT parentLocales ( parentLocale* ) >
+
+<!ELEMENT parentLocale EMPTY >
+<!ATTLIST parentLocale parent NMTOKEN #REQUIRED >
+    <!--@MATCH:validity/locale-->
+<!ATTLIST parentLocale locales NMTOKENS #REQUIRED >
+    <!--@MATCH:set/validity/locale-->
+    <!--@VALUE-->
+
+<!ELEMENT personNamesDefaults ( alias | ( nameOrderLocalesDefault* ) ) >
+
+<!ELEMENT nameOrderLocalesDefault ( #
