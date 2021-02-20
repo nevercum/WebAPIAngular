@@ -83,4 +83,16 @@
  *      -C ./bin/newclass01/
  *      nsk/jvmti/AddToBootstrapClassLoaderSearch/bootclssearch004.class
  *
- * @comment create bootclssearch004.jar in
+ * @comment create bootclssearch004.jar in ./bin/newclass02/
+ * @run driver ExecDriver --cmd
+ *      ${compile.jdk}/bin/jar
+ *      -cf ./bin/newclass02/bootclssearch004.jar
+ *      -C ./bin/newclass02/
+ *      nsk/jvmti/AddToBootstrapClassLoaderSearch/bootclssearch004.class
+ *
+ * @comment ExecDriver is used b/c main class isn't on source/class path
+ * @run main/othervm/native ExecDriver --java
+ *      -agentlib:bootclssearch_agent=-waittime=5,phasetocheck=live,segment1=./bin/newclass01/bootclssearch004.jar,segment2=./bin/newclass02/bootclssearch004.jar
+ *      nsk.jvmti.AddToBootstrapClassLoaderSearch.bootclssearch004
+ */
+

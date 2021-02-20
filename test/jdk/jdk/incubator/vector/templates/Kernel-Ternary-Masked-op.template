@@ -1,0 +1,9 @@
+        $type$[] a = fa.apply(SPECIES.length());
+        $type$[] b = fb.apply(SPECIES.length());
+        $type$[] c = fc.apply(SPECIES.length());
+        $type$[] r = fr.apply(SPECIES.length());
+        boolean[] mask = fm.apply(SPECIES.length());
+        VectorMask<$Wideboxtype$> vmask = VectorMask.fromArray(SPECIES, mask, 0);
+
+        for (int ic = 0; ic < INVOC_COUNT; ic++) {
+            for (int i 
