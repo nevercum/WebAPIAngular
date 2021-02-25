@@ -74,3 +74,63 @@ export NHOURS
 export VMOPTS
 
 echo "######### launch_reliability script ##########"
+echo "JAVA_HOME : $JAVA_HOME "
+echo "WORK_DIR : $WORK_DIR "
+echo "RES_DIR : $RES_DIR "
+echo "SHELLTOUSE : $SHELLTOUSE "
+echo "SUITE_DIR : $SUITE_DIR "
+echo "NHOURS : $NHOURS "
+echo "VMOPTS : $VMOPTS "
+
+
+# set platform-dependent variables
+if [ `uname` = "Linux" ] ; then
+        PATH_SEP=":"
+else
+        PATH_SEP=";"
+fi
+
+export PATH_SEP
+mainpid=$$
+
+mkdir -p ${RES_DIR}
+
+rm -rf ${WORK_DIR}/rmibench_scratch
+rm -rf ${WORK_DIR}/serialbench_scratch
+rm -rf ${WORK_DIR}/juicer_scratch
+mkdir -p ${WORK_DIR}/rmibench_scratch
+mkdir -p ${WORK_DIR}/serialbench_scratch
+mkdir -p ${WORK_DIR}/juicer_scratch
+
+echo ""
+echo "     Starting RMI bench test "
+$SHELLTOUSE ${SUITE_DIR}/scripts/run_rmibench.ksh ${WORK_DIR}/rmibench_scratch $RES_DIR $JAVA_HOME $SUITE_DIR $NHOURS $VMOPTS &
+pid1=$!
+
+sleep 30
+echo ""
+echo "     Starting Serialization bench test "
+$SHELLTOUSE ${SUITE_DIR}/scripts/run_serialbench.ksh ${WORK_DIR}/serialbench_scratch $RES_DIR $JAVA_HOME $SUITE_DIR $NHOURS $VMOPTS &
+pid2=$!
+
+sleep 30
+echo ""
+echo "     Starting RMI juicer test "
+$SHELLTOUSE ${SUITE_DIR}/scripts/run_juicer.ksh ${WORK_DIR}/juicer_scratch $RES_DIR $JAVA_HOME $SUITE_DIR $NHOURS $VMOPTS &
+pid3=$!
+
+sleep 30
+echo ""
+echo "     Waiting for jobs to complete"
+
+wait $pid1 $pid2 $pid3
+
+echo ""
+echo "     Done RMI reliability testing "
+
+rm -rf ${WORK_DIR}/rmibench_scratch
+rm -rf ${WORK_DIR}/serialbench_scratch
+rm -rf ${WORK_DIR}/juicer_scratch
+
+kill -9 $mainpid 
+
