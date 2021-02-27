@@ -45,4 +45,11 @@ public class Bug4966082 {
     public void testOne() {
         try {
             Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(Bug4966082.class.getResource("Bug4966082.xml").toExternalForm());
-            if (document.getDocumentElement().g
+            if (document.getDocumentElement().getSchemaTypeInfo() == null) {
+                Assert.fail("getSchemaTypeInfo returns null");
+            }
+        } catch (Exception ex) {
+            Assert.fail("Unexpected  error" + ex);
+        }
+    }
+}
