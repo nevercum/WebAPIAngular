@@ -60,3 +60,58 @@ public class DefaultErrorHandler
      * specified <code>PrintWriter</code.
      */
     public DefaultErrorHandler(PrintWriter out) {
+        fOut = out;
+    } // <init>(PrintWriter)
+
+    //
+    // ErrorHandler methods
+    //
+
+    /** Warning. */
+    public void warning(String domain, String key, XMLParseException ex)
+        throws XNIException {
+        printError("Warning", ex);
+    } // warning(XMLParseException)
+
+    /** Error. */
+    public void error(String domain, String key, XMLParseException ex)
+        throws XNIException {
+        printError("Error", ex);
+    } // error(XMLParseException)
+
+    /** Fatal error. */
+    public void fatalError(String domain, String key, XMLParseException ex)
+        throws XNIException {
+        printError("Fatal Error", ex);
+        throw ex;
+    } // fatalError(XMLParseException)
+
+    //
+    // Private methods
+    //
+
+    /** Prints the error message. */
+    private void printError(String type, XMLParseException ex) {
+
+        fOut.print("[");
+        fOut.print(type);
+        fOut.print("] ");
+        String systemId = ex.getExpandedSystemId();
+        if (systemId != null) {
+            int index = systemId.lastIndexOf('/');
+            if (index != -1)
+                systemId = systemId.substring(index + 1);
+            fOut.print(systemId);
+        }
+        fOut.print(':');
+        fOut.print(ex.getLineNumber());
+        fOut.print(':');
+        fOut.print(ex.getColumnNumber());
+        fOut.print(": ");
+        fOut.print(ex.getMessage());
+        fOut.println();
+        fOut.flush();
+
+    } // printError(String,SAXParseException)
+
+} // class DefaultErrorHandler
