@@ -760,3 +760,573 @@ public class DescriptorSupport
      * {@link java.util.Arrays#deepEquals(Object[],Object[]) Arrays.deepEquals}
      * must return true.</li>
      * <li>Otherwise {@link Object#equals(Object)} must return true.</li>
+     * </ul>
+     *
+     * @param o the object to compare with.
+     *
+     * @return {@code true} if the objects are the same; {@code false}
+     * otherwise.
+     *
+     */
+    // Note: this Javadoc is copied from javax.management.Descriptor
+    //       due to 6369229.
+    @Override
+    public synchronized boolean equals(Object o) {
+        if (o == this)
+            return true;
+        if (! (o instanceof Descriptor))
+            return false;
+        if (o instanceof ImmutableDescriptor)
+            return o.equals(this);
+        return new ImmutableDescriptor(descriptorMap).equals(o);
+    }
+
+    /**
+     * <p>Returns the hash code value for this descriptor.  The hash
+     * code is computed as the sum of the hash codes for each field in
+     * the descriptor.  The hash code of a field with name {@code n}
+     * and value {@code v} is {@code n.toLowerCase().hashCode() ^ h}.
+     * Here {@code h} is the hash code of {@code v}, computed as
+     * follows:</p>
+     *
+     * <ul>
+     * <li>If {@code v} is null then {@code h} is 0.</li>
+     * <li>If {@code v} is a primitive array then {@code h} is computed using
+     * the appropriate overloading of {@code java.util.Arrays.hashCode}.</li>
+     * <li>If {@code v} is an object array then {@code h} is computed using
+     * {@link java.util.Arrays#deepHashCode(Object[]) Arrays.deepHashCode}.</li>
+     * <li>Otherwise {@code h} is {@code v.hashCode()}.</li>
+     * </ul>
+     *
+     * @return A hash code value for this object.
+     *
+     */
+    // Note: this Javadoc is copied from javax.management.Descriptor
+    //       due to 6369229.
+    @Override
+    public synchronized int hashCode() {
+        final int size = descriptorMap.size();
+        // descriptorMap is sorted with a comparator that ignores cases.
+        //
+        return Util.hashCode(
+                descriptorMap.keySet().toArray(new String[size]),
+                descriptorMap.values().toArray(new Object[size]));
+    }
+
+    /**
+     * Returns true if all of the fields have legal values given their
+     * names.
+     * <P>
+     * This implementation does not support  interoperating with a directory
+     * or lookup service. Thus, conforming to the specification, no checking is
+     * done on the <i>"export"</i> field.
+     * <P>
+     * Otherwise this implementation returns false if:
+     * <UL>
+     * <LI> name and descriptorType fieldNames are not defined, or
+     * null, or empty, or not String
+     * <LI> class, role, getMethod, setMethod fieldNames, if defined,
+     * are null or not String
+     * <LI> persistPeriod, currencyTimeLimit, lastUpdatedTimeStamp,
+     * lastReturnedTimeStamp if defined, are null, or not a Numeric
+     * String or not a Numeric Value {@literal >= -1}
+     * <LI> log fieldName, if defined, is null, or not a Boolean or
+     * not a String with value "t", "f", "true", "false". These String
+     * values must not be case sensitive.
+     * <LI> visibility fieldName, if defined, is null, or not a
+     * Numeric String or a not Numeric Value {@literal >= 1 and <= 4}
+     * <LI> severity fieldName, if defined, is null, or not a Numeric
+     * String or not a Numeric Value {@literal >= 0 and <= 6}<br>
+     * <LI> persistPolicy fieldName, if defined, is null, or not one of
+     * the following strings:<br>
+     *   "OnUpdate", "OnTimer", "NoMoreOftenThan", "OnUnregister", "Always",
+     *   "Never". These String values must not be case sensitive.<br>
+     * </UL>
+     *
+     * @exception RuntimeOperationsException If the validity checking
+     * fails for any reason, this exception will be thrown.
+     */
+
+    public synchronized boolean isValid() throws RuntimeOperationsException {
+        if (MODELMBEAN_LOGGER.isLoggable(Level.TRACE)) {
+            MODELMBEAN_LOGGER.log(Level.TRACE, "Entry");
+        }
+        // verify that the descriptor is valid, by iterating over each field...
+
+        Set<Map.Entry<String, Object>> returnedSet = descriptorMap.entrySet();
+
+        if (returnedSet == null) {   // null descriptor, not valid
+            if (MODELMBEAN_LOGGER.isLoggable(Level.TRACE)) {
+                MODELMBEAN_LOGGER.log(Level.TRACE,
+                        "isValid() Returns false (null set)");
+            }
+            return false;
+        }
+        // must have a name and descriptor type field
+        String thisName = (String)(this.getFieldValue("name"));
+        String thisDescType = (String)(getFieldValue("descriptorType"));
+
+        if ((thisName == null) || (thisDescType == null) ||
+            (thisName.isEmpty()) || (thisDescType.isEmpty())) {
+            return false;
+        }
+
+        // According to the descriptor type we validate the fields contained
+
+        for (Map.Entry<String, Object> currElement : returnedSet) {
+            if (currElement != null) {
+                if (currElement.getValue() != null) {
+                    // validate the field valued...
+                    if (validateField((currElement.getKey()).toString(),
+                                      (currElement.getValue()).toString())) {
+                        continue;
+                    } else {
+                        if (MODELMBEAN_LOGGER.isLoggable(Level.TRACE)) {
+                            MODELMBEAN_LOGGER.log(Level.TRACE,
+                                    "Field " + currElement.getKey() + "=" +
+                                    currElement.getValue() + " is not valid");
+                        }
+                        return false;
+                    }
+                }
+            }
+        }
+
+        // fell through, all fields OK
+        if (MODELMBEAN_LOGGER.isLoggable(Level.TRACE)) {
+            MODELMBEAN_LOGGER.log(Level.TRACE,
+                    "isValid() Returns true");
+        }
+        return true;
+    }
+
+
+    // worker routine for isValid()
+    // name is not null
+    // descriptorType is not null
+    // getMethod and setMethod are not null
+    // persistPeriod is numeric
+    // currencyTimeLimit is numeric
+    // lastUpdatedTimeStamp is numeric
+    // visibility is 1-4
+    // severity is 0-6
+    // log is T or F
+    // role is not null
+    // class is not null
+    // lastReturnedTimeStamp is numeric
+
+
+    private boolean validateField(String fldName, Object fldValue) {
+        if ((fldName == null) || (fldName.isEmpty()))
+            return false;
+        String SfldValue = "";
+        boolean isAString = false;
+        if ((fldValue != null) && (fldValue instanceof java.lang.String)) {
+            SfldValue = (String) fldValue;
+            isAString = true;
+        }
+
+        boolean nameOrDescriptorType =
+            (fldName.equalsIgnoreCase("Name") ||
+             fldName.equalsIgnoreCase("DescriptorType"));
+        if (nameOrDescriptorType ||
+            fldName.equalsIgnoreCase("SetMethod") ||
+            fldName.equalsIgnoreCase("GetMethod") ||
+            fldName.equalsIgnoreCase("Role") ||
+            fldName.equalsIgnoreCase("Class")) {
+            if (fldValue == null || !isAString)
+                return false;
+            if (nameOrDescriptorType && SfldValue.isEmpty())
+                return false;
+            return true;
+        } else if (fldName.equalsIgnoreCase("visibility")) {
+            long v;
+            if ((fldValue != null) && (isAString)) {
+                v = toNumeric(SfldValue);
+            } else if (fldValue instanceof java.lang.Integer) {
+                v = ((Integer)fldValue).intValue();
+            } else return false;
+
+            if (v >= 1 &&  v <= 4)
+                return true;
+            else
+                return false;
+        } else if (fldName.equalsIgnoreCase("severity")) {
+
+            long v;
+            if ((fldValue != null) && (isAString)) {
+                v = toNumeric(SfldValue);
+            } else if (fldValue instanceof java.lang.Integer) {
+                v = ((Integer)fldValue).intValue();
+            } else return false;
+
+            return (v >= 0 && v <= 6);
+        } else if (fldName.equalsIgnoreCase("PersistPolicy")) {
+            return (((fldValue != null) && (isAString)) &&
+                    ( SfldValue.equalsIgnoreCase("OnUpdate") ||
+                      SfldValue.equalsIgnoreCase("OnTimer") ||
+                      SfldValue.equalsIgnoreCase("NoMoreOftenThan") ||
+                      SfldValue.equalsIgnoreCase("Always") ||
+                      SfldValue.equalsIgnoreCase("Never") ||
+                      SfldValue.equalsIgnoreCase("OnUnregister")));
+        } else if (fldName.equalsIgnoreCase("PersistPeriod") ||
+                   fldName.equalsIgnoreCase("CurrencyTimeLimit") ||
+                   fldName.equalsIgnoreCase("LastUpdatedTimeStamp") ||
+                   fldName.equalsIgnoreCase("LastReturnedTimeStamp")) {
+
+            long v;
+            if ((fldValue != null) && (isAString)) {
+                v = toNumeric(SfldValue);
+            } else if (fldValue instanceof java.lang.Number) {
+                v = ((Number)fldValue).longValue();
+            } else return false;
+
+            return (v >= -1);
+        } else if (fldName.equalsIgnoreCase("log")) {
+            return ((fldValue instanceof java.lang.Boolean) ||
+                    (isAString &&
+                     (SfldValue.equalsIgnoreCase("T") ||
+                      SfldValue.equalsIgnoreCase("true") ||
+                      SfldValue.equalsIgnoreCase("F") ||
+                      SfldValue.equalsIgnoreCase("false") )));
+        }
+
+        // default to true, it is a field we aren't validating (user etc.)
+        return true;
+    }
+
+
+
+    /**
+     * <p>Returns an XML String representing the descriptor.</p>
+     *
+     * <p>The format is not defined, but an implementation must
+     * ensure that the string returned by this method can be
+     * used to build an equivalent descriptor when instantiated
+     * using the constructor {@link #DescriptorSupport(String)
+     * DescriptorSupport(String inStr)}.</p>
+     *
+     * <p>Fields which are not String objects will have toString()
+     * called on them to create the value. The value will be
+     * enclosed in parentheses.  It is not guaranteed that you can
+     * reconstruct these objects unless they have been
+     * specifically set up to support toString() in a meaningful
+     * format and have a matching constructor that accepts a
+     * String in the same format.</p>
+     *
+     * <p>If the descriptor is empty the following String is
+     * returned: &lt;Descriptor&gt;&lt;/Descriptor&gt;</p>
+     *
+     * @return the XML string.
+     *
+     * @exception RuntimeOperationsException for illegal value for
+     * field Names or field Values.  If the XML formatted string
+     * construction fails for any reason, this exception will be
+     * thrown.
+     */
+    public synchronized String toXMLString() {
+        final StringBuilder buf = new StringBuilder("<Descriptor>");
+        Set<Map.Entry<String, Object>> returnedSet = descriptorMap.entrySet();
+        for (Map.Entry<String, Object> currElement : returnedSet) {
+            final String name = currElement.getKey();
+            Object value = currElement.getValue();
+            String valueString = null;
+            /* Set valueString to non-null if and only if this is a string that
+               cannot be confused with the encoding of an object.  If it
+               could be so confused (surrounded by parentheses) then we
+               call makeFieldValue as for any non-String object and end
+               up with an encoding like "(java.lang.String/(thing))".  */
+            if (value instanceof String) {
+                final String svalue = (String) value;
+                if (!svalue.startsWith("(") || !svalue.endsWith(")"))
+                    valueString = quote(svalue);
+            }
+            if (valueString == null)
+                valueString = makeFieldValue(value);
+            buf.append("<field name=\"").append(name).append("\" value=\"")
+                .append(valueString).append("\"></field>");
+        }
+        buf.append("</Descriptor>");
+        return buf.toString();
+    }
+
+    private static final String[] entities = {
+        " &#32;",
+        "\"&quot;",
+        "<&lt;",
+        ">&gt;",
+        "&&amp;",
+        "\r&#13;",
+        "\t&#9;",
+        "\n&#10;",
+        "\f&#12;",
+    };
+    private static final Map<String,Character> entityToCharMap =
+        new HashMap<>();
+    private static final String[] charToEntityMap;
+
+    static {
+        char maxChar = 0;
+        for (int i = 0; i < entities.length; i++) {
+            final char c = entities[i].charAt(0);
+            if (c > maxChar)
+                maxChar = c;
+        }
+        charToEntityMap = new String[maxChar + 1];
+        for (int i = 0; i < entities.length; i++) {
+            final char c = entities[i].charAt(0);
+            final String entity = entities[i].substring(1);
+            charToEntityMap[c] = entity;
+            entityToCharMap.put(entity, c);
+        }
+    }
+
+    private static boolean isMagic(char c) {
+        return (c < charToEntityMap.length && charToEntityMap[c] != null);
+    }
+
+    /*
+     * Quote the string so that it will be acceptable to the (String)
+     * constructor.  Since the parsing code in that constructor is fairly
+     * stupid, we're obliged to quote apparently innocuous characters like
+     * space, <, and >.  In a future version, we should rewrite the parser
+     * and only quote " plus either \ or & (depending on the quote syntax).
+     */
+    private static String quote(String s) {
+        boolean found = false;
+        for (int i = 0; i < s.length(); i++) {
+            if (isMagic(s.charAt(i))) {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            return s;
+        final StringBuilder buf = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (isMagic(c))
+                buf.append(charToEntityMap[c]);
+            else
+                buf.append(c);
+        }
+        return buf.toString();
+    }
+
+    private static String unquote(String s) throws XMLParseException {
+        if (!s.startsWith("\"") || !s.endsWith("\""))
+            throw new XMLParseException("Value must be quoted: <" + s + ">");
+        final StringBuilder buf = new StringBuilder();
+        final int len = s.length() - 1;
+        for (int i = 1; i < len; i++) {
+            final char c = s.charAt(i);
+            final int semi;
+            final Character quoted;
+            if (c == '&'
+                && (semi = s.indexOf(';', i + 1)) >= 0
+                && ((quoted = entityToCharMap.get(s.substring(i, semi+1)))
+                    != null)) {
+                buf.append(quoted);
+                i = semi;
+            } else
+                buf.append(c);
+        }
+        return buf.toString();
+    }
+
+    /**
+     * Make the string that will go inside "..." for a value that is not
+     * a plain String.
+     * @throws RuntimeOperationsException if the value cannot be encoded.
+     */
+    private static String makeFieldValue(Object value) {
+        if (value == null)
+            return "(null)";
+
+        Class<?> valueClass = value.getClass();
+        try {
+            valueClass.getConstructor(String.class);
+        } catch (NoSuchMethodException e) {
+            final String msg =
+                "Class " + valueClass + " does not have a public " +
+                "constructor with a single string arg";
+            final RuntimeException iae = new IllegalArgumentException(msg);
+            throw new RuntimeOperationsException(iae,
+                                                 "Cannot make XML descriptor");
+        } catch (SecurityException e) {
+            // OK: we'll pretend the constructor is there
+            // too bad if it's not: we'll find out when we try to
+            // reconstruct the DescriptorSupport
+        }
+
+        final String quotedValueString = quote(value.toString());
+
+        return "(" + valueClass.getName() + "/" + quotedValueString + ")";
+    }
+
+    /*
+     * Parse a field value from the XML produced by toXMLString().
+     * Given a descriptor XML containing <field name="nnn" value="vvv">,
+     * the argument to this method will be "vvv" (a string including the
+     * containing quote characters).  If vvv begins and ends with parentheses,
+     * then it may contain:
+     * - the characters "null", in which case the result is null;
+     * - a value of the form "some.class.name/xxx", in which case the
+     * result is equivalent to `new some.class.name("xxx")';
+     * - some other string, in which case the result is that string,
+     * without the parentheses.
+     */
+    private static Object parseQuotedFieldValue(String s)
+            throws XMLParseException {
+        s = unquote(s);
+        if (s.equalsIgnoreCase("(null)"))
+            return null;
+        if (!s.startsWith("(") || !s.endsWith(")"))
+            return s;
+        final int slash = s.indexOf('/');
+        if (slash < 0) {
+            // compatibility: old code didn't include class name
+            return s.substring(1, s.length() - 1);
+        }
+        final String className = s.substring(1, slash);
+
+        final Constructor<?> constr;
+        try {
+            ReflectUtil.checkPackageAccess(className);
+            final ClassLoader contextClassLoader =
+                Thread.currentThread().getContextClassLoader();
+            final Class<?> c =
+                Class.forName(className, false, contextClassLoader);
+            constr = c.getConstructor(new Class<?>[] {String.class});
+        } catch (Exception e) {
+            throw new XMLParseException(e,
+                                        "Cannot parse value: <" + s + ">");
+        }
+        final String arg = s.substring(slash + 1, s.length() - 1);
+        try {
+            return constr.newInstance(new Object[] {arg});
+        } catch (Exception e) {
+            final String msg =
+                "Cannot construct instance of " + className +
+                " with arg: <" + s + ">";
+            throw new XMLParseException(e, msg);
+        }
+    }
+
+    /**
+     * Returns a human readable string representing the
+     * descriptor.  The string will be in the format of
+     * "fieldName=fieldValue,fieldName2=fieldValue2,..."<br>
+     *
+     * If there are no fields in the descriptor, then an empty String
+     * is returned.<br>
+     *
+     * If a fieldValue is an object then the toString() method is
+     * called on it and its returned value is used as the value for
+     * the field enclosed in parenthesis.
+     *
+     * @exception RuntimeOperationsException for illegal value for
+     * field Names or field Values.  If the descriptor string fails
+     * for any reason, this exception will be thrown.
+     */
+    @Override
+    public synchronized String toString() {
+        if (MODELMBEAN_LOGGER.isLoggable(Level.TRACE)) {
+            MODELMBEAN_LOGGER.log(Level.TRACE, "Entry");
+        }
+
+        String[] fields = getFields();
+
+        if ((fields == null) || (fields.length == 0)) {
+            if (MODELMBEAN_LOGGER.isLoggable(Level.TRACE)) {
+                MODELMBEAN_LOGGER.log(Level.TRACE, "Empty Descriptor");
+            }
+            return "";
+        }
+
+        if (MODELMBEAN_LOGGER.isLoggable(Level.TRACE)) {
+            MODELMBEAN_LOGGER.log(Level.TRACE,
+                    "Printing " + fields.length + " fields");
+        }
+
+        String respStr = String.join(", ", fields);
+
+        if (MODELMBEAN_LOGGER.isLoggable(Level.TRACE)) {
+            MODELMBEAN_LOGGER.log(Level.TRACE, "Exit returning " + respStr);
+        }
+
+        return respStr;
+    }
+
+    // utility to convert to int, returns -2 if bogus.
+
+    private long toNumeric(String inStr) {
+        try {
+            return java.lang.Long.parseLong(inStr);
+        } catch (Exception e) {
+            return -2;
+        }
+    }
+
+
+    /**
+     * Deserializes a {@link DescriptorSupport} from an {@link
+     * ObjectInputStream}.
+     */
+    private void readObject(ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        ObjectInputStream.GetField fields = in.readFields();
+        Map<String, Object> descriptor = cast(fields.get("descriptor", null));
+        init(null);
+        if (descriptor != null) {
+            descriptorMap.putAll(descriptor);
+        }
+    }
+
+
+    /**
+     * Serializes a {@link DescriptorSupport} to an {@link ObjectOutputStream}.
+     */
+    /* If you set jmx.serial.form to "1.2.0" or "1.2.1", then we are
+       bug-compatible with those versions.  Specifically, field names
+       are forced to lower-case before being written.  This
+       contradicts the spec, which, though it does not mention
+       serialization explicitly, does say that the case of field names
+       is preserved.  But in 1.2.0 and 1.2.1, this requirement was not
+       met.  Instead, field names in the descriptor map were forced to
+       lower case.  Those versions expect this to have happened to a
+       descriptor they deserialize and e.g. getFieldValue will not
+       find a field whose name is spelt with a different case.
+    */
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        ObjectOutputStream.PutField fields = out.putFields();
+        boolean compat = "1.0".equals(serialForm);
+        if (compat)
+            fields.put("currClass", currClass);
+
+        /* Purge the field "targetObject" from the DescriptorSupport before
+         * serializing since the referenced object is typically not
+         * serializable.  We do this here rather than purging the "descriptor"
+         * variable below because that HashMap doesn't do case-insensitivity.
+         * See CR 6332962.
+         */
+        SortedMap<String, Object> startMap = descriptorMap;
+        if (startMap.containsKey("targetObject")) {
+            startMap = new TreeMap<>(descriptorMap);
+            startMap.remove("targetObject");
+        }
+
+        final HashMap<String, Object> descriptor;
+        if (compat || "1.2.0".equals(serialForm) ||
+                "1.2.1".equals(serialForm)) {
+            descriptor = new HashMap<>();
+            for (Map.Entry<String, Object> entry : startMap.entrySet())
+                descriptor.put(entry.getKey().toLowerCase(), entry.getValue());
+        } else
+            descriptor = new HashMap<>(startMap);
+
+        fields.put("descriptor", descriptor);
+        out.writeFields();
+    }
+
+}
