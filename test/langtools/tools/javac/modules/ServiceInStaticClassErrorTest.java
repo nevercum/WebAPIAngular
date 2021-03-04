@@ -62,4 +62,7 @@ public class ServiceInStaticClassErrorTest extends ModuleTestBase {
                 .files(findJavaFiles(src))
                 .run()
                 .writeAll()
-            
+                .getOutputLines(Task.OutputKind.DIRECT);
+    }
+
+}
