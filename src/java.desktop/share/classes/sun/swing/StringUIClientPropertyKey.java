@@ -1,10 +1,12 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -21,11 +23,17 @@
  * questions.
  */
 
-public class Host {
-    public static String getID() { return "HostAB/redef/Host.java"; }
-    public static class A {}
-    public static class B {}
-    public int m() {
-        return 2; // redefined class
-    }
-}
+package sun.swing;
+
+import javax.swing.UIClientPropertyKey;
+
+/**
+ * An implementation of {@code UIClientPropertyKey} that wraps a {@code String}.
+ *
+ * @author Shannon Hickey
+ */
+public class StringUIClientPropertyKey implements UIClientPropertyKey {
+
+    private final String key;
+
+   
