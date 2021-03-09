@@ -207,4 +207,174 @@ Java_sun_security_pkcs11_wrapper_PKCS11_getNativeKeyInfo
             CK_ATTRIBUTES_TEMPLATE_LENGTH * sizeof(CK_ATTRIBUTE));
 
     // Get sizes for value buffers
-    // NOTE: may return an error code but length values a
+    // NOTE: may return an error code but length values are filled anyways
+    (*ckpFunctions->C_GetAttributeValue)(ckSessionHandle, ckObjectHandle,
+            ckpAttributes, CK_ATTRIBUTES_TEMPLATE_LENGTH);
+
+    for (i = 0; i < CK_ATTRIBUTES_TEMPLATE_LENGTH; i++) {
+        if ((ckpAttributes+i)->ulValueLen != CK_UNAVAILABLE_INFORMATION) {
+            totalDataSize += (ckpAttributes+i)->ulValueLen;
+            if ((ckpAttributes+i)->type == CKA_SENSITIVE) {
+                 sensitiveAttributePosition = attributesCount;
+                 TRACE0("DEBUG: GetNativeKeyInfo key is sensitive");
+            }
+            attributesCount++;
+        }
+    }
+
+    if (netscapeAttributeValueNeeded) {
+        attributesCount++;
+    }
+
+    // Allocate a single buffer to hold valid attributes and attribute's values
+    // Buffer structure: [ attributes-size, [ ... attributes ... ],
+    //                   values-size, [ ... values ... ], wrapped-key-size,
+    //                   [ ... wrapped-key ... ] ]
+    //     * sizes are expressed in bytes and data type is unsigned long
+    totalCkAttributesSize = attributesCount * sizeof(CK_ATTRIBUTE);
+    TRACE1("DEBUG: GetNativeKeyInfo attributesCount = %lu\n", attributesCount);
+    TRACE1("DEBUG: GetNativeKeyInfo sizeof CK_ATTRIBUTE = %zu\n", sizeof(CK_ATTRIBUTE));
+    TRACE1("DEBUG: GetNativeKeyInfo totalCkAttributesSize = %lu\n", totalCkAttributesSize);
+    TRACE1("DEBUG: GetNativeKeyInfo totalDataSize = %lu\n", totalDataSize);
+
+    totalNativeKeyInfoArraySize =
+            totalCkAttributesSize + sizeof(unsigned long) * 3 + totalDataSize;
+
+    TRACE1("DEBUG: GetNativeKeyInfo totalNativeKeyInfoArraySize = %lu\n", totalNativeKeyInfoArraySize);
+
+    nativeKeyInfoArray = (*env)->NewByteArray(env, totalNativeKeyInfoArraySize);
+    if (nativeKeyInfoArray == NULL) {
+        goto cleanup;
+    }
+
+    nativeKeyInfoArrayRaw = (*env)->GetByteArrayElements(env, nativeKeyInfoArray,
+            NULL);
+    if (nativeKeyInfoArrayRaw == NULL) {
+        goto cleanup;
+    }
+
+    wrappedKeySizePtr = nativeKeyInfoArrayRaw +
+            sizeof(unsigned long)*2 + totalCkAttributesSize + totalDataSize;
+    memcpy(nativeKeyInfoArrayRaw, &totalCkAttributesSize, sizeof(unsigned long));
+
+    memcpy(nativeKeyInfoArrayRaw + sizeof(unsigned long) + totalCkAttributesSize,
+        &totalDataSize, sizeof(unsigned long));
+
+    memset(wrappedKeySizePtr, 0, sizeof(unsigned long));
+
+    nativeKeyInfoArrayRawCkAttributes = nativeKeyInfoArrayRaw +
+            sizeof(unsigned long);
+    nativeKeyInfoArrayRawCkAttributesPtr = nativeKeyInfoArrayRawCkAttributes;
+    nativeKeyInfoArrayRawDataPtr = nativeKeyInfoArrayRaw +
+            totalCkAttributesSize + sizeof(unsigned long) * 2;
+
+    for (i = 0; i < CK_ATTRIBUTES_TEMPLATE_LENGTH; i++) {
+        if ((ckpAttributes+i)->ulValueLen != CK_UNAVAILABLE_INFORMATION) {
+            (*(CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributesPtr).type =
+                    (ckpAttributes+i)->type;
+            (*(CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributesPtr).ulValueLen =
+                    (ckpAttributes+i)->ulValueLen;
+            if ((ckpAttributes+i)->ulValueLen != 0) {
+                (*(CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributesPtr).pValue =
+                        nativeKeyInfoArrayRawDataPtr;
+            } else {
+                (*(CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributesPtr).pValue = 0;
+            }
+            nativeKeyInfoArrayRawDataPtr +=
+                    (*(CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributesPtr).ulValueLen;
+            nativeKeyInfoArrayRawCkAttributesPtr += sizeof(CK_ATTRIBUTE);
+        }
+    }
+
+    TRACE0("DEBUG: GetNativeKeyInfo finished prepping nativeKeyInfoArray\n");
+
+    // Get attribute's values
+    rv = (*ckpFunctions->C_GetAttributeValue)(ckSessionHandle, ckObjectHandle,
+            (CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributes,
+            attributesCount);
+    if (ckAssertReturnValueOK(env, rv) != CK_ASSERT_OK) {
+        goto cleanup;
+    }
+
+    TRACE0("DEBUG: GetNativeKeyInfo 1st C_GetAttributeValue call passed\n");
+
+    if (netscapeAttributeValueNeeded) {
+        (*(CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributesPtr).type = CKA_NETSCAPE_DB;
+        // Value is not needed, public key is not used
+    }
+
+    if ((sensitiveAttributePosition != (unsigned int)-1) &&
+        *(CK_BBOOL*)(((CK_ATTRIBUTE_PTR)(((CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributes)
+                +sensitiveAttributePosition))->pValue) == CK_TRUE) {
+        // Key is sensitive. Need to extract it wrapped.
+        if (jWrappingKeyHandle != 0) {
+
+            ckpMechanism = jMechanismToCKMechanismPtr(env, jWrappingMech);
+            rv = (*ckpFunctions->C_WrapKey)(ckSessionHandle, ckpMechanism,
+                    jLongToCKULong(jWrappingKeyHandle), ckObjectHandle,
+                    NULL_PTR, &ckWrappedKeyLength);
+            if (ckWrappedKeyLength != 0) {
+                // Allocate space for getting the wrapped key
+                nativeKeyInfoWrappedKeyArray = (*env)->NewByteArray(env,
+                        totalNativeKeyInfoArraySize + ckWrappedKeyLength);
+                if (nativeKeyInfoWrappedKeyArray == NULL) {
+                    goto cleanup;
+                }
+                nativeKeyInfoWrappedKeyArrayRaw =
+                        (*env)->GetByteArrayElements(env,
+                                nativeKeyInfoWrappedKeyArray, NULL);
+                if (nativeKeyInfoWrappedKeyArrayRaw == NULL) {
+                    goto cleanup;
+                }
+                memcpy(nativeKeyInfoWrappedKeyArrayRaw, nativeKeyInfoArrayRaw,
+                        totalNativeKeyInfoArraySize);
+                wrappedKeySizeWrappedKeyArrayPtr =
+                        nativeKeyInfoWrappedKeyArrayRaw +
+                        sizeof(unsigned long)*2 + totalCkAttributesSize +
+                        totalDataSize;
+                memcpy(wrappedKeySizeWrappedKeyArrayPtr, &ckWrappedKeyLength, sizeof(unsigned long));
+                TRACE1("DEBUG: GetNativeKeyInfo 1st C_WrapKey wrappedKeyLength = %lu\n", ckWrappedKeyLength);
+
+                wrappedKeyBufferPtr =
+                        (CK_BYTE_PTR) (wrappedKeySizeWrappedKeyArrayPtr +
+                        sizeof(unsigned long));
+                rv = (*ckpFunctions->C_WrapKey)(ckSessionHandle, ckpMechanism,
+                        jLongToCKULong(jWrappingKeyHandle),ckObjectHandle,
+                        wrappedKeyBufferPtr, &ckWrappedKeyLength);
+                if (ckAssertReturnValueOK(env, rv) != CK_ASSERT_OK) {
+                    goto cleanup;
+                }
+                memcpy(wrappedKeySizeWrappedKeyArrayPtr, &ckWrappedKeyLength, sizeof(unsigned long));
+                TRACE1("DEBUG: GetNativeKeyInfo 2nd C_WrapKey wrappedKeyLength = %lu\n", ckWrappedKeyLength);
+            } else {
+                goto cleanup;
+            }
+        } else {
+            ckAssertReturnValueOK(env, CKR_KEY_HANDLE_INVALID);
+            goto cleanup;
+        }
+        returnValue = nativeKeyInfoWrappedKeyArray;
+    } else {
+        returnValue = nativeKeyInfoArray;
+    }
+
+cleanup:
+    if (ckpAttributes != NULL) {
+        free(ckpAttributes);
+    }
+
+    if (nativeKeyInfoArrayRaw != NULL) {
+        (*env)->ReleaseByteArrayElements(env, nativeKeyInfoArray,
+                nativeKeyInfoArrayRaw, 0);
+    }
+
+    if (nativeKeyInfoWrappedKeyArrayRaw != NULL) {
+        (*env)->ReleaseByteArrayElements(env, nativeKeyInfoWrappedKeyArray,
+                nativeKeyInfoWrappedKeyArrayRaw, 0);
+    }
+
+    if (nativeKeyInfoArray != NULL && returnValue != nativeKeyInfoArray) {
+        (*env)->DeleteLocalRef(env, nativeKeyInfoArray);
+    }
+
+    if (nativeKeyInfoWrappedKeyArray != NUL
