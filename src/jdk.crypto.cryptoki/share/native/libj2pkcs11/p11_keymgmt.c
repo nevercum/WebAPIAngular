@@ -377,4 +377,189 @@ cleanup:
         (*env)->DeleteLocalRef(env, nativeKeyInfoArray);
     }
 
-    if (nativeKeyInfoWrappedKeyArray != NUL
+    if (nativeKeyInfoWrappedKeyArray != NULL
+            && returnValue != nativeKeyInfoWrappedKeyArray) {
+        (*env)->DeleteLocalRef(env, nativeKeyInfoWrappedKeyArray);
+    }
+    freeCKMechanismPtr(ckpMechanism);
+
+    return returnValue;
+}
+#endif
+
+#ifdef P11_ENABLE_CREATENATIVEKEY
+/*
+ * Class:     sun_security_pkcs11_wrapper_PKCS11
+ * Method:    createNativeKey
+ * Signature: (J[BJLsun/security/pkcs11/wrapper/CK_MECHANISM;)J
+ * Parametermapping:                          *PKCS11*
+ * @param   jlong         jSessionHandle      CK_SESSION_HANDLE hSession
+ * @param   jbyteArray    jNativeKeyInfo      -
+ * @param   jlong         jWrappingKeyHandle  CK_OBJECT_HANDLE hObject
+ * @param   jobject       jWrappingMech       CK_MECHANISM_PTR pMechanism
+ * @return  jlong         jKeyHandle          CK_OBJECT_HANDLE hObject
+ */
+JNIEXPORT jlong JNICALL
+Java_sun_security_pkcs11_wrapper_PKCS11_createNativeKey
+    (JNIEnv *env, jobject obj, jlong jSessionHandle, jbyteArray jNativeKeyInfo,
+    jlong jWrappingKeyHandle, jobject jWrappingMech)
+{
+    CK_OBJECT_HANDLE ckObjectHandle;
+    CK_RV rv;
+    CK_SESSION_HANDLE ckSessionHandle = jLongToCKULong(jSessionHandle);
+    jbyte* nativeKeyInfoArrayRaw = NULL;
+    jlong jObjectHandle = 0L;
+    unsigned long totalCkAttributesSize = 0UL;
+    unsigned long nativeKeyInfoCkAttributesCount = 0UL;
+    jbyte* nativeKeyInfoArrayRawCkAttributes = NULL;
+    jbyte* nativeKeyInfoArrayRawCkAttributesPtr = NULL;
+    jbyte* nativeKeyInfoArrayRawDataPtr = NULL;
+    unsigned long totalDataSize = 0UL;
+    jbyte* wrappedKeySizePtr = NULL;
+    unsigned int i = 0U;
+    CK_MECHANISM_PTR ckpMechanism = NULL;
+    CK_ULONG ckWrappedKeyLength = 0UL;
+    CK_FUNCTION_LIST_PTR ckpFunctions = getFunctionList(env, obj);
+
+    if (ckpFunctions == NULL) { goto cleanup; }
+
+    nativeKeyInfoArrayRaw =
+            (*env)->GetByteArrayElements(env, jNativeKeyInfo, NULL);
+    if (nativeKeyInfoArrayRaw == NULL) {
+        goto cleanup;
+    }
+
+    memcpy(&totalCkAttributesSize, nativeKeyInfoArrayRaw, sizeof(unsigned long));
+    TRACE1("DEBUG: createNativeKey totalCkAttributesSize = %lu\n", totalCkAttributesSize);
+    nativeKeyInfoCkAttributesCount = totalCkAttributesSize/sizeof(CK_ATTRIBUTE);
+    TRACE1("DEBUG: createNativeKey nativeKeyInfoCkAttributesCount = %lu\n", nativeKeyInfoCkAttributesCount);
+
+    nativeKeyInfoArrayRawCkAttributes = nativeKeyInfoArrayRaw +
+            sizeof(unsigned long);
+    nativeKeyInfoArrayRawCkAttributesPtr = nativeKeyInfoArrayRawCkAttributes;
+    nativeKeyInfoArrayRawDataPtr = nativeKeyInfoArrayRaw +
+            totalCkAttributesSize + sizeof(unsigned long) * 2;
+    memcpy(&totalDataSize, (nativeKeyInfoArrayRaw + totalCkAttributesSize + sizeof(unsigned long)),
+            sizeof(unsigned long));
+    TRACE1("DEBUG: createNativeKey totalDataSize = %lu\n", totalDataSize);
+
+    wrappedKeySizePtr = nativeKeyInfoArrayRaw +
+            sizeof(unsigned long)*2 + totalCkAttributesSize + totalDataSize;
+
+    memcpy(&ckWrappedKeyLength, wrappedKeySizePtr, sizeof(unsigned long));
+    TRACE1("DEBUG: createNativeKey wrappedKeyLength = %lu\n", ckWrappedKeyLength);
+
+    for (i = 0; i < nativeKeyInfoCkAttributesCount; i++) {
+        if ((*(CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributesPtr).ulValueLen
+                > 0) {
+            (*(CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributesPtr).pValue =
+                    nativeKeyInfoArrayRawDataPtr;
+        }
+        nativeKeyInfoArrayRawDataPtr +=
+                (*(CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributesPtr).ulValueLen;
+        nativeKeyInfoArrayRawCkAttributesPtr += sizeof(CK_ATTRIBUTE);
+    }
+
+    if (ckWrappedKeyLength == 0) {
+        // Not a wrapped key
+        rv = (*ckpFunctions->C_CreateObject)(ckSessionHandle,
+                (CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributes,
+                jLongToCKULong(nativeKeyInfoCkAttributesCount), &ckObjectHandle);
+    } else {
+        // Wrapped key
+        ckpMechanism = jMechanismToCKMechanismPtr(env, jWrappingMech);
+        rv = (*ckpFunctions->C_UnwrapKey)(ckSessionHandle, ckpMechanism,
+                jLongToCKULong(jWrappingKeyHandle),
+                (CK_BYTE_PTR)(wrappedKeySizePtr + sizeof(unsigned long)),
+                ckWrappedKeyLength,
+                (CK_ATTRIBUTE_PTR)nativeKeyInfoArrayRawCkAttributes,
+                jLongToCKULong(nativeKeyInfoCkAttributesCount),
+                &ckObjectHandle);
+    }
+    if (ckAssertReturnValueOK(env, rv) != CK_ASSERT_OK) {
+        goto cleanup;
+    }
+
+    jObjectHandle = ckULongToJLong(ckObjectHandle);
+
+cleanup:
+
+    if (nativeKeyInfoArrayRaw != NULL) {
+        (*env)->ReleaseByteArrayElements(env, jNativeKeyInfo,
+                nativeKeyInfoArrayRaw, JNI_ABORT);
+    }
+
+    freeCKMechanismPtr(ckpMechanism);
+    return jObjectHandle;
+}
+#endif
+
+#ifdef P11_ENABLE_C_GENERATEKEY
+/*
+ * Class:     sun_security_pkcs11_wrapper_PKCS11
+ * Method:    C_GenerateKey
+ * Signature: (JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J
+ * Parametermapping:                    *PKCS11*
+ * @param   jlong jSessionHandle        CK_SESSION_HANDLE hSession
+ * @param   jobject jMechanism          CK_MECHANISM_PTR pMechanism
+ * @param   jobjectArray jTemplate      CK_ATTRIBUTE_PTR pTemplate
+ *                                      CK_ULONG ulCount
+ * @return  jlong jKeyHandle            CK_OBJECT_HANDLE_PTR phKey
+ */
+JNIEXPORT jlong JNICALL Java_sun_security_pkcs11_wrapper_PKCS11_C_1GenerateKey
+    (JNIEnv *env, jobject obj, jlong jSessionHandle, jobject jMechanism, jobjectArray jTemplate)
+{
+    CK_SESSION_HANDLE ckSessionHandle;
+    CK_MECHANISM_PTR ckpMechanism = NULL;
+    CK_ATTRIBUTE_PTR ckpAttributes = NULL_PTR;
+    CK_ULONG ckAttributesLength = 0;
+    CK_OBJECT_HANDLE ckKeyHandle = 0;
+    jlong jKeyHandle = 0L;
+    CK_RV rv;
+
+    CK_FUNCTION_LIST_PTR ckpFunctions = getFunctionList(env, obj);
+    if (ckpFunctions == NULL) { return 0L; }
+
+    ckSessionHandle = jLongToCKULong(jSessionHandle);
+    ckpMechanism = jMechanismToCKMechanismPtr(env, jMechanism);
+    if ((*env)->ExceptionCheck(env)) { return 0L ; }
+
+    jAttributeArrayToCKAttributeArray(env, jTemplate, &ckpAttributes, &ckAttributesLength);
+    if ((*env)->ExceptionCheck(env)) {
+        goto cleanup;
+    }
+
+    rv = (*ckpFunctions->C_GenerateKey)(ckSessionHandle, ckpMechanism, ckpAttributes, ckAttributesLength, &ckKeyHandle);
+
+    if (ckAssertReturnValueOK(env, rv) == CK_ASSERT_OK) {
+        jKeyHandle = ckULongToJLong(ckKeyHandle);
+
+        /* cheack, if we must give a initialization vector back to Java */
+        switch (ckpMechanism->mechanism) {
+        case CKM_PBE_MD2_DES_CBC:
+        case CKM_PBE_MD5_DES_CBC:
+        case CKM_PBE_MD5_CAST_CBC:
+        case CKM_PBE_MD5_CAST3_CBC:
+        case CKM_PBE_MD5_CAST128_CBC:
+        /* case CKM_PBE_MD5_CAST5_CBC:  the same as CKM_PBE_MD5_CAST128_CBC */
+        case CKM_PBE_SHA1_CAST128_CBC:
+        /* case CKM_PBE_SHA1_CAST5_CBC: the same as CKM_PBE_SHA1_CAST128_CBC */
+            /* we must copy back the initialization vector to the jMechanism object */
+            copyBackPBEInitializationVector(env, ckpMechanism, jMechanism);
+            break;
+        }
+    }
+cleanup:
+    freeCKMechanismPtr(ckpMechanism);
+    freeCKAttributeArray(ckpAttributes, ckAttributesLength);
+
+    return jKeyHandle ;
+}
+#endif
+
+#ifdef P11_ENABLE_C_GENERATEKEYPAIR
+/*
+ * Class:     sun_security_pkcs11_wrapper_PKCS11
+ * Method:    C_GenerateKeyPair
+ * Signature: (JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)[J
+ * 
