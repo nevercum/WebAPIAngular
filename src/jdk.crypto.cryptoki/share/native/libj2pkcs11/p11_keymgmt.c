@@ -950,4 +950,187 @@ cleanup:
 static void copyBackClientVersion(JNIEnv *env, CK_MECHANISM_PTR ckpMechanism, jobject jMechanism,
         CK_VERSION *ckVersion, const char *class_master_key_derive_params)
 {
-    jclass jMasterKeyDerive
+    jclass jMasterKeyDeriveParamsClass, jMechanismClass, jVersionClass;
+    jobject jMasterKeyDeriveParams;
+    jfieldID fieldID;
+    CK_MECHANISM_TYPE ckMechanismType;
+    jlong jMechanismType;
+    jobject jVersion;
+
+    /* get mechanism */
+    jMechanismClass = (*env)->FindClass(env, CLASS_MECHANISM);
+    if (jMechanismClass == NULL) { return; }
+    fieldID = (*env)->GetFieldID(env, jMechanismClass, "mechanism", "J");
+    if (fieldID == NULL) { return; }
+    jMechanismType = (*env)->GetLongField(env, jMechanism, fieldID);
+    ckMechanismType = jLongToCKULong(jMechanismType);
+    if (ckMechanismType != ckpMechanism->mechanism) {
+        /* we do not have matching types, this should not occur */
+        return;
+    }
+
+    if (ckVersion != NULL_PTR) {
+      /* get the Java CK_SSL3_MASTER_KEY_DERIVE_PARAMS (pParameter) */
+      fieldID = (*env)->GetFieldID(env, jMechanismClass, "pParameter", "Ljava/lang/Object;");
+      if (fieldID == NULL) { return; }
+
+      jMasterKeyDeriveParams = (*env)->GetObjectField(env, jMechanism, fieldID);
+
+      /* get the Java CK_VERSION */
+      jMasterKeyDeriveParamsClass = (*env)->FindClass(env, class_master_key_derive_params);
+      if (jMasterKeyDeriveParamsClass == NULL) { return; }
+      fieldID = (*env)->GetFieldID(env, jMasterKeyDeriveParamsClass,
+              "pVersion", "L"CLASS_VERSION";");
+      if (fieldID == NULL) { return; }
+      jVersion = (*env)->GetObjectField(env, jMasterKeyDeriveParams, fieldID);
+
+      /* now copy back the version from the native structure to the Java structure */
+
+      /* copy back the major version */
+      jVersionClass = (*env)->FindClass(env, CLASS_VERSION);
+      if (jVersionClass == NULL) { return; }
+      fieldID = (*env)->GetFieldID(env, jVersionClass, "major", "B");
+      if (fieldID == NULL) { return; }
+      (*env)->SetByteField(env, jVersion, fieldID, ckByteToJByte(ckVersion->major));
+
+      /* copy back the minor version */
+      fieldID = (*env)->GetFieldID(env, jVersionClass, "minor", "B");
+      if (fieldID == NULL) { return; }
+      (*env)->SetByteField(env, jVersion, fieldID, ckByteToJByte(ckVersion->minor));
+    }
+}
+
+/*
+ * Copy back the client version information from the native
+ * structure to the Java object. This is only used for
+ * CKM_SSL3_MASTER_KEY_DERIVE and CKM_TLS_MASTER_KEY_DERIVE
+ * mechanisms when used for deriving a key.
+ *
+ */
+void ssl3CopyBackClientVersion(JNIEnv *env, CK_MECHANISM_PTR ckpMechanism,
+        jobject jMechanism)
+{
+    CK_SSL3_MASTER_KEY_DERIVE_PARAMS *ckSSL3MasterKeyDeriveParams;
+    ckSSL3MasterKeyDeriveParams =
+            (CK_SSL3_MASTER_KEY_DERIVE_PARAMS *)ckpMechanism->pParameter;
+    if (ckSSL3MasterKeyDeriveParams != NULL_PTR) {
+        copyBackClientVersion(env, ckpMechanism, jMechanism,
+                ckSSL3MasterKeyDeriveParams->pVersion,
+                CLASS_SSL3_MASTER_KEY_DERIVE_PARAMS);
+    }
+}
+
+/*
+ * Copy back the client version information from the native
+ * structure to the Java object. This is only used for
+ * CKM_TLS12_MASTER_KEY_DERIVE mechanism when used for deriving a key.
+ *
+ */
+void tls12CopyBackClientVersion(JNIEnv *env, CK_MECHANISM_PTR ckpMechanism,
+        jobject jMechanism)
+{
+    CK_TLS12_MASTER_KEY_DERIVE_PARAMS *ckTLS12MasterKeyDeriveParams;
+    ckTLS12MasterKeyDeriveParams =
+            (CK_TLS12_MASTER_KEY_DERIVE_PARAMS *)ckpMechanism->pParameter;
+    if (ckTLS12MasterKeyDeriveParams != NULL_PTR) {
+        copyBackClientVersion(env, ckpMechanism, jMechanism,
+                ckTLS12MasterKeyDeriveParams->pVersion,
+                CLASS_TLS12_MASTER_KEY_DERIVE_PARAMS);
+    }
+}
+
+static void copyBackKeyMatParams(JNIEnv *env, CK_MECHANISM_PTR ckpMechanism,
+        jobject jMechanism, CK_SSL3_RANDOM_DATA *RandomInfo,
+        CK_SSL3_KEY_MAT_OUT_PTR ckSSL3KeyMatOut, const char *class_key_mat_params)
+{
+    jclass jMechanismClass, jKeyMatParamsClass, jSSL3KeyMatOutClass;
+    jfieldID fieldID;
+    CK_MECHANISM_TYPE ckMechanismType;
+    jlong jMechanismType;
+    CK_BYTE_PTR iv;
+    jobject jKeyMatParam;
+    jobject jSSL3KeyMatOut;
+    jobject jIV;
+    jint jLength;
+    jbyte* jBytes;
+    int i;
+
+    /* get mechanism */
+    jMechanismClass= (*env)->FindClass(env, CLASS_MECHANISM);
+    if (jMechanismClass == NULL) { return; }
+    fieldID = (*env)->GetFieldID(env, jMechanismClass, "mechanism", "J");
+    if (fieldID == NULL) { return; }
+    jMechanismType = (*env)->GetLongField(env, jMechanism, fieldID);
+    ckMechanismType = jLongToCKULong(jMechanismType);
+    if (ckMechanismType != ckpMechanism->mechanism) {
+        /* we do not have matching types, this should not occur */
+        return;
+    }
+
+    if (ckSSL3KeyMatOut != NULL_PTR) {
+      /* get the Java params object (pParameter) */
+      fieldID = (*env)->GetFieldID(env, jMechanismClass, "pParameter",
+              "Ljava/lang/Object;");
+      if (fieldID == NULL) { return; }
+      jKeyMatParam = (*env)->GetObjectField(env, jMechanism, fieldID);
+
+      /* get the Java CK_SSL3_KEY_MAT_OUT */
+      jKeyMatParamsClass = (*env)->FindClass(env, class_key_mat_params);
+      if (jKeyMatParamsClass == NULL) { return; }
+      fieldID = (*env)->GetFieldID(env, jKeyMatParamsClass,
+              "pReturnedKeyMaterial", "L"CLASS_SSL3_KEY_MAT_OUT";");
+      if (fieldID == NULL) { return; }
+      jSSL3KeyMatOut = (*env)->GetObjectField(env, jKeyMatParam, fieldID);
+
+      /* now copy back all the key handles and the initialization vectors */
+      /* copy back client MAC secret handle */
+      jSSL3KeyMatOutClass = (*env)->FindClass(env, CLASS_SSL3_KEY_MAT_OUT);
+      if (jSSL3KeyMatOutClass == NULL) { return; }
+      fieldID = (*env)->GetFieldID(env, jSSL3KeyMatOutClass,
+              "hClientMacSecret", "J");
+      if (fieldID == NULL) { return; }
+      (*env)->SetLongField(env, jSSL3KeyMatOut, fieldID,
+              ckULongToJLong(ckSSL3KeyMatOut->hClientMacSecret));
+
+      /* copy back server MAC secret handle */
+      fieldID = (*env)->GetFieldID(env, jSSL3KeyMatOutClass,
+              "hServerMacSecret", "J");
+      if (fieldID == NULL) { return; }
+      (*env)->SetLongField(env, jSSL3KeyMatOut, fieldID,
+              ckULongToJLong(ckSSL3KeyMatOut->hServerMacSecret));
+
+      /* copy back client secret key handle */
+      fieldID = (*env)->GetFieldID(env, jSSL3KeyMatOutClass, "hClientKey", "J");
+      if (fieldID == NULL) { return; }
+      (*env)->SetLongField(env, jSSL3KeyMatOut, fieldID,
+              ckULongToJLong(ckSSL3KeyMatOut->hClientKey));
+
+      /* copy back server secret key handle */
+      fieldID = (*env)->GetFieldID(env, jSSL3KeyMatOutClass, "hServerKey", "J");
+      if (fieldID == NULL) { return; }
+      (*env)->SetLongField(env, jSSL3KeyMatOut, fieldID,
+              ckULongToJLong(ckSSL3KeyMatOut->hServerKey));
+
+      /* copy back the client IV */
+      fieldID = (*env)->GetFieldID(env, jSSL3KeyMatOutClass, "pIVClient", "[B");
+      if (fieldID == NULL) { return; }
+      jIV = (*env)->GetObjectField(env, jSSL3KeyMatOut, fieldID);
+      iv = ckSSL3KeyMatOut->pIVClient;
+
+      if (jIV != NULL) {
+        jLength = (*env)->GetArrayLength(env, jIV);
+        jBytes = (*env)->GetByteArrayElements(env, jIV, NULL);
+        if (jBytes == NULL) { return; }
+        /* copy the bytes to the Java buffer */
+        for (i=0; i < jLength; i++) {
+          jBytes[i] = ckByteToJByte(iv[i]);
+        }
+        /* copy back the Java buffer to the object */
+        (*env)->ReleaseByteArrayElements(env, jIV, jBytes, 0);
+      }
+
+      /* copy back the server IV */
+      fieldID = (*env)->GetFieldID(env, jSSL3KeyMatOutClass, "pIVServer", "[B");
+      if (fieldID == NULL) { return; }
+      jIV = (*env)->GetObjectField(env, jSSL3KeyMatOut, fieldID);
+      iv = ckSSL3KeyMatOut->pIVServ
