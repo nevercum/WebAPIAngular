@@ -562,4 +562,180 @@ cleanup:
  * Class:     sun_security_pkcs11_wrapper_PKCS11
  * Method:    C_GenerateKeyPair
  * Signature: (JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)[J
- * 
+ * Parametermapping:                          *PKCS11*
+ * @param   jlong jSessionHandle              CK_SESSION_HANDLE hSession
+ * @param   jobject jMechanism                CK_MECHANISM_PTR pMechanism
+ * @param   jobjectArray jPublicKeyTemplate   CK_ATTRIBUTE_PTR pPublicKeyTemplate
+ *                                            CK_ULONG ulPublicKeyAttributeCount
+ * @param   jobjectArray jPrivateKeyTemplate  CK_ATTRIBUTE_PTR pPrivateKeyTemplate
+ *                                            CK_ULONG ulPrivateKeyAttributeCount
+ * @return  jlongArray jKeyHandles            CK_OBJECT_HANDLE_PTR phPublicKey
+ *                                            CK_OBJECT_HANDLE_PTR phPublicKey
+ */
+JNIEXPORT jlongArray JNICALL Java_sun_security_pkcs11_wrapper_PKCS11_C_1GenerateKeyPair
+    (JNIEnv *env, jobject obj, jlong jSessionHandle, jobject jMechanism,
+     jobjectArray jPublicKeyTemplate, jobjectArray jPrivateKeyTemplate)
+{
+    CK_SESSION_HANDLE ckSessionHandle;
+    CK_MECHANISM_PTR ckpMechanism = NULL;
+    CK_ATTRIBUTE_PTR ckpPublicKeyAttributes = NULL_PTR;
+    CK_ATTRIBUTE_PTR ckpPrivateKeyAttributes = NULL_PTR;
+    CK_ULONG ckPublicKeyAttributesLength = 0;
+    CK_ULONG ckPrivateKeyAttributesLength = 0;
+    CK_OBJECT_HANDLE_PTR ckpPublicKeyHandle;  /* pointer to Public Key */
+    CK_OBJECT_HANDLE_PTR ckpPrivateKeyHandle; /* pointer to Private Key */
+    CK_OBJECT_HANDLE_PTR ckpKeyHandles = NULL; /* pointer to array with Public and Private Key */
+    jlongArray jKeyHandles = NULL;
+    CK_RV rv;
+    int attempts;
+    const int MAX_ATTEMPTS = 3;
+
+    CK_FUNCTION_LIST_PTR ckpFunctions = getFunctionList(env, obj);
+    if (ckpFunctions == NULL) { return NULL; }
+
+    ckSessionHandle = jLongToCKULong(jSessionHandle);
+    ckpMechanism = jMechanismToCKMechanismPtr(env, jMechanism);
+    if ((*env)->ExceptionCheck(env)) { return NULL; }
+
+    ckpKeyHandles = (CK_OBJECT_HANDLE_PTR) calloc(2, sizeof(CK_OBJECT_HANDLE));
+    if (ckpKeyHandles == NULL) {
+        throwOutOfMemoryError(env, 0);
+        goto cleanup;
+    }
+    ckpPublicKeyHandle = ckpKeyHandles;   /* first element of array is Public Key */
+    ckpPrivateKeyHandle = (ckpKeyHandles + 1);  /* second element of array is Private Key */
+
+    jAttributeArrayToCKAttributeArray(env, jPublicKeyTemplate, &ckpPublicKeyAttributes, &ckPublicKeyAttributesLength);
+    if ((*env)->ExceptionCheck(env)) {
+        goto cleanup;
+    }
+
+    jAttributeArrayToCKAttributeArray(env, jPrivateKeyTemplate, &ckpPrivateKeyAttributes, &ckPrivateKeyAttributesLength);
+    if ((*env)->ExceptionCheck(env)) {
+        goto cleanup;
+    }
+
+    /*
+     * Workaround for NSS bug 1012786:
+     *
+     * Key generation may fail with CKR_FUNCTION_FAILED error
+     * if there is insufficient entropy to generate a random key.
+     *
+     * PKCS11 spec says the following about CKR_FUNCTION_FAILED error
+     * (see section 11.1.1):
+     *
+     *      ... In any event, although the function call failed, the situation
+     *      is not necessarily totally hopeless, as it is likely to be
+     *      when CKR_GENERAL_ERROR is returned. Depending on what the root cause of
+     *      the error actually was, it is possible that an attempt
+     *      to make the exact same function call again would succeed.
+     *
+     * Call C_GenerateKeyPair() several times if CKR_FUNCTION_FAILED occurs.
+     */
+    for (attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
+        rv = (*ckpFunctions->C_GenerateKeyPair)(ckSessionHandle, ckpMechanism,
+                        ckpPublicKeyAttributes, ckPublicKeyAttributesLength,
+                        ckpPrivateKeyAttributes, ckPrivateKeyAttributesLength,
+                        ckpPublicKeyHandle, ckpPrivateKeyHandle);
+        if (rv == CKR_FUNCTION_FAILED) {
+            printDebug("C_1GenerateKeyPair(): C_GenerateKeyPair() failed \
+                    with CKR_FUNCTION_FAILED error, try again\n");
+        } else {
+            break;
+        }
+    }
+
+    if (ckAssertReturnValueOK(env, rv) == CK_ASSERT_OK) {
+        jKeyHandles = ckULongArrayToJLongArray(env, ckpKeyHandles, 2);
+    }
+
+cleanup:
+    freeCKMechanismPtr(ckpMechanism);
+    free(ckpKeyHandles);
+    freeCKAttributeArray(ckpPublicKeyAttributes, ckPublicKeyAttributesLength);
+    freeCKAttributeArray(ckpPrivateKeyAttributes, ckPrivateKeyAttributesLength);
+    return jKeyHandles ;
+}
+#endif
+
+#ifdef P11_ENABLE_C_WRAPKEY
+/*
+ * Class:     sun_security_pkcs11_wrapper_PKCS11
+ * Method:    C_WrapKey
+ * Signature: (JLsun/security/pkcs11/wrapper/CK_MECHANISM;JJ)[B
+ * Parametermapping:                    *PKCS11*
+ * @param   jlong jSessionHandle        CK_SESSION_HANDLE hSession
+ * @param   jobject jMechanism          CK_MECHANISM_PTR pMechanism
+ * @param   jlong jWrappingKeyHandle    CK_OBJECT_HANDLE hWrappingKey
+ * @param   jlong jKeyHandle            CK_OBJECT_HANDLE hKey
+ * @return  jbyteArray jWrappedKey      CK_BYTE_PTR pWrappedKey
+ *                                      CK_ULONG_PTR pulWrappedKeyLen
+ */
+JNIEXPORT jbyteArray JNICALL Java_sun_security_pkcs11_wrapper_PKCS11_C_1WrapKey
+    (JNIEnv *env, jobject obj, jlong jSessionHandle, jobject jMechanism, jlong jWrappingKeyHandle, jlong jKeyHandle)
+{
+    CK_SESSION_HANDLE ckSessionHandle;
+    CK_MECHANISM_PTR ckpMechanism = NULL;
+    CK_OBJECT_HANDLE ckWrappingKeyHandle;
+    CK_OBJECT_HANDLE ckKeyHandle;
+    jbyteArray jWrappedKey = NULL;
+    CK_RV rv;
+    CK_BYTE BUF[MAX_STACK_BUFFER_LEN];
+    CK_BYTE_PTR ckpWrappedKey = BUF;
+    CK_ULONG ckWrappedKeyLength = MAX_STACK_BUFFER_LEN;
+
+    CK_FUNCTION_LIST_PTR ckpFunctions = getFunctionList(env, obj);
+    if (ckpFunctions == NULL) { return NULL; }
+
+    ckSessionHandle = jLongToCKULong(jSessionHandle);
+    ckpMechanism = jMechanismToCKMechanismPtr(env, jMechanism);
+    if ((*env)->ExceptionCheck(env)) { return NULL; }
+
+    ckWrappingKeyHandle = jLongToCKULong(jWrappingKeyHandle);
+    ckKeyHandle = jLongToCKULong(jKeyHandle);
+
+    rv = (*ckpFunctions->C_WrapKey)(ckSessionHandle, ckpMechanism, ckWrappingKeyHandle, ckKeyHandle, ckpWrappedKey, &ckWrappedKeyLength);
+    if (rv == CKR_BUFFER_TOO_SMALL) {
+        ckpWrappedKey = (CK_BYTE_PTR)
+                calloc(ckWrappedKeyLength, sizeof(CK_BYTE));
+        if (ckpWrappedKey == NULL) {
+            throwOutOfMemoryError(env, 0);
+            goto cleanup;
+        }
+
+        rv = (*ckpFunctions->C_WrapKey)(ckSessionHandle, ckpMechanism, ckWrappingKeyHandle, ckKeyHandle, ckpWrappedKey, &ckWrappedKeyLength);
+    }
+    if (ckAssertReturnValueOK(env, rv) == CK_ASSERT_OK) {
+        jWrappedKey = ckByteArrayToJByteArray(env, ckpWrappedKey, ckWrappedKeyLength);
+    }
+
+cleanup:
+    if (ckpWrappedKey != BUF) { free(ckpWrappedKey); }
+    freeCKMechanismPtr(ckpMechanism);
+
+    return jWrappedKey ;
+}
+#endif
+
+#ifdef P11_ENABLE_C_UNWRAPKEY
+/*
+ * Class:     sun_security_pkcs11_wrapper_PKCS11
+ * Method:    C_UnwrapKey
+ * Signature: (JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[B[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J
+ * Parametermapping:                    *PKCS11*
+ * @param   jlong jSessionHandle        CK_SESSION_HANDLE hSession
+ * @param   jobject jMechanism          CK_MECHANISM_PTR pMechanism
+ * @param   jlong jUnwrappingKeyHandle  CK_OBJECT_HANDLE hUnwrappingKey
+ * @param   jbyteArray jWrappedKey      CK_BYTE_PTR pWrappedKey
+ *                                      CK_ULONG_PTR pulWrappedKeyLen
+ * @param   jobjectArray jTemplate      CK_ATTRIBUTE_PTR pTemplate
+ *                                      CK_ULONG ulCount
+ * @return  jlong jKeyHandle            CK_OBJECT_HANDLE_PTR phKey
+ */
+JNIEXPORT jlong JNICALL Java_sun_security_pkcs11_wrapper_PKCS11_C_1UnwrapKey
+    (JNIEnv *env, jobject obj, jlong jSessionHandle, jobject jMechanism, jlong jUnwrappingKeyHandle,
+     jbyteArray jWrappedKey, jobjectArray jTemplate)
+{
+    CK_SESSION_HANDLE ckSessionHandle;
+    CK_MECHANISM_PTR ckpMechanism = NULL;
+    CK_OBJECT_HANDLE ckUnwrap
