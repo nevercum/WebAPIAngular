@@ -738,4 +738,216 @@ JNIEXPORT jlong JNICALL Java_sun_security_pkcs11_wrapper_PKCS11_C_1UnwrapKey
 {
     CK_SESSION_HANDLE ckSessionHandle;
     CK_MECHANISM_PTR ckpMechanism = NULL;
-    CK_OBJECT_HANDLE ckUnwrap
+    CK_OBJECT_HANDLE ckUnwrappingKeyHandle;
+    CK_BYTE_PTR ckpWrappedKey = NULL_PTR;
+    CK_ULONG ckWrappedKeyLength;
+    CK_ATTRIBUTE_PTR ckpAttributes = NULL_PTR;
+    CK_ULONG ckAttributesLength = 0;
+    CK_OBJECT_HANDLE ckKeyHandle = 0;
+    jlong jKeyHandle = 0L;
+    CK_RV rv;
+
+    CK_FUNCTION_LIST_PTR ckpFunctions = getFunctionList(env, obj);
+    if (ckpFunctions == NULL) { return 0L; }
+
+    ckSessionHandle = jLongToCKULong(jSessionHandle);
+    ckpMechanism = jMechanismToCKMechanismPtr(env, jMechanism);
+    if ((*env)->ExceptionCheck(env)) { return 0L; }
+
+    ckUnwrappingKeyHandle = jLongToCKULong(jUnwrappingKeyHandle);
+    jByteArrayToCKByteArray(env, jWrappedKey, &ckpWrappedKey, &ckWrappedKeyLength);
+    if ((*env)->ExceptionCheck(env)) {
+        goto cleanup;
+    }
+
+    jAttributeArrayToCKAttributeArray(env, jTemplate, &ckpAttributes, &ckAttributesLength);
+    if ((*env)->ExceptionCheck(env)) {
+        goto cleanup;
+    }
+
+
+    rv = (*ckpFunctions->C_UnwrapKey)(ckSessionHandle, ckpMechanism, ckUnwrappingKeyHandle,
+                 ckpWrappedKey, ckWrappedKeyLength,
+                 ckpAttributes, ckAttributesLength, &ckKeyHandle);
+
+    if (ckAssertReturnValueOK(env, rv) == CK_ASSERT_OK) {
+        jKeyHandle = ckLongToJLong(ckKeyHandle);
+
+#if 0
+        /* cheack, if we must give a initialization vector back to Java */
+        if (ckpMechanism->mechanism == CKM_KEY_WRAP_SET_OAEP) {
+            /* we must copy back the unwrapped key info to the jMechanism object */
+            copyBackSetUnwrappedKey(env, ckpMechanism, jMechanism);
+        }
+#endif
+    }
+cleanup:
+    freeCKMechanismPtr(ckpMechanism);
+    freeCKAttributeArray(ckpAttributes, ckAttributesLength);
+    free(ckpWrappedKey);
+
+    return jKeyHandle ;
+}
+#endif
+
+#ifdef P11_ENABLE_C_DERIVEKEY
+
+/*
+ * Copy back the PRF output to Java.
+ */
+void copyBackTLSPrfParams(JNIEnv *env, CK_MECHANISM_PTR ckpMechanism, jobject jMechanism)
+{
+    jclass jMechanismClass, jTLSPrfParamsClass;
+    CK_TLS_PRF_PARAMS *ckTLSPrfParams;
+    jobject jTLSPrfParams;
+    jfieldID fieldID;
+    CK_MECHANISM_TYPE ckMechanismType;
+    jlong jMechanismType;
+    CK_BYTE_PTR output;
+    jobject jOutput;
+    jint jLength;
+    jbyte* jBytes;
+    int i;
+
+    /* get mechanism */
+    jMechanismClass = (*env)->FindClass(env, CLASS_MECHANISM);
+    if (jMechanismClass == NULL) { return; }
+    fieldID = (*env)->GetFieldID(env, jMechanismClass, "mechanism", "J");
+    if (fieldID == NULL) { return; }
+    jMechanismType = (*env)->GetLongField(env, jMechanism, fieldID);
+    ckMechanismType = jLongToCKULong(jMechanismType);
+    if (ckMechanismType != ckpMechanism->mechanism) {
+        /* we do not have matching types, this should not occur */
+        return;
+    }
+
+    /* get the native CK_TLS_PRF_PARAMS */
+    ckTLSPrfParams = (CK_TLS_PRF_PARAMS *) ckpMechanism->pParameter;
+    if (ckTLSPrfParams != NULL_PTR) {
+        /* get the Java CK_TLS_PRF_PARAMS object (pParameter) */
+        fieldID = (*env)->GetFieldID(env, jMechanismClass, "pParameter", "Ljava/lang/Object;");
+        if (fieldID == NULL) { return; }
+        jTLSPrfParams = (*env)->GetObjectField(env, jMechanism, fieldID);
+
+        /* copy back the client IV */
+        jTLSPrfParamsClass = (*env)->FindClass(env, CLASS_TLS_PRF_PARAMS);
+        if (jTLSPrfParamsClass == NULL) { return; }
+        fieldID = (*env)->GetFieldID(env, jTLSPrfParamsClass, "pOutput", "[B");
+        if (fieldID == NULL) { return; }
+        jOutput = (*env)->GetObjectField(env, jTLSPrfParams, fieldID);
+        output = ckTLSPrfParams->pOutput;
+
+        // Note: we assume that the token returned exactly as many bytes as we
+        // requested. Anything else would not make sense.
+        if (jOutput != NULL) {
+            jLength = (*env)->GetArrayLength(env, jOutput);
+            jBytes = (*env)->GetByteArrayElements(env, jOutput, NULL);
+            if (jBytes == NULL) { return; }
+
+            /* copy the bytes to the Java buffer */
+            for (i=0; i < jLength; i++) {
+                jBytes[i] = ckByteToJByte(output[i]);
+            }
+            /* copy back the Java buffer to the object */
+            (*env)->ReleaseByteArrayElements(env, jOutput, jBytes, 0);
+        }
+    }
+}
+
+/*
+ * Class:     sun_security_pkcs11_wrapper_PKCS11
+ * Method:    C_DeriveKey
+ * Signature: (JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J
+ * Parametermapping:                    *PKCS11*
+ * @param   jlong jSessionHandle        CK_SESSION_HANDLE hSession
+ * @param   jobject jMechanism          CK_MECHANISM_PTR pMechanism
+ * @param   jlong jBaseKeyHandle        CK_OBJECT_HANDLE hBaseKey
+ * @param   jobjectArray jTemplate      CK_ATTRIBUTE_PTR pTemplate
+ *                                      CK_ULONG ulCount
+ * @return  jlong jKeyHandle            CK_OBJECT_HANDLE_PTR phKey
+ */
+JNIEXPORT jlong JNICALL Java_sun_security_pkcs11_wrapper_PKCS11_C_1DeriveKey
+    (JNIEnv *env, jobject obj, jlong jSessionHandle, jobject jMechanism, jlong jBaseKeyHandle, jobjectArray jTemplate)
+{
+    CK_SESSION_HANDLE ckSessionHandle;
+    CK_MECHANISM_PTR ckpMechanism = NULL;
+    CK_OBJECT_HANDLE ckBaseKeyHandle;
+    CK_ATTRIBUTE_PTR ckpAttributes = NULL_PTR;
+    CK_ULONG ckAttributesLength = 0;
+    CK_OBJECT_HANDLE ckKeyHandle = 0;
+    jlong jKeyHandle = 0L;
+    CK_RV rv;
+    CK_OBJECT_HANDLE_PTR phKey = &ckKeyHandle;
+
+    CK_FUNCTION_LIST_PTR ckpFunctions = getFunctionList(env, obj);
+    if (ckpFunctions == NULL) { return 0L; }
+
+    ckSessionHandle = jLongToCKULong(jSessionHandle);
+    ckpMechanism = jMechanismToCKMechanismPtr(env, jMechanism);
+    if ((*env)->ExceptionCheck(env)) { return 0L; }
+
+    ckBaseKeyHandle = jLongToCKULong(jBaseKeyHandle);
+    jAttributeArrayToCKAttributeArray(env, jTemplate, &ckpAttributes, &ckAttributesLength);
+    if ((*env)->ExceptionCheck(env)) {
+        goto cleanup;
+    }
+
+    switch (ckpMechanism->mechanism) {
+    case CKM_SSL3_KEY_AND_MAC_DERIVE:
+    case CKM_TLS_KEY_AND_MAC_DERIVE:
+    case CKM_TLS12_KEY_AND_MAC_DERIVE:
+    case CKM_TLS_PRF:
+        // these mechanism do not return a key handle via phKey
+        // set to NULL in case pedantic implementations check for it
+        phKey = NULL;
+        break;
+    default:
+        // empty
+        break;
+    }
+
+    rv = (*ckpFunctions->C_DeriveKey)(ckSessionHandle, ckpMechanism, ckBaseKeyHandle,
+                 ckpAttributes, ckAttributesLength, phKey);
+
+    jKeyHandle = ckLongToJLong(ckKeyHandle);
+
+    switch (ckpMechanism->mechanism) {
+    case CKM_SSL3_MASTER_KEY_DERIVE:
+    case CKM_TLS_MASTER_KEY_DERIVE:
+        /* we must copy back the client version */
+        ssl3CopyBackClientVersion(env, ckpMechanism, jMechanism);
+        break;
+    case CKM_TLS12_MASTER_KEY_DERIVE:
+        tls12CopyBackClientVersion(env, ckpMechanism, jMechanism);
+        break;
+    case CKM_SSL3_KEY_AND_MAC_DERIVE:
+    case CKM_TLS_KEY_AND_MAC_DERIVE:
+        /* we must copy back the unwrapped key info to the jMechanism object */
+        ssl3CopyBackKeyMatParams(env, ckpMechanism, jMechanism);
+        break;
+    case CKM_TLS12_KEY_AND_MAC_DERIVE:
+        /* we must copy back the unwrapped key info to the jMechanism object */
+        tls12CopyBackKeyMatParams(env, ckpMechanism, jMechanism);
+        break;
+    case CKM_TLS_PRF:
+        copyBackTLSPrfParams(env, ckpMechanism, jMechanism);
+        break;
+    default:
+        // empty
+        break;
+    }
+    if (ckAssertReturnValueOK(env, rv) != CK_ASSERT_OK) {
+        jKeyHandle =0L;
+    }
+
+cleanup:
+    freeCKMechanismPtr(ckpMechanism);
+    freeCKAttributeArray(ckpAttributes, ckAttributesLength);
+
+    return jKeyHandle ;
+}
+
+static void copyBackClientVersion(JNIEnv *env, CK_MECHANISM_PTR ckpMechanism, jobject jMechanism,
+        CK_VERSION *ckVersion, const char *class_master_key_derive_params)
+{
+    jclass jMasterKeyDerive
