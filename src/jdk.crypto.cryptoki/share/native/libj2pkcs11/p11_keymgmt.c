@@ -1133,4 +1133,59 @@ static void copyBackKeyMatParams(JNIEnv *env, CK_MECHANISM_PTR ckpMechanism,
       fieldID = (*env)->GetFieldID(env, jSSL3KeyMatOutClass, "pIVServer", "[B");
       if (fieldID == NULL) { return; }
       jIV = (*env)->GetObjectField(env, jSSL3KeyMatOut, fieldID);
-      iv = ckSSL3KeyMatOut->pIVServ
+      iv = ckSSL3KeyMatOut->pIVServer;
+
+      if (jIV != NULL) {
+        jLength = (*env)->GetArrayLength(env, jIV);
+        jBytes = (*env)->GetByteArrayElements(env, jIV, NULL);
+        if (jBytes == NULL) { return; }
+        /* copy the bytes to the Java buffer */
+        for (i=0; i < jLength; i++) {
+          jBytes[i] = ckByteToJByte(iv[i]);
+        }
+        /* copy back the Java buffer to the object */
+        (*env)->ReleaseByteArrayElements(env, jIV, jBytes, 0);
+      }
+    }
+}
+
+/*
+ * Copy back the derived keys and initialization vectors from the native
+ * structure to the Java object. This is only used for
+ * CKM_SSL3_KEY_AND_MAC_DERIVE and CKM_TLS_KEY_AND_MAC_DERIVE mechanisms
+ * when used for deriving a key.
+ *
+ */
+void ssl3CopyBackKeyMatParams(JNIEnv *env, CK_MECHANISM_PTR ckpMechanism,
+        jobject jMechanism)
+{
+    CK_SSL3_KEY_MAT_PARAMS *ckSSL3KeyMatParam;
+    ckSSL3KeyMatParam = (CK_SSL3_KEY_MAT_PARAMS *)ckpMechanism->pParameter;
+    if (ckSSL3KeyMatParam != NULL_PTR) {
+        copyBackKeyMatParams(env, ckpMechanism, jMechanism,
+                &(ckSSL3KeyMatParam->RandomInfo),
+                ckSSL3KeyMatParam->pReturnedKeyMaterial,
+                CLASS_SSL3_KEY_MAT_PARAMS);
+    }
+}
+
+/*
+ * Copy back the derived keys and initialization vectors from the native
+ * structure to the Java object. This is only used for
+ * CKM_TLS12_KEY_AND_MAC_DERIVE mechanism when used for deriving a key.
+ *
+ */
+void tls12CopyBackKeyMatParams(JNIEnv *env, CK_MECHANISM_PTR ckpMechanism,
+        jobject jMechanism)
+{
+    CK_TLS12_KEY_MAT_PARAMS *ckTLS12KeyMatParam;
+    ckTLS12KeyMatParam = (CK_TLS12_KEY_MAT_PARAMS *)ckpMechanism->pParameter;
+    if (ckTLS12KeyMatParam != NULL_PTR) {
+        copyBackKeyMatParams(env, ckpMechanism, jMechanism,
+                &(ckTLS12KeyMatParam->RandomInfo),
+                ckTLS12KeyMatParam->pReturnedKeyMaterial,
+                CLASS_TLS12_KEY_MAT_PARAMS);
+    }
+}
+
+#endif
