@@ -81,4 +81,16 @@ public class GetSafepointCount {
         long value2 = mbean.getSafepointCount();
 
         if (trace) {
-            System.out.println("Safepoint count2: " + val
+            System.out.println("Safepoint count2: " + value2);
+        }
+
+        if (value2 <= value) {
+            throw new RuntimeException("Safepoint count " +
+                                       "did not increase " +
+                                       "(value = " + value + "; " +
+                                       "value2 = " + value2 + ")");
+        }
+
+        System.out.println("Test passed.");
+    }
+}
