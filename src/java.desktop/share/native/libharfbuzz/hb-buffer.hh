@@ -266,4 +266,271 @@ struct hb_buffer_t
     }
     if (merge_clusters)
       this->merge_clusters (start, i);
-    reverse_range (start, 
+    reverse_range (start, i);
+
+    reverse ();
+  }
+
+  template <typename FuncType>
+  unsigned group_end (unsigned start, const FuncType& group) const
+  {
+    while (++start < len && group (info[start - 1], info[start]))
+      ;
+
+    return start;
+  }
+
+  static bool _cluster_group_func (const hb_glyph_info_t& a,
+                                   const hb_glyph_info_t& b)
+  { return a.cluster == b.cluster; }
+
+  void reverse_clusters () { reverse_groups (_cluster_group_func); }
+
+  HB_INTERNAL void guess_segment_properties ();
+
+  HB_INTERNAL void sync ();
+  HB_INTERNAL void clear_output ();
+  HB_INTERNAL void clear_positions ();
+
+  template <typename T>
+  HB_NODISCARD bool replace_glyphs (unsigned int num_in,
+                                    unsigned int num_out,
+                                    const T *glyph_data)
+  {
+    if (unlikely (!make_room_for (num_in, num_out))) return false;
+
+    assert (idx + num_in <= len);
+
+    merge_clusters (idx, idx + num_in);
+
+    hb_glyph_info_t &orig_info = idx < len ? cur() : prev();
+
+    hb_glyph_info_t *pinfo = &out_info[out_len];
+    for (unsigned int i = 0; i < num_out; i++)
+    {
+      *pinfo = orig_info;
+      pinfo->codepoint = glyph_data[i];
+      pinfo++;
+    }
+
+    idx  += num_in;
+    out_len += num_out;
+    return true;
+  }
+
+  HB_NODISCARD bool replace_glyph (hb_codepoint_t glyph_index)
+  { return replace_glyphs (1, 1, &glyph_index); }
+
+  /* Makes a copy of the glyph at idx to output and replace glyph_index */
+  HB_NODISCARD bool output_glyph (hb_codepoint_t glyph_index)
+  { return replace_glyphs (0, 1, &glyph_index); }
+
+  HB_NODISCARD bool output_info (const hb_glyph_info_t &glyph_info)
+  {
+    if (unlikely (!make_room_for (0, 1))) return false;
+
+    out_info[out_len] = glyph_info;
+
+    out_len++;
+    return true;
+  }
+  /* Copies glyph at idx to output but doesn't advance idx */
+  HB_NODISCARD bool copy_glyph ()
+  {
+    /* Extra copy because cur()'s return can be freed within
+     * output_info() call if buffer reallocates. */
+    return output_info (hb_glyph_info_t (cur()));
+  }
+
+  /* Copies glyph at idx to output and advance idx.
+   * If there's no output, just advance idx. */
+  HB_NODISCARD bool next_glyph ()
+  {
+    if (have_output)
+    {
+      if (out_info != info || out_len != idx)
+      {
+        if (unlikely (!make_room_for (1, 1))) return false;
+        out_info[out_len] = info[idx];
+      }
+      out_len++;
+    }
+
+    idx++;
+    return true;
+  }
+  /* Copies n glyphs at idx to output and advance idx.
+   * If there's no output, just advance idx. */
+  HB_NODISCARD bool next_glyphs (unsigned int n)
+  {
+    if (have_output)
+    {
+      if (out_info != info || out_len != idx)
+      {
+        if (unlikely (!make_room_for (n, n))) return false;
+        memmove (out_info + out_len, info + idx, n * sizeof (out_info[0]));
+      }
+      out_len += n;
+    }
+
+    idx += n;
+    return true;
+  }
+  /* Advance idx without copying to output. */
+  void skip_glyph () { idx++; }
+  void reset_masks (hb_mask_t mask)
+  {
+    for (unsigned int j = 0; j < len; j++)
+      info[j].mask = mask;
+  }
+  void add_masks (hb_mask_t mask)
+  {
+    for (unsigned int j = 0; j < len; j++)
+      info[j].mask |= mask;
+  }
+  HB_INTERNAL void set_masks (hb_mask_t value, hb_mask_t mask,
+                              unsigned int cluster_start, unsigned int cluster_end);
+
+  void merge_clusters (unsigned int start, unsigned int end)
+  {
+    if (end - start < 2)
+      return;
+    merge_clusters_impl (start, end);
+  }
+  HB_INTERNAL void merge_clusters_impl (unsigned int start, unsigned int end);
+  HB_INTERNAL void merge_out_clusters (unsigned int start, unsigned int end);
+  /* Merge clusters for deleting current glyph, and skip it. */
+  HB_INTERNAL void delete_glyph ();
+
+
+  /* Adds glyph flags in mask to infos with clusters between start and end.
+   * The start index will be from out-buffer if from_out_buffer is true.
+   * If interior is true, then the cluster having the minimum value is skipped. */
+  void _set_glyph_flags (hb_mask_t mask,
+                         unsigned start = 0,
+                         unsigned end = (unsigned) -1,
+                         bool interior = false,
+                         bool from_out_buffer = false)
+  {
+    end = hb_min (end, len);
+
+    if (interior && !from_out_buffer && end - start < 2)
+      return;
+
+    scratch_flags |= HB_BUFFER_SCRATCH_FLAG_HAS_GLYPH_FLAGS;
+
+    if (!from_out_buffer || !have_output)
+    {
+      if (!interior)
+      {
+        for (unsigned i = start; i < end; i++)
+          info[i].mask |= mask;
+      }
+      else
+      {
+        unsigned cluster = _infos_find_min_cluster (info, start, end);
+        _infos_set_glyph_flags (info, start, end, cluster, mask);
+      }
+    }
+    else
+    {
+      assert (start <= out_len);
+      assert (idx <= end);
+
+      if (!interior)
+      {
+        for (unsigned i = start; i < out_len; i++)
+          out_info[i].mask |= mask;
+        for (unsigned i = idx; i < end; i++)
+          info[i].mask |= mask;
+      }
+      else
+      {
+        unsigned cluster = _infos_find_min_cluster (info, idx, end);
+        cluster = _infos_find_min_cluster (out_info, start, out_len, cluster);
+
+        _infos_set_glyph_flags (out_info, start, out_len, cluster, mask);
+        _infos_set_glyph_flags (info, idx, end, cluster, mask);
+      }
+    }
+  }
+
+  void unsafe_to_break (unsigned int start = 0, unsigned int end = -1)
+  {
+    _set_glyph_flags (HB_GLYPH_FLAG_UNSAFE_TO_BREAK | HB_GLYPH_FLAG_UNSAFE_TO_CONCAT,
+                      start, end,
+                      true);
+  }
+  void unsafe_to_concat (unsigned int start = 0, unsigned int end = -1)
+  {
+    if (likely ((flags & HB_BUFFER_FLAG_PRODUCE_UNSAFE_TO_CONCAT) == 0))
+      return;
+    _set_glyph_flags (HB_GLYPH_FLAG_UNSAFE_TO_CONCAT,
+                      start, end,
+                      true);
+  }
+  void unsafe_to_break_from_outbuffer (unsigned int start = 0, unsigned int end = -1)
+  {
+    _set_glyph_flags (HB_GLYPH_FLAG_UNSAFE_TO_BREAK | HB_GLYPH_FLAG_UNSAFE_TO_CONCAT,
+                      start, end,
+                      true, true);
+  }
+  void unsafe_to_concat_from_outbuffer (unsigned int start = 0, unsigned int end = -1)
+  {
+    if (likely ((flags & HB_BUFFER_FLAG_PRODUCE_UNSAFE_TO_CONCAT) == 0))
+      return;
+    _set_glyph_flags (HB_GLYPH_FLAG_UNSAFE_TO_CONCAT,
+                      start, end,
+                      false, true);
+  }
+
+
+  /* Internal methods */
+  HB_NODISCARD HB_INTERNAL bool move_to (unsigned int i); /* i is output-buffer index. */
+
+  HB_NODISCARD HB_INTERNAL bool enlarge (unsigned int size);
+
+  HB_NODISCARD bool ensure (unsigned int size)
+  { return likely (!size || size < allocated) ? true : enlarge (size); }
+
+  HB_NODISCARD bool ensure_inplace (unsigned int size)
+  { return likely (!size || size < allocated); }
+
+  void assert_glyphs ()
+  {
+    assert ((content_type == HB_BUFFER_CONTENT_TYPE_GLYPHS) ||
+            (!len && (content_type == HB_BUFFER_CONTENT_TYPE_INVALID)));
+  }
+  void assert_unicode ()
+  {
+    assert ((content_type == HB_BUFFER_CONTENT_TYPE_UNICODE) ||
+            (!len && (content_type == HB_BUFFER_CONTENT_TYPE_INVALID)));
+  }
+  HB_NODISCARD bool ensure_glyphs ()
+  {
+    if (unlikely (content_type != HB_BUFFER_CONTENT_TYPE_GLYPHS))
+    {
+      if (content_type != HB_BUFFER_CONTENT_TYPE_INVALID)
+        return false;
+      assert (len == 0);
+      content_type = HB_BUFFER_CONTENT_TYPE_GLYPHS;
+    }
+    return true;
+  }
+  HB_NODISCARD bool ensure_unicode ()
+  {
+    if (unlikely (content_type != HB_BUFFER_CONTENT_TYPE_UNICODE))
+    {
+      if (content_type != HB_BUFFER_CONTENT_TYPE_INVALID)
+        return false;
+      assert (len == 0);
+      content_type = HB_BUFFER_CONTENT_TYPE_UNICODE;
+    }
+    return true;
+  }
+
+  HB_NODISCARD HB_INTERNAL bool make_room_for (unsigned int num_in, unsigned int num_out);
+  HB_NODISCARD HB_INTERNAL bool shift_forward (unsigned int count);
+
+  typedef long scratch_buffer_t;
+  HB_INTERNAL scratch_buffer_t *g
