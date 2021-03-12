@@ -26,3 +26,59 @@ package org.openjdk.bench.vm.compiler;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Warmup;
+
+import java.util.concurrent.TimeUnit;
+
+@State(Scope.Benchmark)
+@Warmup(iterations = 4, time = 2, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 4, time = 2, timeUnit = TimeUnit.SECONDS)
+public class InterfacePrivateCalls {
+    interface I {
+        private int bar() { return 0; }
+        default int foo() {
+            return bar();
+        }
+    }
+
+    static class C1 implements I {}
+    static class C2 implements I {}
+    static class C3 implements I {}
+
+    private I[] objs;
+
+    @Setup(Level.Trial)
+    public void setupTrial() {
+        objs = new I[3];
+        objs[0] = new C1();
+        objs[1] = new C2();
+        objs[2] = new C3();
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.NANOSECONDS)
+    @Fork(value=3, jvmArgsAppend={"-XX:TieredStopAtLevel=1"})
+    public void invokePrivateInterfaceMethodC1() {
+        for (int i = 0; i < objs.length; ++i) {
+            objs[i].foo();
+        }
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.NANOSECONDS)
+    @Fork(value=3)
+    public void invokePrivateInterfaceMethodC2() {
+        for (int i = 0; i < objs.length; ++i) {
+            objs[i].foo();
+        }
+    }
+}
