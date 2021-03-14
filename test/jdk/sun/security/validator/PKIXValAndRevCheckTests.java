@@ -158,4 +158,119 @@ public class PKIXValAndRevCheckTests {
         "Dq3Hpc3WDY9/5jRKWZOC0qLmXMPEF8wrwyC3aQ81sytDJOhEfxEf3KvwFDI9NUQb\n" +
         "tFdWB+IDEvaDCTJgOt/jIJAzLTxzvwPBzP/JHdRCwKdmlQStRp20AmDtpgIlm2RH\n" +
         "v8ywabI/UqncZHe/LVYdmDNxztziM98Zs1I7vsO2/yebWE/QH3g3k9ZgaT6UnBAq\n" +
-        "gvV2TQhZOGMmps7RrfNdVEHeeRXmJTFAtmbi/o6Ou7xli+3bDuY5Faxk7u
+        "gvV2TQhZOGMmps7RrfNdVEHeeRXmJTFAtmbi/o6Ou7xli+3bDuY5Faxk7uOpC54H\n" +
+        "iyyH2Htoyc9A0M9qwkwnrKxlWe594uD9LbWMNBMMTv4nUtf1ZE1swHg/L9XATDa/\n" +
+        "ZB5hL6p/oS2CxloLL982CIbSuV1TcI6s4naTyZ3HxnIKCaOijAK+IDo9qbTFkt9w\n" +
+        "4toc09fWGRV/pgm3p6YptP48JDYTHQK8GvjzQIdALXee28BmM496cV49uo1O6ia0\n" +
+        "Ht1MFMDKav2g9Cr5SYKIFkpZjJ2T0aJ4dLeft+nQCwDP4odHRBTQbqK9oMw6qYav\n" +
+        "PVuZJWwW3ilZtke2D28N4bF2X1nMYFM2obnB/TLkpreNSiyV6M0D2DW8tpGLTXOp\n" +
+        "yZEJqAx2dEhfxRNE7sECAwEAAaNjMGEwHQYDVR0OBBYEFPBYgi5QQCd4Bcl653eK\n" +
+        "hqSZODfbMB8GA1UdIwQYMBaAFPBYgi5QQCd4Bcl653eKhqSZODfbMA8GA1UdEwEB\n" +
+        "/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgGGMA0GCSqGSIb3DQEBCwUAA4ICAQBjCVYc\n" +
+        "0PmSjzxYGfXtR6+JaDrA/1jhkTPTVTqVniKV4beqoX90BE9krvic7nfvxoYecNux\n" +
+        "b1ZZkXMZ0NVadjxySaFmHo9E5eoPWp2N0Jb5rV+imlofz+U9/lANTb9QJ4L+qUwL\n" +
+        "s40zai1i5yvt4ZcowBRy2BohF2qgaFy8rd+amqVd8LnG06HIOJjZYKgKd2EJyQR6\n" +
+        "F6SPPuSfK5wpkBnkTUvtsvx4+8MKUfKRThGQkovSbXxfusAWehe9XT5hCgG2s04J\n" +
+        "7rL1LVrviBXPFaQgbIGov0PubCJM6V6GFwNJxqVLxbFS0mN+z9M6JzJM5SRF/Ki5\n" +
+        "daczIOGNELVbCct/4aaWeHYwXfnJo/EghAdbS2DPvESXQhNsuW6KYTl6Qhzu3UHw\n" +
+        "yaEIOh2LYENhKJq91Ww6Xhk9seGuwIsj6HXS30lrRztDM+GPU44WQxhmSUwY0C9g\n" +
+        "+KydH1c71eH5vBG3ODKsqBtFkHVD0qhm3Oa33uyUOdvNeRyIQzXSH9QJPXbJURqD\n" +
+        "TRNWmLG4eEIGIFCYyuaBSeCKrvPyiUXR0p9XQjOJVuCQPr8pfW483/BtlzAa6v3r\n" +
+        "jDOoB5v4FaC57HFt8aMrf/B3KGtH/PBpdRSAAIWAIwt9sbTq8nzhCIFhxJTiRWxQ\n" +
+        "uvSM40WEaUsmfpxU+tF2LJvWmNNbDDtEmbFsQQ==\n" +
+        "-----END CERTIFICATE-----";
+
+    // OCSP Response Status: successful (0x0)
+    // Response Type: Basic OCSP Response
+    // Version: 1 (0x0)
+    // Responder Id: O = TestPKI, CN = TestRoot
+    // Produced At: Aug 16 06:06:27 2019 GMT
+    // Responses:
+    // Certificate ID:
+    //   Hash Algorithm: sha1
+    //   Issuer Name Hash: 622C4B816C42E2E99FF41B5CED388DAA33A6B9B3
+    //   Issuer Key Hash: F058822E5040277805C97AE7778A86A4993837DB
+    //   Serial Number: 0100
+    // Cert Status: good
+    // This Update: Aug 16 06:06:27 2019 GMT
+    // Next Update: Aug 17 06:06:27 2019 GMT
+    static final String INT_CA_OCSP_PEM =
+        "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";
+
+    // OCSP Response Status: successful (0x0)
+    // Response Type: Basic OCSP Response
+    // Version: 1 (0x0)
+    // Responder Id: O = TestPKI, CN = CA1 Intermediate
+    // Produced At: Aug 16 05:03:09 2019 GMT
+    // Responses:
+    // Certificate ID:
+    //   Hash Algorithm: sha1
+    //   Issuer Name Hash: FE48D59BAF624773549AE209AA14FD20DCE6B8F4
+    //   Issuer Key Hash: 9ADA40D33E5BADA5C2ACDC48473A56335701A49A
+    //   Serial Number: 01000015
+    // Cert Status: good
+    // This Update: Aug 16 05:03:09 2019 GMT
+    // Next Update: Aug 17 05:03:09 2019 GMT
+    static final String GOOD_GUY_OCSP_PEM =
+        "MIIGfgoBAKCCBncwggZzBgkrBgEFBQcwAQEEggZkMIIGYDCB0KEvMC0xEDAOBgNV\n" +
+        "BAoMB1Rlc3RQS0kxGTAXBgNVBAMMEENBMSBJbnRlcm1lZGlhdGUYDzIwMTkwODE2\n" +
+        "MDUwMzA5WjBnMGUwPTAJBgUrDgMCGgUABBT+SNWbr2JHc1Sa4gmqFP0g3Oa49AQU\n" +
+        "mtpA0z5braXCrNxIRzpWM1cBpJoCBAEAABWAABgPMjAxOTA4MTYwNTAzMDlaoBEY\n" +
+        "DzIwMTkwODE3MDUwMzA5WqEjMCEwHwYJKwYBBQUHMAECBBIEEN087n3ef92+4d2K\n" +
+        "+XaudDUwDQYJKoZIhvcNAQELBQADggEBAErIOOkLGwbDWgrpl3lQbsnaoVY6YNYV\n" +
+        "x1bfJ89S8twBouei6a/HmAIDqUPmlVF7gm8sNvgANXuZGkWXmqadSpWxLA36ZT4d\n" +
+        "70iRLmdTaPnKVpUEO5dYMg7nWW+D4hp9wupkPaB3PsEPb4pwrcTOUH1FAi3pZ+hF\n" +
+        "oeNDaE3jHQGEz4dVK1XgK2pxFNf4aTIgj+w40xN5yaCcTYicbLmumNGCzrGwnRqh\n" +
+        "tyoiz27+rTxFrEeWGnNslJfScD9O4oe/KhvYBusurNVrFgG4VcxB5NNemrCW4/cf\n" +
+        "dehv8z50FaZvq1xklqkZ4hgbjNxtI8lAHp+wYDQJub0mhXWmb9K/4kOgggR1MIIE\n" +
+        "cTCCBG0wggJVoAMCAQICAgEAMA0GCSqGSIb3DQEBCwUAMCUxEDAOBgNVBAoMB1Rl\n" +
+        "c3RQS0kxETAPBgNVBAMMCFRlc3RSb290MB4XDTE1MDUwNjA2MDAwMFoXDTI1MDEy\n" +
+        "MTEyMDAwMFowLTEQMA4GA1UECgwHVGVzdFBLSTEZMBcGA1UEAwwQQ0ExIEludGVy\n" +
+        "bWVkaWF0ZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALXSowaXriSR\n" +
+        "L3YuMDBhxOcu4p17g7zAo5IxUb/Vzh9tAVQCAzEzHiAcpOjUCWHnmk0Rl02sGTfP\n" +
+        "3Gl7ULqrERs/6tr2vyPgORyL7bvr7o3VZLLtm2mnxjNEJfBnc4/DHSxm/pBhY4vx\n" +
+        "V3/tjy/FH6Z5lIpCze9vJRfW83ANOOiPAeN0q4hSXmDpSz3xP8ozYOXnHHTDwwcO\n" +
+        "4SkD1W136XJlkSZv7xpQkd/EXe3HmBd/3LX/9CfA2m+6vfCE6R/
