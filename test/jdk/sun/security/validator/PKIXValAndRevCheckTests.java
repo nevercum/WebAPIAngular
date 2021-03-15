@@ -402,4 +402,96 @@ public class PKIXValAndRevCheckTests {
         // setRevocationEnabled method set to false this should perform
         // revocation checking and catch the revoked certificate.
         pkixParams = new PKIXBuilderParameters(trustAnchors, null);
-        pkixParams.setDate(
+        pkixParams.setDate(VALID_DATE);
+        pkixParams.setRevocationEnabled(false);
+        pkrc = (PKIXRevocationChecker)cpv.getRevocationChecker();
+        pkrc.setOcspResponses(Map.of(badGuyCert, badOcspDer,
+                intCACert, intCAOcspDer));
+        pkixParams.addCertPathChecker(pkrc);
+        validatePath(badPath, Collections.emptyList(), pkixParams,
+                new CertPathValidatorException("Ouch!", null,
+                certFac.generateCertPath(List.of(badGuyCert, intCACert)), 0,
+                BasicReason.REVOKED));
+
+        // Test 5: This is the same basic setup as test 4, but instead of
+        // delivering the OCSP responses via the PKIXRevocationChecker use
+        // the third parameter (List<byte[]>) for the Validator.validate()
+        // call.  Revocation checking should be performed.
+        pkixParams = new PKIXBuilderParameters(trustAnchors, null);
+        pkixParams.setDate(VALID_DATE);
+        pkixParams.setRevocationEnabled(false);
+        pkrc = (PKIXRevocationChecker)cpv.getRevocationChecker();
+        pkixParams.addCertPathChecker(pkrc);
+        validatePath(badPath, badResponses, pkixParams,
+                new CertPathValidatorException("Ouch!", null,
+                certFac.generateCertPath(List.of(badGuyCert, intCACert)), 0,
+                BasicReason.REVOKED));
+    }
+
+    static void validatePath(X509Certificate[] path, List<byte[]> responses,
+            PKIXBuilderParameters params, Exception expectedExc) {
+        try {
+            Validator val = Validator.getInstance(Validator.TYPE_PKIX,
+                    Validator.VAR_TLS_SERVER, params);
+            val.validate(path, null, responses, null, "RSA");
+            if (expectedExc != null) {
+                // We expected to receive an exception here
+                throw new RuntimeException("Did not receive expected " +
+                        expectedExc.getClass().getName());
+            }
+        } catch (CertificateException certExc) {
+            if (expectedExc == null) {
+                // This test was supposed to pass, so wrap it in a Runtime
+                throw new RuntimeException("Received unexpected exception: ",
+                        certExc);
+            } else {
+                Throwable cause = certExc.getCause();
+                if (cause == null) {
+                    throw new RuntimeException("Missing expected cause: " +
+                            expectedExc.getClass().getName(),
+                            certExc);
+                } else {
+                    verifyCause(cause, expectedExc);
+                }
+            }
+        }
+    }
+
+    static void verifyCause(Throwable cause, Throwable expectedExc) {
+        if (cause.getClass() != expectedExc.getClass()) {
+            throw new RuntimeException("Exception class mismatch: expected = " +
+                    expectedExc.getClass().getName() + ", actual = " +
+                    cause.getClass().getName());
+        } else if (cause instanceof CertPathValidatorException) {
+            CertPathValidatorException actual =
+                    (CertPathValidatorException)cause;
+            CertPathValidatorException expected =
+                    (CertPathValidatorException)expectedExc;
+            // The failure index and reason should be the same
+            if (actual.getIndex() != expected.getIndex() ||
+                    actual.getReason() != expected.getReason()) {
+                throw new RuntimeException("CertPathValidatorException " +
+                        "differs from expected.  Expected: index = " +
+                        expected.getIndex() + ", reason = " +
+                        expected.getReason() + ", Actual: index = " +
+                        actual.getIndex() + ", reason = " +
+                        actual.getReason(), actual);
+            }
+        }
+    }
+
+    static X509Certificate getCert(CertificateFactory fac, String pemCert) {
+        try {
+            ByteArrayInputStream bais =
+                    new ByteArrayInputStream(pemCert.getBytes("UTF-8"));
+            return (X509Certificate)fac.generateCertificate(bais);
+        } catch (UnsupportedEncodingException | CertificateException exc) {
+            throw new RuntimeException(exc);
+        }
+    }
+
+    static byte[] pemToDer(String pemData) {
+        Base64.Decoder b64Dec = Base64.getMimeDecoder();
+        return b64Dec.decode(pemData);
+    }
+}
