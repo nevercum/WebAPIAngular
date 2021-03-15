@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,31 +23,22 @@
  * questions.
  */
 
+package java.util;
 
-/*
- * The Original Code is HAT. The Initial Developer of the
- * Original Code is Bill Foote, with contributions from others
- * at JavaSoft/Sun.
- */
-
-package jdk.test.lib.hprof.model;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import sun.util.locale.provider.CalendarDataUtility;
+import sun.util.calendar.BaseCalendar;
+import sun.util.calendar.CalendarDate;
+import sun.util.calendar.CalendarSystem;
+import sun.util.calendar.CalendarUtils;
+import sun.util.calendar.Era;
+import sun.util.calendar.Gregorian;
+import sun.util.calendar.LocalGregorianCalendar;
+import sun.util.calendar.ZoneInfo;
 
 /**
- * Represents a float (i.e. a float field in an instance).
+ * {@code JapaneseImperialCalendar} implements a Japanese
+ * calendar system in which the imperial era-based year numbering is
+ * supported from the Meiji era. The following are the eras supported
  *
- * @author      Bill Foote
- */
-
-
-public class JavaFloat extends JavaValue {
-
-    float value;
-
-    public JavaFloat(float value) {
-        this.value = value;
-    }
-
-    public String toString() {
-        return Float.toString(value);
-    }
-}

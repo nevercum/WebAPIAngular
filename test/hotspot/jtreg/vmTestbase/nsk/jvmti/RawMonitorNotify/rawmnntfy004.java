@@ -1,12 +1,10 @@
 /*
- * Copyright (c) 1997, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,31 +21,35 @@
  * questions.
  */
 
+package nsk.jvmti.RawMonitorNotify;
 
-/*
- * The Original Code is HAT. The Initial Developer of the
- * Original Code is Bill Foote, with contributions from others
- * at JavaSoft/Sun.
- */
+import java.io.PrintStream;
 
-package jdk.test.lib.hprof.model;
+public class rawmnntfy004 {
 
-/**
- * Represents a float (i.e. a float field in an instance).
- *
- * @author      Bill Foote
- */
+    final static int JCK_STATUS_BASE = 95;
 
-
-public class JavaFloat extends JavaValue {
-
-    float value;
-
-    public JavaFloat(float value) {
-        this.value = value;
+    static {
+        try {
+            System.loadLibrary("rawmnntfy004");
+        } catch (UnsatisfiedLinkError ule) {
+            System.err.println("Could not load rawmnntfy004 library");
+            System.err.println("java.library.path:"
+                + System.getProperty("java.library.path"));
+            throw ule;
+        }
     }
 
-    public String toString() {
-        return Float.toString(value);
+    native static int check();
+
+    public static void main(String args[]) {
+        args = nsk.share.jvmti.JVMTITest.commonInit(args);
+
+        // produce JCK-like exit status.
+        System.exit(run(args, System.out) + JCK_STATUS_BASE);
+    }
+
+    public static int run(String args[], PrintStream out) {
+        return check();
     }
 }
