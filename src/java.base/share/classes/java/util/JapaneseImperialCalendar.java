@@ -227,4 +227,205 @@ class JapaneseImperialCalendar extends Calendar {
         59,             // SECOND
         999,            // MILLISECOND
         14*ONE_HOUR,    // ZONE_OFFSET
-        20*ONE_M
+        20*ONE_MINUTE   // DST_OFFSET (historical least maximum)
+    };
+    static final int MAX_VALUES[] = {
+        0,              // ERA
+        292278994,      // YEAR
+        DECEMBER,       // MONTH
+        53,             // WEEK_OF_YEAR
+        6,              // WEEK_OF_MONTH
+        31,             // DAY_OF_MONTH
+        366,            // DAY_OF_YEAR
+        SATURDAY,       // DAY_OF_WEEK
+        6,              // DAY_OF_WEEK_IN
+        PM,             // AM_PM
+        11,             // HOUR
+        23,             // HOUR_OF_DAY
+        59,             // MINUTE
+        59,             // SECOND
+        999,            // MILLISECOND
+        14*ONE_HOUR,    // ZONE_OFFSET
+        2*ONE_HOUR      // DST_OFFSET (double summer time)
+    };
+
+    // Proclaim serialization compatibility with JDK 1.6
+    @SuppressWarnings("FieldNameHidesFieldInSuperclass")
+    @java.io.Serial
+    private static final long serialVersionUID = -3364572813905467929L;
+
+    static {
+        Era[] es = jcal.getEras();
+        int length = es.length + 1;
+        eras = new Era[length];
+        sinceFixedDates = new long[length];
+
+        // eras[BEFORE_MEIJI] and sinceFixedDate[BEFORE_MEIJI] are the
+        // same as Gregorian.
+        int index = BEFORE_MEIJI;
+        int current = index;
+        sinceFixedDates[index] = gcal.getFixedDate(BEFORE_MEIJI_ERA.getSinceDate());
+        eras[index++] = BEFORE_MEIJI_ERA;
+        for (Era e : es) {
+            if(e.getSince(TimeZone.NO_TIMEZONE) < System.currentTimeMillis()) {
+                current = index;
+            }
+            CalendarDate d = e.getSinceDate();
+            sinceFixedDates[index] = gcal.getFixedDate(d);
+            eras[index++] = e;
+        }
+        currentEra = current;
+
+        LEAST_MAX_VALUES[ERA] = MAX_VALUES[ERA] = eras.length - 1;
+
+        // Calculate the least maximum year and least day of Year
+        // values. The following code assumes that there's at most one
+        // era transition in a Gregorian year.
+        int year = Integer.MAX_VALUE;
+        int dayOfYear = Integer.MAX_VALUE;
+        CalendarDate date = gcal.newCalendarDate(TimeZone.NO_TIMEZONE);
+        for (int i = 1; i < eras.length; i++) {
+            long fd = sinceFixedDates[i];
+            CalendarDate transitionDate = eras[i].getSinceDate();
+            date.setDate(transitionDate.getYear(), BaseCalendar.JANUARY, 1);
+            long fdd = gcal.getFixedDate(date);
+            if (fd != fdd) {
+                dayOfYear = Math.min((int)(fd - fdd) + 1, dayOfYear);
+            }
+            date.setDate(transitionDate.getYear(), BaseCalendar.DECEMBER, 31);
+            fdd = gcal.getFixedDate(date);
+            if (fd != fdd) {
+                dayOfYear = Math.min((int)(fdd - fd) + 1, dayOfYear);
+            }
+            LocalGregorianCalendar.Date lgd = getCalendarDate(fd - 1);
+            int y = lgd.getYear();
+            // Unless the first year starts from January 1, the actual
+            // max value could be one year short. For example, if it's
+            // Showa 63 January 8, 63 is the actual max value since
+            // Showa 64 January 8 doesn't exist.
+            if (!(lgd.getMonth() == BaseCalendar.JANUARY && lgd.getDayOfMonth() == 1)) {
+                y--;
+            }
+            year = Math.min(y, year);
+        }
+        LEAST_MAX_VALUES[YEAR] = year; // Max year could be smaller than this value.
+        LEAST_MAX_VALUES[DAY_OF_YEAR] = dayOfYear;
+    }
+
+    /**
+     * jdate always has a sun.util.calendar.LocalGregorianCalendar.Date instance to
+     * avoid overhead of creating it for each calculation.
+     */
+    private transient LocalGregorianCalendar.Date jdate;
+
+    /**
+     * Temporary int[2] to get time zone offsets. zoneOffsets[0] gets
+     * the GMT offset value and zoneOffsets[1] gets the daylight saving
+     * value.
+     */
+    private transient int[] zoneOffsets;
+
+    /**
+     * Temporary storage for saving original fields[] values in
+     * non-lenient mode.
+     */
+    private transient int[] originalFields;
+
+    /**
+     * Constructs a {@code JapaneseImperialCalendar} based on the current time
+     * in the given time zone with the given locale.
+     *
+     * @param zone the given time zone.
+     * @param aLocale the given locale.
+     */
+    JapaneseImperialCalendar(TimeZone zone, Locale aLocale) {
+        super(zone, aLocale);
+        jdate = jcal.newCalendarDate(zone);
+        setTimeInMillis(System.currentTimeMillis());
+    }
+
+    /**
+     * Constructs an "empty" {@code JapaneseImperialCalendar}.
+     *
+     * @param zone    the given time zone
+     * @param aLocale the given locale
+     * @param flag    the flag requesting an empty instance
+     */
+    JapaneseImperialCalendar(TimeZone zone, Locale aLocale, boolean flag) {
+        super(zone, aLocale);
+        jdate = jcal.newCalendarDate(zone);
+    }
+
+    /**
+     * Returns {@code "japanese"} as the calendar type of this {@code
+     * JapaneseImperialCalendar}.
+     *
+     * @return {@code "japanese"}
+     */
+    @Override
+    public String getCalendarType() {
+        return "japanese";
+    }
+
+    /**
+     * Compares this {@code JapaneseImperialCalendar} to the specified
+     * {@code Object}. The result is {@code true} if and
+     * only if the argument is a {@code JapaneseImperialCalendar} object
+     * that represents the same time value (millisecond offset from
+     * the <a href="Calendar.html#Epoch">Epoch</a>) under the same
+     * {@code Calendar} parameters.
+     *
+     * @param obj the object to compare with.
+     * @return {@code true} if this object is equal to {@code obj};
+     * {@code false} otherwise.
+     * @see Calendar#compareTo(Calendar)
+     */
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof JapaneseImperialCalendar &&
+            super.equals(obj);
+    }
+
+    /**
+     * Generates the hash code for this
+     * {@code JapaneseImperialCalendar} object.
+     */
+    @Override
+    public int hashCode() {
+        return super.hashCode() ^ jdate.hashCode();
+    }
+
+    /**
+     * Adds the specified (signed) amount of time to the given calendar field,
+     * based on the calendar's rules.
+     *
+     * <p><em>Add rule 1</em>. The value of {@code field}
+     * after the call minus the value of {@code field} before the
+     * call is {@code amount}, modulo any overflow that has occurred in
+     * {@code field}. Overflow occurs when a field value exceeds its
+     * range and, as a result, the next larger field is incremented or
+     * decremented and the field value is adjusted back into its range.</p>
+     *
+     * <p><em>Add rule 2</em>. If a smaller field is expected to be
+     * invariant, but it is impossible for it to be equal to its
+     * prior value because of changes in its minimum or maximum after
+     * {@code field} is changed, then its value is adjusted to be as close
+     * as possible to its expected value. A smaller field represents a
+     * smaller unit of time. {@code HOUR} is a smaller field than
+     * {@code DAY_OF_MONTH}. No adjustment is made to smaller fields
+     * that are not expected to be invariant. The calendar system
+     * determines what fields are expected to be invariant.</p>
+     *
+     * @param field the calendar field.
+     * @param amount the amount of date or time to be added to the field.
+     * @throws    IllegalArgumentException if {@code field} is
+     * {@code ZONE_OFFSET}, {@code DST_OFFSET}, or unknown,
+     * or if any calendar fields have out-of-range values in
+     * non-lenient mode.
+     */
+    @Override
+    public void add(int field, int amount) {
+        // If amount == 0, do nothing even the given field is out of
+        // range. This is tested by JCK.
+        if (amount == 0) {
+            return;   //
