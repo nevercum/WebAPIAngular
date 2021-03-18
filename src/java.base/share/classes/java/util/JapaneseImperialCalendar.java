@@ -428,4 +428,212 @@ class JapaneseImperialCalendar extends Calendar {
         // If amount == 0, do nothing even the given field is out of
         // range. This is tested by JCK.
         if (amount == 0) {
-            return;   //
+            return;   // Do nothing!
+        }
+
+        if (field < 0 || field >= ZONE_OFFSET) {
+            throw new IllegalArgumentException();
+        }
+
+        // Sync the time and calendar fields.
+        complete();
+
+        if (field == YEAR) {
+            LocalGregorianCalendar.Date d = (LocalGregorianCalendar.Date) jdate.clone();
+            d.addYear(amount);
+            pinDayOfMonth(d);
+            set(ERA, getEraIndex(d));
+            set(YEAR, d.getYear());
+            set(MONTH, d.getMonth() - 1);
+            set(DAY_OF_MONTH, d.getDayOfMonth());
+        } else if (field == MONTH) {
+            LocalGregorianCalendar.Date d = (LocalGregorianCalendar.Date) jdate.clone();
+            d.addMonth(amount);
+            pinDayOfMonth(d);
+            set(ERA, getEraIndex(d));
+            set(YEAR, d.getYear());
+            set(MONTH, d.getMonth() - 1);
+            set(DAY_OF_MONTH, d.getDayOfMonth());
+        } else if (field == ERA) {
+            int era = internalGet(ERA) + amount;
+            if (era < 0) {
+                era = 0;
+            } else if (era > eras.length - 1) {
+                era = eras.length - 1;
+            }
+            set(ERA, era);
+        } else {
+            long delta = amount;
+            long timeOfDay = 0;
+            switch (field) {
+            // Handle the time fields here. Convert the given
+            // amount to milliseconds and call setTimeInMillis.
+            case HOUR:
+            case HOUR_OF_DAY:
+                delta *= 60 * 60 * 1000;        // hours to milliseconds
+                break;
+
+            case MINUTE:
+                delta *= 60 * 1000;             // minutes to milliseconds
+                break;
+
+            case SECOND:
+                delta *= 1000;                  // seconds to milliseconds
+                break;
+
+            case MILLISECOND:
+                break;
+
+            // Handle week, day and AM_PM fields which involves
+            // time zone offset change adjustment. Convert the
+            // given amount to the number of days.
+            case WEEK_OF_YEAR:
+            case WEEK_OF_MONTH:
+            case DAY_OF_WEEK_IN_MONTH:
+                delta *= 7;
+                break;
+
+            case DAY_OF_MONTH: // synonym of DATE
+            case DAY_OF_YEAR:
+            case DAY_OF_WEEK:
+                break;
+
+            case AM_PM:
+                // Convert the amount to the number of days (delta)
+                // and +12 or -12 hours (timeOfDay).
+                delta = amount / 2;
+                timeOfDay = 12 * (amount % 2);
+                break;
+            }
+
+            // The time fields don't require time zone offset change
+            // adjustment.
+            if (field >= HOUR) {
+                setTimeInMillis(time + delta);
+                return;
+            }
+
+            // The rest of the fields (week, day or AM_PM fields)
+            // require time zone offset (both GMT and DST) change
+            // adjustment.
+
+            // Translate the current time to the fixed date and time
+            // of the day.
+            long fd = cachedFixedDate;
+            timeOfDay += internalGet(HOUR_OF_DAY);
+            timeOfDay *= 60;
+            timeOfDay += internalGet(MINUTE);
+            timeOfDay *= 60;
+            timeOfDay += internalGet(SECOND);
+            timeOfDay *= 1000;
+            timeOfDay += internalGet(MILLISECOND);
+            if (timeOfDay >= ONE_DAY) {
+                fd++;
+                timeOfDay -= ONE_DAY;
+            } else if (timeOfDay < 0) {
+                fd--;
+                timeOfDay += ONE_DAY;
+            }
+
+            fd += delta; // fd is the expected fixed date after the calculation
+            int zoneOffset = internalGet(ZONE_OFFSET) + internalGet(DST_OFFSET);
+            setTimeInMillis((fd - EPOCH_OFFSET) * ONE_DAY + timeOfDay - zoneOffset);
+            zoneOffset -= internalGet(ZONE_OFFSET) + internalGet(DST_OFFSET);
+            // If the time zone offset has changed, then adjust the difference.
+            if (zoneOffset != 0) {
+                setTimeInMillis(time + zoneOffset);
+                long fd2 = cachedFixedDate;
+                // If the adjustment has changed the date, then take
+                // the previous one.
+                if (fd2 != fd) {
+                    setTimeInMillis(time - zoneOffset);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void roll(int field, boolean up) {
+        roll(field, up ? +1 : -1);
+    }
+
+    /**
+     * Adds a signed amount to the specified calendar field without changing larger fields.
+     * A negative roll amount means to subtract from field without changing
+     * larger fields. If the specified amount is 0, this method performs nothing.
+     *
+     * <p>This method calls {@link #complete()} before adding the
+     * amount so that all the calendar fields are normalized. If there
+     * is any calendar field having an out-of-range value in non-lenient mode, then an
+     * {@code IllegalArgumentException} is thrown.
+     *
+     * @param field the calendar field.
+     * @param amount the signed amount to add to {@code field}.
+     * @throws    IllegalArgumentException if {@code field} is
+     * {@code ZONE_OFFSET}, {@code DST_OFFSET}, or unknown,
+     * or if any calendar fields have out-of-range values in
+     * non-lenient mode.
+     * @see #roll(int,boolean)
+     * @see #add(int,int)
+     * @see #set(int,int)
+     */
+    @Override
+    public void roll(int field, int amount) {
+        // If amount == 0, do nothing even the given field is out of
+        // range. This is tested by JCK.
+        if (amount == 0) {
+            return;
+        }
+
+        if (field < 0 || field >= ZONE_OFFSET) {
+            throw new IllegalArgumentException();
+        }
+
+        // Sync the time and calendar fields.
+        complete();
+
+        int min = getMinimum(field);
+        int max = getMaximum(field);
+
+        switch (field) {
+        case ERA:
+        case AM_PM:
+        case MINUTE:
+        case SECOND:
+        case MILLISECOND:
+            // These fields are handled simply, since they have fixed
+            // minima and maxima. Other fields are complicated, since
+            // the range within they must roll varies depending on the
+            // date, a time zone and the era transitions.
+            break;
+
+        case HOUR:
+        case HOUR_OF_DAY:
+            {
+                int unit = max + 1; // 12 or 24 hours
+                int h = internalGet(field);
+                int nh = (h + amount) % unit;
+                if (nh < 0) {
+                    nh += unit;
+                }
+                time += ONE_HOUR * (nh - h);
+
+                // The day might have changed, which could happen if
+                // the daylight saving time transition brings it to
+                // the next day, although it's very unlikely. But we
+                // have to make sure not to change the larger fields.
+                CalendarDate d = jcal.getCalendarDate(time, getZone());
+                if (internalGet(DAY_OF_MONTH) != d.getDayOfMonth()) {
+                    d.setEra(jdate.getEra());
+                    d.setDate(internalGet(YEAR),
+                              internalGet(MONTH) + 1,
+                              internalGet(DAY_OF_MONTH));
+                    if (field == HOUR) {
+                        assert (internalGet(AM_PM) == PM);
+                        d.addHours(+12); // restore PM
+                    }
+                    time = jcal.getTime(d);
+                }
+                int hourOfDay = d.getHours();
+                internalSet(field, hourOfDay % unit);
+                if (field
