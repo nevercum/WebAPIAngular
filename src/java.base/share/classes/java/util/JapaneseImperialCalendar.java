@@ -636,4 +636,159 @@ class JapaneseImperialCalendar extends Calendar {
                 }
                 int hourOfDay = d.getHours();
                 internalSet(field, hourOfDay % unit);
-                if (field
+                if (field == HOUR) {
+                    internalSet(HOUR_OF_DAY, hourOfDay);
+                } else {
+                    internalSet(AM_PM, hourOfDay / 12);
+                    internalSet(HOUR, hourOfDay % 12);
+                }
+
+                // Time zone offset and/or daylight saving might have changed.
+                int zoneOffset = d.getZoneOffset();
+                int saving = d.getDaylightSaving();
+                internalSet(ZONE_OFFSET, zoneOffset - saving);
+                internalSet(DST_OFFSET, saving);
+                return;
+            }
+
+        case YEAR:
+            min = getActualMinimum(field);
+            max = getActualMaximum(field);
+            break;
+
+        case MONTH:
+            // Rolling the month involves both pinning the final value to [0, 11]
+            // and adjusting the DAY_OF_MONTH if necessary.  We only adjust the
+            // DAY_OF_MONTH if, after updating the MONTH field, it is illegal.
+            // E.g., <jan31>.roll(MONTH, 1) -> <feb28> or <feb29>.
+            {
+                if (!isTransitionYear(jdate.getNormalizedYear())) {
+                    int year = jdate.getYear();
+                    if (year == getMaximum(YEAR)) {
+                        CalendarDate jd = jcal.getCalendarDate(time, getZone());
+                        CalendarDate d = jcal.getCalendarDate(Long.MAX_VALUE, getZone());
+                        max = d.getMonth() - 1;
+                        int n = getRolledValue(internalGet(field), amount, min, max);
+                        if (n == max) {
+                            // To avoid overflow, use an equivalent year.
+                            jd.addYear(-400);
+                            jd.setMonth(n + 1);
+                            if (jd.getDayOfMonth() > d.getDayOfMonth()) {
+                                jd.setDayOfMonth(d.getDayOfMonth());
+                                jcal.normalize(jd);
+                            }
+                            if (jd.getDayOfMonth() == d.getDayOfMonth()
+                                && jd.getTimeOfDay() > d.getTimeOfDay()) {
+                                jd.setMonth(n + 1);
+                                jd.setDayOfMonth(d.getDayOfMonth() - 1);
+                                jcal.normalize(jd);
+                                // Month may have changed by the normalization.
+                                n = jd.getMonth() - 1;
+                            }
+                            set(DAY_OF_MONTH, jd.getDayOfMonth());
+                        }
+                        set(MONTH, n);
+                    } else if (year == getMinimum(YEAR)) {
+                        CalendarDate jd = jcal.getCalendarDate(time, getZone());
+                        CalendarDate d = jcal.getCalendarDate(Long.MIN_VALUE, getZone());
+                        min = d.getMonth() - 1;
+                        int n = getRolledValue(internalGet(field), amount, min, max);
+                        if (n == min) {
+                            // To avoid underflow, use an equivalent year.
+                            jd.addYear(+400);
+                            jd.setMonth(n + 1);
+                            if (jd.getDayOfMonth() < d.getDayOfMonth()) {
+                                jd.setDayOfMonth(d.getDayOfMonth());
+                                jcal.normalize(jd);
+                            }
+                            if (jd.getDayOfMonth() == d.getDayOfMonth()
+                                && jd.getTimeOfDay() < d.getTimeOfDay()) {
+                                jd.setMonth(n + 1);
+                                jd.setDayOfMonth(d.getDayOfMonth() + 1);
+                                jcal.normalize(jd);
+                                // Month may have changed by the normalization.
+                                n = jd.getMonth() - 1;
+                            }
+                            set(DAY_OF_MONTH, jd.getDayOfMonth());
+                        }
+                        set(MONTH, n);
+                    } else {
+                        int mon = (internalGet(MONTH) + amount) % 12;
+                        if (mon < 0) {
+                            mon += 12;
+                        }
+                        set(MONTH, mon);
+
+                        // Keep the day of month in the range.  We
+                        // don't want to spill over into the next
+                        // month; e.g., we don't want jan31 + 1 mo ->
+                        // feb31 -> mar3.
+                        int monthLen = monthLength(mon);
+                        if (internalGet(DAY_OF_MONTH) > monthLen) {
+                            set(DAY_OF_MONTH, monthLen);
+                        }
+                    }
+                } else {
+                    int eraIndex = getEraIndex(jdate);
+                    CalendarDate transition = null;
+                    if (jdate.getYear() == 1) {
+                        transition = eras[eraIndex].getSinceDate();
+                        min = transition.getMonth() - 1;
+                    } else {
+                        if (eraIndex < eras.length - 1) {
+                            transition = eras[eraIndex + 1].getSinceDate();
+                            if (transition.getYear() == jdate.getNormalizedYear()) {
+                                max = transition.getMonth() - 1;
+                                if (transition.getDayOfMonth() == 1) {
+                                    max--;
+                                }
+                            }
+                        }
+                    }
+
+                    if (min == max) {
+                        // The year has only one month. No need to
+                        // process further. (Showa Gan-nen (year 1)
+                        // and the last year have only one month.)
+                        return;
+                    }
+                    int n = getRolledValue(internalGet(field), amount, min, max);
+                    set(MONTH, n);
+                    if (n == min) {
+                        if (!(transition.getMonth() == BaseCalendar.JANUARY
+                              && transition.getDayOfMonth() == 1)) {
+                            if (jdate.getDayOfMonth() < transition.getDayOfMonth()) {
+                                set(DAY_OF_MONTH, transition.getDayOfMonth());
+                            }
+                        }
+                    } else if (n == max && (transition.getMonth() - 1 == n)) {
+                        int dom = transition.getDayOfMonth();
+                        if (jdate.getDayOfMonth() >= dom) {
+                            set(DAY_OF_MONTH, dom - 1);
+                        }
+                    }
+                }
+                return;
+            }
+
+        case WEEK_OF_YEAR:
+            {
+                int y = jdate.getNormalizedYear();
+                max = getActualMaximum(WEEK_OF_YEAR);
+                set(DAY_OF_WEEK, internalGet(DAY_OF_WEEK)); // update stamp[field]
+                int woy = internalGet(WEEK_OF_YEAR);
+                int value = woy + amount;
+                if (!isTransitionYear(jdate.getNormalizedYear())) {
+                    int year = jdate.getYear();
+                    if (year == getMaximum(YEAR)) {
+                        max = getActualMaximum(WEEK_OF_YEAR);
+                    } else if (year == getMinimum(YEAR)) {
+                        min = getActualMinimum(WEEK_OF_YEAR);
+                        max = getActualMaximum(WEEK_OF_YEAR);
+                        if (value > min && value < max) {
+                            set(WEEK_OF_YEAR, value);
+                            return;
+                        }
+
+                    }
+                   
