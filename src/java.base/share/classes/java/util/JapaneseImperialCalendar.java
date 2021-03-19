@@ -960,4 +960,186 @@ class JapaneseImperialCalendar extends Calendar {
                 fd += amount;
                 if (fd < dowFirst) {
                     fd += 7;
-                } e
+                } else if (fd >= dowFirst + 7) {
+                    fd -= 7;
+                }
+                LocalGregorianCalendar.Date d = getCalendarDate(fd);
+                set(ERA, getEraIndex(d));
+                set(d.getYear(), d.getMonth() - 1, d.getDayOfMonth());
+                return;
+            }
+
+        case DAY_OF_WEEK_IN_MONTH:
+            {
+                min = 1; // after having normalized, min should be 1.
+                if (!isTransitionYear(jdate.getNormalizedYear())) {
+                    int dom = internalGet(DAY_OF_MONTH);
+                    int monthLength = jcal.getMonthLength(jdate);
+                    int lastDays = monthLength % 7;
+                    max = monthLength / 7;
+                    int x = (dom - 1) % 7;
+                    if (x < lastDays) {
+                        max++;
+                    }
+                    set(DAY_OF_WEEK, internalGet(DAY_OF_WEEK));
+                    break;
+                }
+
+                // Transition year handling.
+                long fd = cachedFixedDate;
+                long month1 = getFixedDateMonth1(jdate, fd);
+                int monthLength = actualMonthLength();
+                int lastDays = monthLength % 7;
+                max = monthLength / 7;
+                int x = (int)(fd - month1) % 7;
+                if (x < lastDays) {
+                    max++;
+                }
+                int value = getRolledValue(internalGet(field), amount, min, max) - 1;
+                fd = month1 + value * 7 + x;
+                LocalGregorianCalendar.Date d = getCalendarDate(fd);
+                set(DAY_OF_MONTH, d.getDayOfMonth());
+                return;
+            }
+        }
+
+        set(field, getRolledValue(internalGet(field), amount, min, max));
+    }
+
+    @Override
+    public String getDisplayName(int field, int style, Locale locale) {
+        if (!checkDisplayNameParams(field, style, SHORT, NARROW_FORMAT, locale,
+                                    ERA_MASK|YEAR_MASK|MONTH_MASK|DAY_OF_WEEK_MASK|AM_PM_MASK)) {
+            return null;
+        }
+
+        int fieldValue = get(field);
+
+        // "GanNen" is supported only in the LONG style.
+        if (field == YEAR
+            && (getBaseStyle(style) != LONG || fieldValue != 1 || get(ERA) == 0)) {
+            return null;
+        }
+
+        String name = CalendarDataUtility.retrieveFieldValueName(getCalendarType(), field,
+                                                                 fieldValue, style, locale);
+        // If the ERA value is null or empty, then
+        // try to get its name or abbreviation from the Era instance.
+        if ((name == null || name.isEmpty()) &&
+                field == ERA &&
+                fieldValue < eras.length) {
+            Era era = eras[fieldValue];
+            name = (style == SHORT) ? era.getAbbreviation() : era.getName();
+        }
+        return name;
+    }
+
+    @Override
+    public Map<String,Integer> getDisplayNames(int field, int style, Locale locale) {
+        if (!checkDisplayNameParams(field, style, ALL_STYLES, NARROW_FORMAT, locale,
+                                    ERA_MASK|YEAR_MASK|MONTH_MASK|DAY_OF_WEEK_MASK|AM_PM_MASK)) {
+            return null;
+        }
+        Map<String, Integer> names;
+        names = CalendarDataUtility.retrieveFieldValueNames(getCalendarType(), field, style, locale);
+        // If strings[] has fewer than eras[], get more names from eras[].
+        if (names != null) {
+            if (field == ERA) {
+                int size = names.size();
+                if (style == ALL_STYLES) {
+                    Set<Integer> values = new HashSet<>();
+                    // count unique era values
+                    for (String key : names.keySet()) {
+                        values.add(names.get(key));
+                    }
+                    size = values.size();
+                }
+                if (size < eras.length) {
+                    int baseStyle = getBaseStyle(style);
+                    for (int i = 0; i < eras.length; i++) {
+                        if (!names.values().contains(i)) {
+                            Era era = eras[i];
+                            if (baseStyle == ALL_STYLES || baseStyle == SHORT
+                                    || baseStyle == NARROW_FORMAT) {
+                                names.put(era.getAbbreviation(), i);
+                            }
+                            if (baseStyle == ALL_STYLES || baseStyle == LONG) {
+                                names.put(era.getName(), i);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return names;
+    }
+
+    /**
+     * Returns the minimum value for the given calendar field of this
+     * {@code Calendar} instance. The minimum value is
+     * defined as the smallest value returned by the
+     * {@link Calendar#get(int) get} method for any possible time value,
+     * taking into consideration the current values of the
+     * {@link Calendar#getFirstDayOfWeek() getFirstDayOfWeek},
+     * {@link Calendar#getMinimalDaysInFirstWeek() getMinimalDaysInFirstWeek},
+     * and {@link Calendar#getTimeZone() getTimeZone} methods.
+     *
+     * @param field the calendar field.
+     * @return the minimum value for the given calendar field.
+     * @see #getMaximum(int)
+     * @see #getGreatestMinimum(int)
+     * @see #getLeastMaximum(int)
+     * @see #getActualMinimum(int)
+     * @see #getActualMaximum(int)
+     */
+    public int getMinimum(int field) {
+        return MIN_VALUES[field];
+    }
+
+    /**
+     * Returns the maximum value for the given calendar field of this
+     * {@code GregorianCalendar} instance. The maximum value is
+     * defined as the largest value returned by the
+     * {@link Calendar#get(int) get} method for any possible time value,
+     * taking into consideration the current values of the
+     * {@link Calendar#getFirstDayOfWeek() getFirstDayOfWeek},
+     * {@link Calendar#getMinimalDaysInFirstWeek() getMinimalDaysInFirstWeek},
+     * and {@link Calendar#getTimeZone() getTimeZone} methods.
+     *
+     * @param field the calendar field.
+     * @return the maximum value for the given calendar field.
+     * @see #getMinimum(int)
+     * @see #getGreatestMinimum(int)
+     * @see #getLeastMaximum(int)
+     * @see #getActualMinimum(int)
+     * @see #getActualMaximum(int)
+     */
+    public int getMaximum(int field) {
+        return switch (field) {
+            case YEAR -> {
+                // The value should depend on the time zone of this calendar.
+                LocalGregorianCalendar.Date d = jcal.getCalendarDate(Long.MAX_VALUE, getZone());
+                yield Math.max(LEAST_MAX_VALUES[YEAR], d.getYear());
+            }
+            default -> MAX_VALUES[field];
+        };
+    }
+
+    /**
+     * Returns the highest minimum value for the given calendar field
+     * of this {@code GregorianCalendar} instance. The highest
+     * minimum value is defined as the largest value returned by
+     * {@link #getActualMinimum(int)} for any possible time value,
+     * taking into consideration the current values of the
+     * {@link Calendar#getFirstDayOfWeek() getFirstDayOfWeek},
+     * {@link Calendar#getMinimalDaysInFirstWeek() getMinimalDaysInFirstWeek},
+     * and {@link Calendar#getTimeZone() getTimeZone} methods.
+     *
+     * @param field the calendar field.
+     * @return the highest minimum value for the given calendar field.
+     * @see #getMinimum(int)
+     * @see #getMaximum(int)
+     * @see #getLeastMaximum(int)
+     * @see #getActualMinimum(int)
+     * @see #getActualMaximum(int)
+ 
