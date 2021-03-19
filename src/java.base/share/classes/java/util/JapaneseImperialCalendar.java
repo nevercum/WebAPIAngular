@@ -791,4 +791,173 @@ class JapaneseImperialCalendar extends Calendar {
                         }
 
                     }
-                   
+                    // If the new value is in between min and max
+                    // (exclusive), then we can use the value.
+                    if (value > min && value < max) {
+                        set(WEEK_OF_YEAR, value);
+                        return;
+                    }
+                    long fd = cachedFixedDate;
+                    // Make sure that the min week has the current DAY_OF_WEEK
+                    long day1 = fd - (7 * (woy - min));
+                    if (year != getMinimum(YEAR)) {
+                        if (gcal.getYearFromFixedDate(day1) != y) {
+                            min++;
+                        }
+                    } else {
+                        CalendarDate d = jcal.getCalendarDate(Long.MIN_VALUE, getZone());
+                        if (day1 < jcal.getFixedDate(d)) {
+                            min++;
+                        }
+                    }
+
+                    // Make sure the same thing for the max week
+                    fd += 7 * (max - internalGet(WEEK_OF_YEAR));
+                    if (gcal.getYearFromFixedDate(fd) != y) {
+                        max--;
+                    }
+                    break;
+                }
+
+                // Handle transition here.
+                long fd = cachedFixedDate;
+                long day1 = fd - (7 * (woy - min));
+                // Make sure that the min week has the current DAY_OF_WEEK
+                LocalGregorianCalendar.Date d = getCalendarDate(day1);
+                if (!(d.getEra() == jdate.getEra() && d.getYear() == jdate.getYear())) {
+                    min++;
+                }
+
+                // Make sure the same thing for the max week
+                fd += 7 * (max - woy);
+                jcal.getCalendarDateFromFixedDate(d, fd);
+                if (!(d.getEra() == jdate.getEra() && d.getYear() == jdate.getYear())) {
+                    max--;
+                }
+                // value: the new WEEK_OF_YEAR which must be converted
+                // to month and day of month.
+                value = getRolledValue(woy, amount, min, max) - 1;
+                d = getCalendarDate(day1 + value * 7);
+                set(MONTH, d.getMonth() - 1);
+                set(DAY_OF_MONTH, d.getDayOfMonth());
+                return;
+            }
+
+        case WEEK_OF_MONTH:
+            {
+                boolean isTransitionYear = isTransitionYear(jdate.getNormalizedYear());
+                // dow: relative day of week from the first day of week
+                int dow = internalGet(DAY_OF_WEEK) - getFirstDayOfWeek();
+                if (dow < 0) {
+                    dow += 7;
+                }
+
+                long fd = cachedFixedDate;
+                long month1;     // fixed date of the first day (usually 1) of the month
+                int monthLength; // actual month length
+                if (isTransitionYear) {
+                    month1 = getFixedDateMonth1(jdate, fd);
+                    monthLength = actualMonthLength();
+                } else {
+                    month1 = fd - internalGet(DAY_OF_MONTH) + 1;
+                    monthLength = jcal.getMonthLength(jdate);
+                }
+
+                // the first day of week of the month.
+                long monthDay1st = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(month1 + 6,
+                                                                                     getFirstDayOfWeek());
+                // if the week has enough days to form a week, the
+                // week starts from the previous month.
+                if ((int)(monthDay1st - month1) >= getMinimalDaysInFirstWeek()) {
+                    monthDay1st -= 7;
+                }
+                max = getActualMaximum(field);
+
+                // value: the new WEEK_OF_MONTH value
+                int value = getRolledValue(internalGet(field), amount, 1, max) - 1;
+
+                // nfd: fixed date of the rolled date
+                long nfd = monthDay1st + value * 7 + dow;
+
+                // Unlike WEEK_OF_YEAR, we need to change day of week if the
+                // nfd is out of the month.
+                if (nfd < month1) {
+                    nfd = month1;
+                } else if (nfd >= (month1 + monthLength)) {
+                    nfd = month1 + monthLength - 1;
+                }
+                set(DAY_OF_MONTH, getCalendarDate(nfd).getDayOfMonth());
+                return;
+            }
+
+        case DAY_OF_MONTH:
+            {
+                if (!isTransitionYear(jdate.getNormalizedYear())) {
+                    max = jcal.getMonthLength(jdate);
+                    break;
+                }
+
+                // TODO: Need to change the spec to be usable DAY_OF_MONTH rolling...
+
+                // Transition handling. We can't change year and era
+                // values here due to the Calendar roll spec!
+                long month1 = getFixedDateMonth1(jdate, cachedFixedDate);
+
+                // It may not be a regular month. Convert the date and range to
+                // the relative values, perform the roll, and
+                // convert the result back to the rolled date.
+                int value = getRolledValue((int)(cachedFixedDate - month1), amount,
+                                           0, actualMonthLength() - 1);
+                LocalGregorianCalendar.Date d = getCalendarDate(month1 + value);
+                assert getEraIndex(d) == internalGetEra()
+                    && d.getYear() == internalGet(YEAR) && d.getMonth()-1 == internalGet(MONTH);
+                set(DAY_OF_MONTH, d.getDayOfMonth());
+                return;
+            }
+
+        case DAY_OF_YEAR:
+            {
+                max = getActualMaximum(field);
+                if (!isTransitionYear(jdate.getNormalizedYear())) {
+                    break;
+                }
+
+                // Handle transition. We can't change year and era values
+                // here due to the Calendar roll spec.
+                int value = getRolledValue(internalGet(DAY_OF_YEAR), amount, min, max);
+                long jan0 = cachedFixedDate - internalGet(DAY_OF_YEAR);
+                LocalGregorianCalendar.Date d = getCalendarDate(jan0 + value);
+                assert getEraIndex(d) == internalGetEra() && d.getYear() == internalGet(YEAR);
+                set(MONTH, d.getMonth() - 1);
+                set(DAY_OF_MONTH, d.getDayOfMonth());
+                return;
+            }
+
+        case DAY_OF_WEEK:
+            {
+                int normalizedYear = jdate.getNormalizedYear();
+                if (!isTransitionYear(normalizedYear) && !isTransitionYear(normalizedYear - 1)) {
+                    // If the week of year is in the same year, we can
+                    // just change DAY_OF_WEEK.
+                    int weekOfYear = internalGet(WEEK_OF_YEAR);
+                    if (weekOfYear > 1 && weekOfYear < 52) {
+                        set(WEEK_OF_YEAR, internalGet(WEEK_OF_YEAR));
+                        max = SATURDAY;
+                        break;
+                    }
+                }
+
+                // We need to handle it in a different way around year
+                // boundaries and in the transition year. Note that
+                // changing era and year values violates the roll
+                // rule: not changing larger calendar fields...
+                amount %= 7;
+                if (amount == 0) {
+                    return;
+                }
+                long fd = cachedFixedDate;
+                long dowFirst = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(fd, getFirstDayOfWeek());
+                fd += amount;
+                if (fd < dowFirst) {
+                    fd += 7;
+                } e
