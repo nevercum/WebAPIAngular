@@ -1142,4 +1142,183 @@ class JapaneseImperialCalendar extends Calendar {
      * @see #getLeastMaximum(int)
      * @see #getActualMinimum(int)
      * @see #getActualMaximum(int)
- 
+     */
+    public int getGreatestMinimum(int field) {
+        return field == YEAR ? 1 : MIN_VALUES[field];
+    }
+
+    /**
+     * Returns the lowest maximum value for the given calendar field
+     * of this {@code GregorianCalendar} instance. The lowest
+     * maximum value is defined as the smallest value returned by
+     * {@link #getActualMaximum(int)} for any possible time value,
+     * taking into consideration the current values of the
+     * {@link Calendar#getFirstDayOfWeek() getFirstDayOfWeek},
+     * {@link Calendar#getMinimalDaysInFirstWeek() getMinimalDaysInFirstWeek},
+     * and {@link Calendar#getTimeZone() getTimeZone} methods.
+     *
+     * @param field the calendar field
+     * @return the lowest maximum value for the given calendar field.
+     * @see #getMinimum(int)
+     * @see #getMaximum(int)
+     * @see #getGreatestMinimum(int)
+     * @see #getActualMinimum(int)
+     * @see #getActualMaximum(int)
+     */
+    public int getLeastMaximum(int field) {
+        return switch (field) {
+            case YEAR -> Math.min(LEAST_MAX_VALUES[YEAR], getMaximum(YEAR));
+            default -> LEAST_MAX_VALUES[field];
+        };
+    }
+
+    /**
+     * Returns the minimum value that this calendar field could have,
+     * taking into consideration the given time value and the current
+     * values of the
+     * {@link Calendar#getFirstDayOfWeek() getFirstDayOfWeek},
+     * {@link Calendar#getMinimalDaysInFirstWeek() getMinimalDaysInFirstWeek},
+     * and {@link Calendar#getTimeZone() getTimeZone} methods.
+     *
+     * @param field the calendar field
+     * @return the minimum of the given field for the time value of
+     * this {@code JapaneseImperialCalendar}
+     * @see #getMinimum(int)
+     * @see #getMaximum(int)
+     * @see #getGreatestMinimum(int)
+     * @see #getLeastMaximum(int)
+     * @see #getActualMaximum(int)
+     */
+    public int getActualMinimum(int field) {
+        if (!isFieldSet(YEAR_MASK|MONTH_MASK|WEEK_OF_YEAR_MASK, field)) {
+            return getMinimum(field);
+        }
+
+        int value = 0;
+        JapaneseImperialCalendar jc = getNormalizedCalendar();
+        // Get a local date which includes time of day and time zone,
+        // which are missing in jc.jdate.
+        LocalGregorianCalendar.Date jd = jcal.getCalendarDate(jc.getTimeInMillis(),
+                                                              getZone());
+        int eraIndex = getEraIndex(jd);
+        switch (field) {
+            case YEAR -> {
+                if (eraIndex > BEFORE_MEIJI) {
+                    value = 1;
+                    long since = eras[eraIndex].getSince(getZone());
+                    CalendarDate d = jcal.getCalendarDate(since, getZone());
+                    // Use the same year in jd to take care of leap
+                    // years. i.e., both jd and d must agree on leap
+                    // or common years.
+                    jd.setYear(d.getYear());
+                    jcal.normalize(jd);
+                    assert jd.isLeapYear() == d.isLeapYear();
+                    if (getYearOffsetInMillis(jd) < getYearOffsetInMillis(d)) {
+                        value++;
+                    }
+                } else {
+                    value = getMinimum(field);
+                    CalendarDate d = jcal.getCalendarDate(Long.MIN_VALUE, getZone());
+                    // Use an equivalent year of d.getYear() if
+                    // possible. Otherwise, ignore the leap year and
+                    // common year difference.
+                    int y = d.getYear();
+                    if (y > 400) {
+                        y -= 400;
+                    }
+                    jd.setYear(y);
+                    jcal.normalize(jd);
+                    if (getYearOffsetInMillis(jd) < getYearOffsetInMillis(d)) {
+                        value++;
+                    }
+                }
+            }
+            case MONTH -> {
+                // In Before Meiji and Meiji, January is the first month.
+                if (eraIndex > MEIJI && jd.getYear() == 1) {
+                    long since = eras[eraIndex].getSince(getZone());
+                    CalendarDate d = jcal.getCalendarDate(since, getZone());
+                    value = d.getMonth() - 1;
+                    if (jd.getDayOfMonth() < d.getDayOfMonth()) {
+                        value++;
+                    }
+                }
+            }
+            case WEEK_OF_YEAR -> {
+                value = 1;
+                CalendarDate d = jcal.getCalendarDate(Long.MIN_VALUE, getZone());
+                // shift 400 years to avoid underflow
+                d.addYear(+400);
+                jcal.normalize(d);
+                jd.setEra(d.getEra());
+                jd.setYear(d.getYear());
+                jcal.normalize(jd);
+
+                long jan1 = jcal.getFixedDate(d);
+                long fd = jcal.getFixedDate(jd);
+                int woy = getWeekNumber(jan1, fd);
+                long day1 = fd - (7 * (woy - 1));
+                if ((day1 < jan1) ||
+                    (day1 == jan1 &&
+                     jd.getTimeOfDay() < d.getTimeOfDay())) {
+                    value++;
+                }
+            }
+        }
+        return value;
+    }
+
+    /**
+     * Returns the maximum value that this calendar field could have,
+     * taking into consideration the given time value and the current
+     * values of the
+     * {@link Calendar#getFirstDayOfWeek() getFirstDayOfWeek},
+     * {@link Calendar#getMinimalDaysInFirstWeek() getMinimalDaysInFirstWeek},
+     * and
+     * {@link Calendar#getTimeZone() getTimeZone} methods.
+     * For example, if the date of this instance is Heisei 16February 1,
+     * the actual maximum value of the {@code DAY_OF_MONTH} field
+     * is 29 because Heisei 16 is a leap year, and if the date of this
+     * instance is Heisei 17 February 1, it's 28.
+     *
+     * @param field the calendar field
+     * @return the maximum of the given field for the time value of
+     * this {@code JapaneseImperialCalendar}
+     * @see #getMinimum(int)
+     * @see #getMaximum(int)
+     * @see #getGreatestMinimum(int)
+     * @see #getLeastMaximum(int)
+     * @see #getActualMinimum(int)
+     */
+    public int getActualMaximum(int field) {
+        final int fieldsForFixedMax = ERA_MASK|DAY_OF_WEEK_MASK|HOUR_MASK|AM_PM_MASK|
+            HOUR_OF_DAY_MASK|MINUTE_MASK|SECOND_MASK|MILLISECOND_MASK|
+            ZONE_OFFSET_MASK|DST_OFFSET_MASK;
+        if ((fieldsForFixedMax & (1<<field)) != 0) {
+            return getMaximum(field);
+        }
+
+        JapaneseImperialCalendar jc = getNormalizedCalendar();
+        LocalGregorianCalendar.Date date = jc.jdate;
+
+        return switch (field) {
+            case MONTH -> {
+                int month = DECEMBER;
+                if (isTransitionYear(date.getNormalizedYear())) {
+                    // TODO: there may be multiple transitions in a year.
+                    int eraIndex = getEraIndex(date);
+                    if (date.getYear() != 1) {
+                        eraIndex++;
+                        assert eraIndex < eras.length;
+                    }
+                    long transition = sinceFixedDates[eraIndex];
+                    long fd = jc.cachedFixedDate;
+                    if (fd < transition) {
+                        LocalGregorianCalendar.Date ldate
+                            = (LocalGregorianCalendar.Date) date.clone();
+                        jcal.getCalendarDateFromFixedDate(ldate, transition - 1);
+                        month = ldate.getMonth() - 1;
+                    }
+                } else {
+                    LocalGregorianCalendar.Date d = jcal.getCalendarDate(Long.MAX_VALUE, getZone());
+                    if (date.getEra() == d.getEra() &&
