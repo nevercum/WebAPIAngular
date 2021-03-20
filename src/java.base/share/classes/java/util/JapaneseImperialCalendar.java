@@ -1677,4 +1677,156 @@ class JapaneseImperialCalendar extends Calendar {
             int normalizedYear = jdate.getNormalizedYear();
             // If it's a year of an era transition, we need to handle
             // irregular year boundaries.
-            boolean transitionYear = i
+            boolean transitionYear = isTransitionYear(jdate.getNormalizedYear());
+            int dayOfYear;
+            long fixedDateJan1;
+            if (transitionYear) {
+                fixedDateJan1 = getFixedDateJan1(jdate, fixedDate);
+                dayOfYear = (int)(fixedDate - fixedDateJan1) + 1;
+            } else if (normalizedYear == MIN_VALUES[YEAR]) {
+                CalendarDate dx = jcal.getCalendarDate(Long.MIN_VALUE, getZone());
+                fixedDateJan1 = jcal.getFixedDate(dx);
+                dayOfYear = (int)(fixedDate - fixedDateJan1) + 1;
+            } else {
+                dayOfYear = (int) jcal.getDayOfYear(jdate);
+                fixedDateJan1 = fixedDate - dayOfYear + 1;
+            }
+            long fixedDateMonth1 = transitionYear ?
+                getFixedDateMonth1(jdate, fixedDate) : fixedDate - dayOfMonth + 1;
+
+            internalSet(DAY_OF_YEAR, dayOfYear);
+            internalSet(DAY_OF_WEEK_IN_MONTH, (dayOfMonth - 1) / 7 + 1);
+
+            int weekOfYear = getWeekNumber(fixedDateJan1, fixedDate);
+
+            // The spec is to calculate WEEK_OF_YEAR in the
+            // ISO8601-style. This creates problems, though.
+            if (weekOfYear == 0) {
+                // If the date belongs to the last week of the
+                // previous year, use the week number of "12/31" of
+                // the "previous" year. Again, if the previous year is
+                // a transition year, we need to take care of it.
+                // Usually the previous day of the first day of a year
+                // is December 31, which is not always true in the
+                // Japanese imperial calendar system.
+                long fixedDec31 = fixedDateJan1 - 1;
+                long prevJan1;
+                LocalGregorianCalendar.Date d = getCalendarDate(fixedDec31);
+                if (!(transitionYear || isTransitionYear(d.getNormalizedYear()))) {
+                    prevJan1 = fixedDateJan1 - 365;
+                    if (d.isLeapYear()) {
+                        --prevJan1;
+                    }
+                } else if (transitionYear) {
+                    if (jdate.getYear() == 1) {
+                        // As of Reiwa (since Meiji) there's no case
+                        // that there are multiple transitions in a
+                        // year.  Historically there was such
+                        // case. There might be such case again in the
+                        // future.
+                        if (era > REIWA) {
+                            CalendarDate pd = eras[era - 1].getSinceDate();
+                            if (normalizedYear == pd.getYear()) {
+                                d.setMonth(pd.getMonth()).setDayOfMonth(pd.getDayOfMonth());
+                            }
+                        } else {
+                            d.setMonth(LocalGregorianCalendar.JANUARY).setDayOfMonth(1);
+                        }
+                        jcal.normalize(d);
+                        prevJan1 = jcal.getFixedDate(d);
+                    } else {
+                        prevJan1 = fixedDateJan1 - 365;
+                        if (d.isLeapYear()) {
+                            --prevJan1;
+                        }
+                    }
+                } else {
+                    CalendarDate cd = eras[getEraIndex(jdate)].getSinceDate();
+                    d.setMonth(cd.getMonth()).setDayOfMonth(cd.getDayOfMonth());
+                    jcal.normalize(d);
+                    prevJan1 = jcal.getFixedDate(d);
+                }
+                weekOfYear = getWeekNumber(prevJan1, fixedDec31);
+            } else {
+                if (!transitionYear) {
+                    // Regular years
+                    if (weekOfYear >= 52) {
+                        long nextJan1 = fixedDateJan1 + 365;
+                        if (jdate.isLeapYear()) {
+                            nextJan1++;
+                        }
+                        long nextJan1st = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(nextJan1 + 6,
+                                                                                            getFirstDayOfWeek());
+                        int ndays = (int)(nextJan1st - nextJan1);
+                        if (ndays >= getMinimalDaysInFirstWeek() && fixedDate >= (nextJan1st - 7)) {
+                            // The first days forms a week in which the date is included.
+                            weekOfYear = 1;
+                        }
+                    }
+                } else {
+                    LocalGregorianCalendar.Date d = (LocalGregorianCalendar.Date) jdate.clone();
+                    long nextJan1;
+                    if (jdate.getYear() == 1) {
+                        d.addYear(+1);
+                        d.setMonth(LocalGregorianCalendar.JANUARY).setDayOfMonth(1);
+                        nextJan1 = jcal.getFixedDate(d);
+                    } else {
+                        int nextEraIndex = getEraIndex(d) + 1;
+                        CalendarDate cd = eras[nextEraIndex].getSinceDate();
+                        d.setEra(eras[nextEraIndex]);
+                        d.setDate(1, cd.getMonth(), cd.getDayOfMonth());
+                        jcal.normalize(d);
+                        nextJan1 = jcal.getFixedDate(d);
+                    }
+                    long nextJan1st = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(nextJan1 + 6,
+                                                                                        getFirstDayOfWeek());
+                    int ndays = (int)(nextJan1st - nextJan1);
+                    if (ndays >= getMinimalDaysInFirstWeek() && fixedDate >= (nextJan1st - 7)) {
+                        // The first days forms a week in which the date is included.
+                        weekOfYear = 1;
+                    }
+                }
+            }
+            internalSet(WEEK_OF_YEAR, weekOfYear);
+            internalSet(WEEK_OF_MONTH, getWeekNumber(fixedDateMonth1, fixedDate));
+            mask |= (DAY_OF_YEAR_MASK|WEEK_OF_YEAR_MASK|WEEK_OF_MONTH_MASK|DAY_OF_WEEK_IN_MONTH_MASK);
+        }
+        return mask;
+    }
+
+    /**
+     * Returns the number of weeks in a period between fixedDay1 and
+     * fixedDate. The getFirstDayOfWeek-getMinimalDaysInFirstWeek rule
+     * is applied to calculate the number of weeks.
+     *
+     * @param fixedDay1 the fixed date of the first day of the period
+     * @param fixedDate the fixed date of the last day of the period
+     * @return the number of weeks of the given period
+     */
+    private int getWeekNumber(long fixedDay1, long fixedDate) {
+        // We can always use `jcal' since Julian and Gregorian are the
+        // same thing for this calculation.
+        long fixedDay1st = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(fixedDay1 + 6,
+                                                                             getFirstDayOfWeek());
+        int ndays = (int)(fixedDay1st - fixedDay1);
+        assert ndays <= 7;
+        if (ndays >= getMinimalDaysInFirstWeek()) {
+            fixedDay1st -= 7;
+        }
+        int normalizedDayOfPeriod = (int)(fixedDate - fixedDay1st);
+        if (normalizedDayOfPeriod >= 0) {
+            return normalizedDayOfPeriod / 7 + 1;
+        }
+        return CalendarUtils.floorDivide(normalizedDayOfPeriod, 7) + 1;
+    }
+
+    /**
+     * Converts calendar field values to the time value (millisecond
+     * offset from the <a href="Calendar.html#Epoch">Epoch</a>).
+     *
+     * @throws    IllegalArgumentException if any calendar fields are invalid.
+     */
+    protected void computeTime() {
+        // In non-lenient mode, perform brief checking of calendar
+        // fields which have been set externally. Through this
+        // checking, the field values are
