@@ -1476,4 +1476,205 @@ class JapaneseImperialCalendar extends Calendar {
                         jd.setYear(year - 400);
                     }
                 } else {
-                    d = jcal.getCalendarDate(eras[eraIndex + 1].getSince(getZon
+                    d = jcal.getCalendarDate(eras[eraIndex + 1].getSince(getZone()) - 1, getZone());
+                    year = d.getYear();
+                    // Use the same year as d.getYear() to be
+                    // consistent with leap and common years.
+                    jd.setYear(year);
+                }
+                jcal.normalize(jd);
+                if (getYearOffsetInMillis(jd) > getYearOffsetInMillis(d)) {
+                    year--;
+                }
+                yield year;
+            }
+            default -> throw new ArrayIndexOutOfBoundsException(field);
+        };
+    }
+
+    /**
+     * Returns the millisecond offset from the beginning of the
+     * year. In the year for Long.MIN_VALUE, it's a pseudo value
+     * beyond the limit. The given CalendarDate object must have been
+     * normalized before calling this method.
+     */
+    private long getYearOffsetInMillis(CalendarDate date) {
+        long t = (jcal.getDayOfYear(date) - 1) * ONE_DAY;
+        return t + date.getTimeOfDay() - date.getZoneOffset();
+    }
+
+    public Object clone() {
+        JapaneseImperialCalendar other = (JapaneseImperialCalendar) super.clone();
+
+        other.jdate = (LocalGregorianCalendar.Date) jdate.clone();
+        other.originalFields = null;
+        other.zoneOffsets = null;
+        return other;
+    }
+
+    public TimeZone getTimeZone() {
+        TimeZone zone = super.getTimeZone();
+        // To share the zone by the CalendarDate
+        jdate.setZone(zone);
+        return zone;
+    }
+
+    public void setTimeZone(TimeZone zone) {
+        super.setTimeZone(zone);
+        // To share the zone by the CalendarDate
+        jdate.setZone(zone);
+    }
+
+    /**
+     * The fixed date corresponding to jdate. If the value is
+     * Long.MIN_VALUE, the fixed date value is unknown.
+     */
+    private transient long cachedFixedDate = Long.MIN_VALUE;
+
+    /**
+     * Converts the time value (millisecond offset from the <a
+     * href="Calendar.html#Epoch">Epoch</a>) to calendar field values.
+     * The time is <em>not</em>
+     * recomputed first; to recompute the time, then the fields, call the
+     * {@code complete} method.
+     *
+     * @see Calendar#complete
+     */
+    protected void computeFields() {
+        int mask = 0;
+        if (isPartiallyNormalized()) {
+            // Determine which calendar fields need to be computed.
+            mask = getSetStateFields();
+            int fieldMask = ~mask & ALL_FIELDS;
+            if (fieldMask != 0 || cachedFixedDate == Long.MIN_VALUE) {
+                mask |= computeFields(fieldMask,
+                                      mask & (ZONE_OFFSET_MASK|DST_OFFSET_MASK));
+                assert mask == ALL_FIELDS;
+            }
+        } else {
+            // Specify all fields
+            mask = ALL_FIELDS;
+            computeFields(mask, 0);
+        }
+        // After computing all the fields, set the field state to `COMPUTED'.
+        setFieldsComputed(mask);
+    }
+
+    /**
+     * This computeFields implements the conversion from UTC
+     * (millisecond offset from the Epoch) to calendar
+     * field values. fieldMask specifies which fields to change the
+     * setting state to COMPUTED, although all fields are set to
+     * the correct values. This is required to fix 4685354.
+     *
+     * @param fieldMask a bit mask to specify which fields to change
+     * the setting state.
+     * @param tzMask a bit mask to specify which time zone offset
+     * fields to be used for time calculations
+     * @return a new field mask that indicates what field values have
+     * actually been set.
+     */
+    private int computeFields(int fieldMask, int tzMask) {
+        int zoneOffset = 0;
+        TimeZone tz = getZone();
+        if (zoneOffsets == null) {
+            zoneOffsets = new int[2];
+        }
+        if (tzMask != (ZONE_OFFSET_MASK|DST_OFFSET_MASK)) {
+            if (tz instanceof ZoneInfo) {
+                zoneOffset = ((ZoneInfo)tz).getOffsets(time, zoneOffsets);
+            } else {
+                zoneOffset = tz.getOffset(time);
+                zoneOffsets[0] = tz.getRawOffset();
+                zoneOffsets[1] = zoneOffset - zoneOffsets[0];
+            }
+        }
+        if (tzMask != 0) {
+            if (isFieldSet(tzMask, ZONE_OFFSET)) {
+                zoneOffsets[0] = internalGet(ZONE_OFFSET);
+            }
+            if (isFieldSet(tzMask, DST_OFFSET)) {
+                zoneOffsets[1] = internalGet(DST_OFFSET);
+            }
+            zoneOffset = zoneOffsets[0] + zoneOffsets[1];
+        }
+
+        // By computing time and zoneOffset separately, we can take
+        // the wider range of time+zoneOffset than the previous
+        // implementation.
+        long fixedDate = zoneOffset / ONE_DAY;
+        int timeOfDay = zoneOffset % (int)ONE_DAY;
+        fixedDate += time / ONE_DAY;
+        timeOfDay += (int) (time % ONE_DAY);
+        if (timeOfDay >= ONE_DAY) {
+            timeOfDay -= (int) ONE_DAY;
+            ++fixedDate;
+        } else {
+            while (timeOfDay < 0) {
+                timeOfDay += (int) ONE_DAY;
+                --fixedDate;
+            }
+        }
+        fixedDate += EPOCH_OFFSET;
+
+        // See if we can use jdate to avoid date calculation.
+        if (fixedDate != cachedFixedDate || fixedDate < 0) {
+            jcal.getCalendarDateFromFixedDate(jdate, fixedDate);
+            cachedFixedDate = fixedDate;
+        }
+        int era = getEraIndex(jdate);
+        int year = jdate.getYear();
+
+        // Always set the ERA and YEAR values.
+        internalSet(ERA, era);
+        internalSet(YEAR, year);
+        int mask = fieldMask | (ERA_MASK|YEAR_MASK);
+
+        int month =  jdate.getMonth() - 1; // 0-based
+        int dayOfMonth = jdate.getDayOfMonth();
+
+        // Set the basic date fields.
+        if ((fieldMask & (MONTH_MASK|DAY_OF_MONTH_MASK|DAY_OF_WEEK_MASK))
+            != 0) {
+            internalSet(MONTH, month);
+            internalSet(DAY_OF_MONTH, dayOfMonth);
+            internalSet(DAY_OF_WEEK, jdate.getDayOfWeek());
+            mask |= MONTH_MASK|DAY_OF_MONTH_MASK|DAY_OF_WEEK_MASK;
+        }
+
+        if ((fieldMask & (HOUR_OF_DAY_MASK|AM_PM_MASK|HOUR_MASK
+                          |MINUTE_MASK|SECOND_MASK|MILLISECOND_MASK)) != 0) {
+            if (timeOfDay != 0) {
+                int hours = timeOfDay / ONE_HOUR;
+                internalSet(HOUR_OF_DAY, hours);
+                internalSet(AM_PM, hours / 12); // Assume AM == 0
+                internalSet(HOUR, hours % 12);
+                int r = timeOfDay % ONE_HOUR;
+                internalSet(MINUTE, r / ONE_MINUTE);
+                r %= ONE_MINUTE;
+                internalSet(SECOND, r / ONE_SECOND);
+                internalSet(MILLISECOND, r % ONE_SECOND);
+            } else {
+                internalSet(HOUR_OF_DAY, 0);
+                internalSet(AM_PM, AM);
+                internalSet(HOUR, 0);
+                internalSet(MINUTE, 0);
+                internalSet(SECOND, 0);
+                internalSet(MILLISECOND, 0);
+            }
+            mask |= (HOUR_OF_DAY_MASK|AM_PM_MASK|HOUR_MASK
+                     |MINUTE_MASK|SECOND_MASK|MILLISECOND_MASK);
+        }
+
+        if ((fieldMask & (ZONE_OFFSET_MASK|DST_OFFSET_MASK)) != 0) {
+            internalSet(ZONE_OFFSET, zoneOffsets[0]);
+            internalSet(DST_OFFSET, zoneOffsets[1]);
+            mask |= (ZONE_OFFSET_MASK|DST_OFFSET_MASK);
+        }
+
+        if ((fieldMask & (DAY_OF_YEAR_MASK|WEEK_OF_YEAR_MASK
+                          |WEEK_OF_MONTH_MASK|DAY_OF_WEEK_IN_MONTH_MASK)) != 0) {
+            int normalizedYear = jdate.getNormalizedYear();
+            // If it's a year of an era transition, we need to handle
+            // irregular year boundaries.
+            boolean transitionYear = i
