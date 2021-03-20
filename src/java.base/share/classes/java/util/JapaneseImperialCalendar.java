@@ -1321,4 +1321,159 @@ class JapaneseImperialCalendar extends Calendar {
                     }
                 } else {
                     LocalGregorianCalendar.Date d = jcal.getCalendarDate(Long.MAX_VALUE, getZone());
-                    if (date.getEra() == d.getEra() &&
+                    if (date.getEra() == d.getEra() && date.getYear() == d.getYear()) {
+                        month = d.getMonth() - 1;
+                    }
+                }
+                yield month;
+            }
+            case DAY_OF_MONTH -> jcal.getMonthLength(date);
+            case DAY_OF_YEAR -> {
+                if (isTransitionYear(date.getNormalizedYear())) {
+                    // Handle transition year.
+                    // TODO: there may be multiple transitions in a year.
+                    int eraIndex = getEraIndex(date);
+                    if (date.getYear() != 1) {
+                        eraIndex++;
+                        assert eraIndex < eras.length;
+                    }
+                    long transition = sinceFixedDates[eraIndex];
+                    long fd = jc.cachedFixedDate;
+                    CalendarDate d = gcal.newCalendarDate(TimeZone.NO_TIMEZONE);
+                    d.setDate(date.getNormalizedYear(), BaseCalendar.JANUARY, 1);
+                    if (fd < transition) {
+                        yield (int) (transition - gcal.getFixedDate(d));
+                    }
+                    d.addYear(1);
+                    yield (int) (gcal.getFixedDate(d) - transition);
+                }
+                LocalGregorianCalendar.Date d = jcal.getCalendarDate(Long.MAX_VALUE, getZone());
+                if (date.getEra() == d.getEra() && date.getYear() == d.getYear()) {
+                    long fd = jcal.getFixedDate(d);
+                    long jan1 = getFixedDateJan1(d, fd);
+                    yield (int) (fd - jan1) + 1;
+                } else if (date.getYear() == getMinimum(YEAR)) {
+                    CalendarDate d1 = jcal.getCalendarDate(Long.MIN_VALUE, getZone());
+                    long fd1 = jcal.getFixedDate(d1);
+                    d1.addYear(1);
+                    d1.setMonth(BaseCalendar.JANUARY).setDayOfMonth(1);
+                    jcal.normalize(d1);
+                    long fd2 = jcal.getFixedDate(d1);
+                    yield (int) (fd2 - fd1);
+                } else {
+                    yield jcal.getYearLength(date);
+                }
+            }
+            case WEEK_OF_YEAR -> {
+                if (!isTransitionYear(date.getNormalizedYear())) {
+                    LocalGregorianCalendar.Date jd = jcal.getCalendarDate(Long.MAX_VALUE, getZone());
+                    if (date.getEra() == jd.getEra() && date.getYear() == jd.getYear()) {
+                        long fd = jcal.getFixedDate(jd);
+                        long jan1 = getFixedDateJan1(jd, fd);
+                        yield getWeekNumber(jan1, fd);
+                    } else if (date.getEra() == null && date.getYear() == getMinimum(YEAR)) {
+                        CalendarDate d = jcal.getCalendarDate(Long.MIN_VALUE, getZone());
+                        // shift 400 years to avoid underflow
+                        d.addYear(+400);
+                        jcal.normalize(d);
+                        jd.setEra(d.getEra());
+                        jd.setDate(d.getYear() + 1, BaseCalendar.JANUARY, 1);
+                        jcal.normalize(jd);
+                        long jan1 = jcal.getFixedDate(d);
+                        long nextJan1 = jcal.getFixedDate(jd);
+                        long nextJan1st = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(nextJan1 + 6,
+                                                                                            getFirstDayOfWeek());
+                        int ndays = (int) (nextJan1st - nextJan1);
+                        if (ndays >= getMinimalDaysInFirstWeek()) {
+                            nextJan1st -= 7;
+                        }
+                        yield getWeekNumber(jan1, nextJan1st);
+                    }
+                    // Get the day of week of January 1 of the year
+                    CalendarDate d = gcal.newCalendarDate(TimeZone.NO_TIMEZONE);
+                    d.setDate(date.getNormalizedYear(), BaseCalendar.JANUARY, 1);
+                    int dayOfWeek = gcal.getDayOfWeek(d);
+                    // Normalize the day of week with the firstDayOfWeek value
+                    dayOfWeek -= getFirstDayOfWeek();
+                    if (dayOfWeek < 0) {
+                        dayOfWeek += 7;
+                    }
+                    int magic = dayOfWeek + getMinimalDaysInFirstWeek() - 1;
+                    if ((magic == 6) ||
+                        (date.isLeapYear() && (magic == 5 || magic == 12))) {
+                        yield 53;
+                    }
+                    yield 52;
+                }
+
+                if (jc == this) {
+                    jc = (JapaneseImperialCalendar) jc.clone();
+                }
+                int max = getActualMaximum(DAY_OF_YEAR);
+                jc.set(DAY_OF_YEAR, max);
+                int weekOfYear = jc.get(WEEK_OF_YEAR);
+                if (weekOfYear == 1 && max > 7) {
+                    jc.add(WEEK_OF_YEAR, -1);
+                    weekOfYear = jc.get(WEEK_OF_YEAR);
+                }
+                yield weekOfYear;
+            }
+            case WEEK_OF_MONTH -> {
+                LocalGregorianCalendar.Date jd = jcal.getCalendarDate(Long.MAX_VALUE, getZone());
+                if (date.getEra() == jd.getEra() && date.getYear() == jd.getYear()) {
+                    long fd = jcal.getFixedDate(jd);
+                    long month1 = fd - jd.getDayOfMonth() + 1;
+                    yield getWeekNumber(month1, fd);
+                }
+                CalendarDate d = gcal.newCalendarDate(TimeZone.NO_TIMEZONE);
+                d.setDate(date.getNormalizedYear(), date.getMonth(), 1);
+                int dayOfWeek = gcal.getDayOfWeek(d);
+                int monthLength = actualMonthLength();
+                dayOfWeek -= getFirstDayOfWeek();
+                if (dayOfWeek < 0) {
+                    dayOfWeek += 7;
+                }
+                int nDaysFirstWeek = 7 - dayOfWeek; // # of days in the first week
+                int weekOfMonth = 3;
+                if (nDaysFirstWeek >= getMinimalDaysInFirstWeek()) {
+                    weekOfMonth++;
+                }
+                monthLength -= nDaysFirstWeek + 7 * 3;
+                if (monthLength > 0) {
+                    weekOfMonth++;
+                    if (monthLength > 7) {
+                        weekOfMonth++;
+                    }
+                }
+                yield weekOfMonth;
+            }
+            case DAY_OF_WEEK_IN_MONTH -> {
+                int ndays, dow1;
+                int dow = date.getDayOfWeek();
+                BaseCalendar.Date d = (BaseCalendar.Date) date.clone();
+                ndays = jcal.getMonthLength(d);
+                d.setDayOfMonth(1);
+                jcal.normalize(d);
+                dow1 = d.getDayOfWeek();
+                int x = dow - dow1;
+                if (x < 0) {
+                    x += 7;
+                }
+                ndays -= x;
+                yield (ndays + 6) / 7;
+            }
+            case YEAR -> {
+                CalendarDate jd = jcal.getCalendarDate(jc.getTimeInMillis(), getZone());
+                CalendarDate d;
+                int eraIndex = getEraIndex(date);
+                int year;
+                if (eraIndex == eras.length - 1) {
+                    d = jcal.getCalendarDate(Long.MAX_VALUE, getZone());
+                    year = d.getYear();
+                    // Use an equivalent year for the
+                    // getYearOffsetInMillis call to avoid overflow.
+                    if (year > 400) {
+                        jd.setYear(year - 400);
+                    }
+                } else {
+                    d = jcal.getCalendarDate(eras[eraIndex + 1].getSince(getZon
