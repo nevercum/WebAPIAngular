@@ -2182,4 +2182,179 @@ class JapaneseImperialCalendar extends Calendar {
 
     /**
      * Returns the length of the specified month in the year provided
-     * by i
+     * by internalGet(YEAR).
+     *
+     * @see GregorianCalendar#isLeapYear(int)
+     */
+    private int monthLength(int month) {
+        assert jdate.isNormalized();
+        return jdate.isLeapYear() ?
+            GregorianCalendar.LEAP_MONTH_LENGTH[month] : GregorianCalendar.MONTH_LENGTH[month];
+    }
+
+    private int actualMonthLength() {
+        int length = jcal.getMonthLength(jdate);
+        int eraIndex = getTransitionEraIndex(jdate);
+        if (eraIndex != -1) {
+            long transitionFixedDate = sinceFixedDates[eraIndex];
+            CalendarDate d = eras[eraIndex].getSinceDate();
+            if (transitionFixedDate <= cachedFixedDate) {
+                length -= d.getDayOfMonth() - 1;
+            } else {
+                length = d.getDayOfMonth() - 1;
+            }
+        }
+        return length;
+    }
+
+    /**
+     * Returns the index to the new era if the given date is in a
+     * transition month.  For example, if the give date is Heisei 1
+     * (1989) January 20, then the era index for Heisei is
+     * returned. Likewise, if the given date is Showa 64 (1989)
+     * January 3, then the era index for Heisei is returned. If the
+     * given date is not in any transition month, then -1 is returned.
+     */
+    private static int getTransitionEraIndex(LocalGregorianCalendar.Date date) {
+        int eraIndex = getEraIndex(date);
+        CalendarDate transitionDate = eras[eraIndex].getSinceDate();
+        if (transitionDate.getYear() == date.getNormalizedYear() &&
+            transitionDate.getMonth() == date.getMonth()) {
+            return eraIndex;
+        }
+        if (eraIndex < eras.length - 1) {
+            transitionDate = eras[++eraIndex].getSinceDate();
+            if (transitionDate.getYear() == date.getNormalizedYear() &&
+                transitionDate.getMonth() == date.getMonth()) {
+                return eraIndex;
+            }
+        }
+        return -1;
+    }
+
+    private boolean isTransitionYear(int normalizedYear) {
+        for (int i = eras.length - 1; i > 0; i--) {
+            int transitionYear = eras[i].getSinceDate().getYear();
+            if (normalizedYear == transitionYear) {
+                return true;
+            }
+            if (normalizedYear > transitionYear) {
+                break;
+            }
+        }
+        return false;
+    }
+
+    private static int getEraIndex(LocalGregorianCalendar.Date date) {
+        Era era = date.getEra();
+        for (int i = eras.length - 1; i > 0; i--) {
+            if (eras[i] == era) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Returns this object if it's normalized (all fields and time are
+     * in sync). Otherwise, a cloned object is returned after calling
+     * complete() in lenient mode.
+     */
+    private JapaneseImperialCalendar getNormalizedCalendar() {
+        JapaneseImperialCalendar jc;
+        if (isFullyNormalized()) {
+            jc = this;
+        } else {
+            // Create a clone and normalize the calendar fields
+            jc = (JapaneseImperialCalendar) this.clone();
+            jc.setLenient(true);
+            jc.complete();
+        }
+        return jc;
+    }
+
+    /**
+     * After adjustments such as add(MONTH), add(YEAR), we don't want the
+     * month to jump around.  E.g., we don't want Jan 31 + 1 month to go to Mar
+     * 3, we want it to go to Feb 28.  Adjustments which might run into this
+     * problem call this method to retain the proper month.
+     */
+    private void pinDayOfMonth(LocalGregorianCalendar.Date date) {
+        int year = date.getYear();
+        int dom = date.getDayOfMonth();
+        if (year != getMinimum(YEAR)) {
+            date.setDayOfMonth(1);
+            jcal.normalize(date);
+            int monthLength = jcal.getMonthLength(date);
+            if (dom > monthLength) {
+                date.setDayOfMonth(monthLength);
+            } else {
+                date.setDayOfMonth(dom);
+            }
+            jcal.normalize(date);
+        } else {
+            LocalGregorianCalendar.Date d = jcal.getCalendarDate(Long.MIN_VALUE, getZone());
+            LocalGregorianCalendar.Date realDate = jcal.getCalendarDate(time, getZone());
+            long tod = realDate.getTimeOfDay();
+            // Use an equivalent year.
+            realDate.addYear(+400);
+            realDate.setMonth(date.getMonth());
+            realDate.setDayOfMonth(1);
+            jcal.normalize(realDate);
+            int monthLength = jcal.getMonthLength(realDate);
+            if (dom > monthLength) {
+                realDate.setDayOfMonth(monthLength);
+            } else {
+                if (dom < d.getDayOfMonth()) {
+                    realDate.setDayOfMonth(d.getDayOfMonth());
+                } else {
+                    realDate.setDayOfMonth(dom);
+                }
+            }
+            if (realDate.getDayOfMonth() == d.getDayOfMonth() && tod < d.getTimeOfDay()) {
+                realDate.setDayOfMonth(Math.min(dom + 1, monthLength));
+            }
+            // restore the year.
+            date.setDate(year, realDate.getMonth(), realDate.getDayOfMonth());
+            // Don't normalize date here so as not to cause underflow.
+        }
+    }
+
+    /**
+     * Returns the new value after 'roll'ing the specified value and amount.
+     */
+    private static int getRolledValue(int value, int amount, int min, int max) {
+        assert value >= min && value <= max;
+        int range = max - min + 1;
+        amount %= range;
+        int n = value + amount;
+        if (n > max) {
+            n -= range;
+        } else if (n < min) {
+            n += range;
+        }
+        assert n >= min && n <= max;
+        return n;
+    }
+
+    /**
+     * Returns the ERA.  We need a special method for this because the
+     * default ERA is the current era, but a zero (unset) ERA means before Meiji.
+     */
+    private int internalGetEra() {
+        return isSet(ERA) ? internalGet(ERA) : currentEra;
+    }
+
+    /**
+     * Updates internal state.
+     */
+    @java.io.Serial
+    private void readObject(ObjectInputStream stream)
+            throws IOException, ClassNotFoundException {
+        stream.defaultReadObject();
+        if (jdate == null) {
+            jdate = jcal.newCalendarDate(getZone());
+            cachedFixedDate = Long.MIN_VALUE;
+        }
+    }
+}
