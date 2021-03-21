@@ -1829,4 +1829,197 @@ class JapaneseImperialCalendar extends Calendar {
     protected void computeTime() {
         // In non-lenient mode, perform brief checking of calendar
         // fields which have been set externally. Through this
-        // checking, the field values are
+        // checking, the field values are stored in originalFields[]
+        // to see if any of them are normalized later.
+        if (!isLenient()) {
+            if (originalFields == null) {
+                originalFields = new int[FIELD_COUNT];
+            }
+            for (int field = 0; field < FIELD_COUNT; field++) {
+                int value = internalGet(field);
+                if (isExternallySet(field)) {
+                    // Quick validation for any out of range values
+                    if (value < getMinimum(field) || value > getMaximum(field)) {
+                        throw new IllegalArgumentException(getFieldName(field));
+                    }
+                }
+                originalFields[field] = value;
+            }
+        }
+
+        // Let the super class determine which calendar fields to be
+        // used to calculate the time.
+        int fieldMask = selectFields();
+
+        int year;
+        int era;
+
+        if (isSet(ERA)) {
+            era = internalGet(ERA);
+            year = isSet(YEAR) ? internalGet(YEAR) : 1;
+        } else {
+            if (isSet(YEAR)) {
+                era = currentEra;
+                year = internalGet(YEAR);
+            } else {
+                // Equivalent to 1970 (Gregorian)
+                era = SHOWA;
+                year = 45;
+            }
+        }
+
+        // Calculate the time of day. We rely on the convention that
+        // an UNSET field has 0.
+        long timeOfDay = 0;
+        if (isFieldSet(fieldMask, HOUR_OF_DAY)) {
+            timeOfDay += (long) internalGet(HOUR_OF_DAY);
+        } else {
+            timeOfDay += internalGet(HOUR);
+            // The default value of AM_PM is 0 which designates AM.
+            if (isFieldSet(fieldMask, AM_PM)) {
+                timeOfDay += 12 * internalGet(AM_PM);
+            }
+        }
+        timeOfDay *= 60;
+        timeOfDay += internalGet(MINUTE);
+        timeOfDay *= 60;
+        timeOfDay += internalGet(SECOND);
+        timeOfDay *= 1000;
+        timeOfDay += internalGet(MILLISECOND);
+
+        // Convert the time of day to the number of days and the
+        // millisecond offset from midnight.
+        long fixedDate = timeOfDay / ONE_DAY;
+        timeOfDay %= ONE_DAY;
+        while (timeOfDay < 0) {
+            timeOfDay += ONE_DAY;
+            --fixedDate;
+        }
+
+        // Calculate the fixed date since January 1, 1 (Gregorian).
+        fixedDate += getFixedDate(era, year, fieldMask);
+
+        // millis represents local wall-clock time in milliseconds.
+        long millis = (fixedDate - EPOCH_OFFSET) * ONE_DAY + timeOfDay;
+
+        // Compute the time zone offset and DST offset.  There are two potential
+        // ambiguities here.  We'll assume a 2:00 am (wall time) switchover time
+        // for discussion purposes here.
+        // 1. The transition into DST.  Here, a designated time of 2:00 am - 2:59 am
+        //    can be in standard or in DST depending.  However, 2:00 am is an invalid
+        //    representation (the representation jumps from 1:59:59 am Std to 3:00:00 am DST).
+        //    We assume standard time.
+        // 2. The transition out of DST.  Here, a designated time of 1:00 am - 1:59 am
+        //    can be in standard or DST.  Both are valid representations (the rep
+        //    jumps from 1:59:59 DST to 1:00:00 Std).
+        //    Again, we assume standard time.
+        // We use the TimeZone object, unless the user has explicitly set the ZONE_OFFSET
+        // or DST_OFFSET fields; then we use those fields.
+        TimeZone zone = getZone();
+        if (zoneOffsets == null) {
+            zoneOffsets = new int[2];
+        }
+        int tzMask = fieldMask & (ZONE_OFFSET_MASK|DST_OFFSET_MASK);
+        if (tzMask != (ZONE_OFFSET_MASK|DST_OFFSET_MASK)) {
+            if (zone instanceof ZoneInfo) {
+                ((ZoneInfo)zone).getOffsetsByWall(millis, zoneOffsets);
+            } else {
+                zone.getOffsets(millis - zone.getRawOffset(), zoneOffsets);
+            }
+        }
+        if (tzMask != 0) {
+            if (isFieldSet(tzMask, ZONE_OFFSET)) {
+                zoneOffsets[0] = internalGet(ZONE_OFFSET);
+            }
+            if (isFieldSet(tzMask, DST_OFFSET)) {
+                zoneOffsets[1] = internalGet(DST_OFFSET);
+            }
+        }
+
+        // Adjust the time zone offset values to get the UTC time.
+        millis -= zoneOffsets[0] + zoneOffsets[1];
+
+        // Set this calendar's time in milliseconds
+        time = millis;
+
+        int mask = computeFields(fieldMask | getSetStateFields(), tzMask);
+
+        if (!isLenient()) {
+            for (int field = 0; field < FIELD_COUNT; field++) {
+                if (!isExternallySet(field)) {
+                    continue;
+                }
+                if (originalFields[field] != internalGet(field)) {
+                    int wrongValue = internalGet(field);
+                    // Restore the original field values
+                    System.arraycopy(originalFields, 0, fields, 0, fields.length);
+                    throw new IllegalArgumentException(getFieldName(field) + "=" + wrongValue
+                                                       + ", expected " + originalFields[field]);
+                }
+            }
+        }
+        setFieldsNormalized(mask);
+    }
+
+    /**
+     * Computes the fixed date under either the Gregorian or the
+     * Julian calendar, using the given year and the specified calendar fields.
+     *
+     * @param era era index
+     * @param year the normalized year number, with 0 indicating the
+     * year 1 BCE, -1 indicating 2 BCE, etc.
+     * @param fieldMask the calendar fields to be used for the date calculation
+     * @return the fixed date
+     * @see Calendar#selectFields
+     */
+    private long getFixedDate(int era, int year, int fieldMask) {
+        int month = JANUARY;
+        int firstDayOfMonth = 1;
+        if (isFieldSet(fieldMask, MONTH)) {
+            // No need to check if MONTH has been set (no isSet(MONTH)
+            // call) since its unset value happens to be JANUARY (0).
+            month = internalGet(MONTH);
+
+            // If the month is out of range, adjust it into range.
+            if (month > DECEMBER) {
+                year += month / 12;
+                month %= 12;
+            } else if (month < JANUARY) {
+                int[] rem = new int[1];
+                year += CalendarUtils.floorDivide(month, 12, rem);
+                month = rem[0];
+            }
+        } else {
+            if (year == 1 && era != 0) {
+                CalendarDate d = eras[era].getSinceDate();
+                month = d.getMonth() - 1;
+                firstDayOfMonth = d.getDayOfMonth();
+            }
+        }
+
+        // Adjust the base date if year is the minimum value.
+        if (year == MIN_VALUES[YEAR]) {
+            CalendarDate dx = jcal.getCalendarDate(Long.MIN_VALUE, getZone());
+            int m = dx.getMonth() - 1;
+            if (month < m) {
+                month = m;
+            }
+            if (month == m) {
+                firstDayOfMonth = dx.getDayOfMonth();
+            }
+        }
+
+        LocalGregorianCalendar.Date date = jcal.newCalendarDate(TimeZone.NO_TIMEZONE);
+        date.setEra(era > 0 ? eras[era] : null);
+        date.setDate(year, month + 1, firstDayOfMonth);
+        jcal.normalize(date);
+
+        // Get the fixed date since Jan 1, 1 (Gregorian). We are on
+        // the first day of either `month' or January in 'year'.
+        long fixedDate = jcal.getFixedDate(date);
+
+        if (isFieldSet(fieldMask, MONTH)) {
+            // Month-based calculations
+            if (isFieldSet(fieldMask, DAY_OF_MONTH)) {
+                // We are on the "first day" of the month (which may
+                // not be 1). Just add the off
