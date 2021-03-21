@@ -2022,4 +2022,164 @@ class JapaneseImperialCalendar extends Calendar {
             // Month-based calculations
             if (isFieldSet(fieldMask, DAY_OF_MONTH)) {
                 // We are on the "first day" of the month (which may
-                // not be 1). Just add the off
+                // not be 1). Just add the offset if DAY_OF_MONTH is
+                // set. If the isSet call returns false, that means
+                // DAY_OF_MONTH has been selected just because of the
+                // selected combination. We don't need to add any
+                // since the default value is the "first day".
+                if (isSet(DAY_OF_MONTH)) {
+                    // To avoid underflow with DAY_OF_MONTH-firstDayOfMonth, add
+                    // DAY_OF_MONTH, then subtract firstDayOfMonth.
+                    fixedDate += internalGet(DAY_OF_MONTH);
+                    fixedDate -= firstDayOfMonth;
+                }
+            } else {
+                if (isFieldSet(fieldMask, WEEK_OF_MONTH)) {
+                    long firstDayOfWeek = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(fixedDate + 6,
+                                                                                            getFirstDayOfWeek());
+                    // If we have enough days in the first week, then
+                    // move to the previous week.
+                    if ((firstDayOfWeek - fixedDate) >= getMinimalDaysInFirstWeek()) {
+                        firstDayOfWeek -= 7;
+                    }
+                    if (isFieldSet(fieldMask, DAY_OF_WEEK)) {
+                        firstDayOfWeek = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(firstDayOfWeek + 6,
+                                                                                           internalGet(DAY_OF_WEEK));
+                    }
+                    // In lenient mode, we treat days of the previous
+                    // months as a part of the specified
+                    // WEEK_OF_MONTH. See 4633646.
+                    fixedDate = firstDayOfWeek + 7 * (internalGet(WEEK_OF_MONTH) - 1);
+                } else {
+                    int dayOfWeek;
+                    if (isFieldSet(fieldMask, DAY_OF_WEEK)) {
+                        dayOfWeek = internalGet(DAY_OF_WEEK);
+                    } else {
+                        dayOfWeek = getFirstDayOfWeek();
+                    }
+                    // We are basing this on the day-of-week-in-month.  The only
+                    // trickiness occurs if the day-of-week-in-month is
+                    // negative.
+                    int dowim;
+                    if (isFieldSet(fieldMask, DAY_OF_WEEK_IN_MONTH)) {
+                        dowim = internalGet(DAY_OF_WEEK_IN_MONTH);
+                    } else {
+                        dowim = 1;
+                    }
+                    if (dowim >= 0) {
+                        fixedDate = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(fixedDate + (7 * dowim) - 1,
+                                                                                      dayOfWeek);
+                    } else {
+                        // Go to the first day of the next week of
+                        // the specified week boundary.
+                        int lastDate = monthLength(month, year) + (7 * (dowim + 1));
+                        // Then, get the day of week date on or before the last date.
+                        fixedDate = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(fixedDate + lastDate - 1,
+                                                                                      dayOfWeek);
+                    }
+                }
+            }
+        } else {
+            // We are on the first day of the year.
+            if (isFieldSet(fieldMask, DAY_OF_YEAR)) {
+                if (isTransitionYear(date.getNormalizedYear())) {
+                    fixedDate = getFixedDateJan1(date, fixedDate);
+                }
+                // Add the offset, then subtract 1. (Make sure to avoid underflow.)
+                fixedDate += internalGet(DAY_OF_YEAR);
+                fixedDate--;
+            } else {
+                long firstDayOfWeek = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(fixedDate + 6,
+                                                                                        getFirstDayOfWeek());
+                // If we have enough days in the first week, then move
+                // to the previous week.
+                if ((firstDayOfWeek - fixedDate) >= getMinimalDaysInFirstWeek()) {
+                    firstDayOfWeek -= 7;
+                }
+                if (isFieldSet(fieldMask, DAY_OF_WEEK)) {
+                    int dayOfWeek = internalGet(DAY_OF_WEEK);
+                    if (dayOfWeek != getFirstDayOfWeek()) {
+                        firstDayOfWeek = LocalGregorianCalendar.getDayOfWeekDateOnOrBefore(firstDayOfWeek + 6,
+                                                                                           dayOfWeek);
+                    }
+                }
+                fixedDate = firstDayOfWeek + 7 * ((long)internalGet(WEEK_OF_YEAR) - 1);
+            }
+        }
+        return fixedDate;
+    }
+
+    /**
+     * Returns the fixed date of the first day of the year (usually
+     * January 1) before the specified date.
+     *
+     * @param date the date for which the first day of the year is
+     * calculated. The date has to be in the cut-over year.
+     * @param fixedDate the fixed date representation of the date
+     */
+    private long getFixedDateJan1(LocalGregorianCalendar.Date date, long fixedDate) {
+        if (date.getEra() != null && date.getYear() == 1) {
+            for (int eraIndex = getEraIndex(date); eraIndex > 0; eraIndex--) {
+                CalendarDate d = eras[eraIndex].getSinceDate();
+                long fd = gcal.getFixedDate(d);
+                // There might be multiple era transitions in a year.
+                if (fd > fixedDate) {
+                    continue;
+                }
+                return fd;
+            }
+        }
+        CalendarDate d = gcal.newCalendarDate(TimeZone.NO_TIMEZONE);
+        d.setDate(date.getNormalizedYear(), Gregorian.JANUARY, 1);
+        return gcal.getFixedDate(d);
+    }
+
+    /**
+     * Returns the fixed date of the first date of the month (usually
+     * the 1st of the month) before the specified date.
+     *
+     * @param date the date for which the first day of the month is
+     * calculated. The date must be in the era transition year.
+     * @param fixedDate the fixed date representation of the date
+     */
+    private long getFixedDateMonth1(LocalGregorianCalendar.Date date,
+                                          long fixedDate) {
+        int eraIndex = getTransitionEraIndex(date);
+        if (eraIndex != -1) {
+            long transition = sinceFixedDates[eraIndex];
+            // If the given date is on or after the transition date, then
+            // return the transition date.
+            if (transition <= fixedDate) {
+                return transition;
+            }
+        }
+
+        // Otherwise, we can use the 1st day of the month.
+        return fixedDate - date.getDayOfMonth() + 1;
+    }
+
+    /**
+     * Returns a LocalGregorianCalendar.Date produced from the specified fixed date.
+     *
+     * @param fd the fixed date
+     */
+    private static LocalGregorianCalendar.Date getCalendarDate(long fd) {
+        LocalGregorianCalendar.Date d = jcal.newCalendarDate(TimeZone.NO_TIMEZONE);
+        jcal.getCalendarDateFromFixedDate(d, fd);
+        return d;
+    }
+
+    /**
+     * Returns the length of the specified month in the specified
+     * Gregorian year. The year number must be normalized.
+     *
+     * @see GregorianCalendar#isLeapYear(int)
+     */
+    private int monthLength(int month, int gregorianYear) {
+        return CalendarUtils.isGregorianLeapYear(gregorianYear) ?
+            GregorianCalendar.LEAP_MONTH_LENGTH[month] : GregorianCalendar.MONTH_LENGTH[month];
+    }
+
+    /**
+     * Returns the length of the specified month in the year provided
+     * by i
