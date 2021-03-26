@@ -199,4 +199,118 @@ public class PrivateInterfaceCall {
         shouldThrowICCE(() -> I2.invokeInterfaceMH(unsafeCastI2(new E())));
 
         System.out.println("ICCE I2.invokeInterfaceObjectFinalMH D1");
-        shouldThrowICCE(() -> I2.invokeInterfaceObjectFinalMH(unsafeCastI2(new D
+        shouldThrowICCE(() -> I2.invokeInterfaceObjectFinalMH(unsafeCastI2(new D1())));
+        System.out.println("ICCE I2.invokeInterfaceObjectFinalMH E");
+        shouldThrowICCE(() -> I2.invokeInterfaceObjectFinalMH(unsafeCastI2(new E())));
+
+        System.out.println("ICCE I3.invokeInterfaceMH D1");
+        shouldThrowICCE(() -> I3.invokeInterfaceMH(unsafeCastI3(new D1())));
+        System.out.println("ICCE I3.invokeInterfaceMH E");
+        shouldThrowICCE(() -> I3.invokeInterfaceMH(unsafeCastI3(new E())));
+
+        System.out.println("ICCE I4.invokeDirect D1");
+        shouldThrowICCE(() -> I4.invokeDirect(unsafeCastI4(new D1())));
+        System.out.println("ICCE I4.invokeDirect E");
+        shouldThrowICCE(() -> I4.invokeDirect(unsafeCastI4(new E())));
+    }
+
+    static void warmup() {
+        for (int i = 0; i < 20_000; i++) {
+            runPositiveTests();
+        }
+    }
+
+    public static void main(String[] args) throws Throwable {
+        System.out.println("UNRESOLVED:");
+        runNegativeTests();
+        runPositiveTests();
+
+        System.out.println("RESOLVED:");
+        runNegativeTests();
+
+        System.out.println("WARMUP:");
+        warmup();
+
+        System.out.println("COMPILED:");
+        runNegativeTests();
+        runPositiveTests();
+    }
+
+    static interface Test {
+        void run() throws Throwable;
+    }
+
+    static void shouldThrowICCE(Test t) {
+        shouldThrow(IncompatibleClassChangeError.class,
+                    "does not implement the requested interface", t);
+    }
+
+    // Depending on whether the exception originates in the linkResolver, the interpreter
+    // or the compiler, the message can be different - which is unfortunate and could be
+    // fixed. So we allow the listed reason or else a null message.
+    static void shouldThrow(Class<?> expectedError, String reason, Test t) {
+        try {
+            t.run();
+        } catch (Throwable e) {
+            // Don't accept subclasses as they can hide unexpected failure modes
+            if (expectedError == e.getClass()) {
+                String msg = e.getMessage();
+                if ((msg != null && msg.contains(reason)) || msg == null) {
+                    // passed
+                    System.out.println("Threw expected: " + e);
+                    return;
+                }
+                else {
+                    throw new AssertionError("Wrong exception reason: expected '" + reason
+                                             + "', got '" + msg + "'", e);
+                }
+            } else {
+                String msg = String.format("Wrong exception thrown: expected=%s; thrown=%s",
+                                           expectedError.getName(), e.getClass().getName());
+                throw new AssertionError(msg, e);
+            }
+        }
+        throw new AssertionError("No exception thrown: expected " + expectedError.getName());
+    }
+
+    static void shouldNotThrow(Test t) {
+        try {
+            t.run();
+            // passed
+        } catch (Throwable e) {
+            throw new AssertionError("Exception was thrown: ", e);
+        }
+    }
+
+    // Note: these unsafe casts are only possible for interface types
+
+    static I2 unsafeCastI2(Object obj) {
+        try {
+            MethodHandle mh = MethodHandles.identity(Object.class);
+            mh = MethodHandles.explicitCastArguments(mh, mh.type().changeReturnType(I2.class));
+            return (I2)mh.invokeExact((Object) obj);
+        } catch (Throwable e) {
+            throw new Error(e);
+        }
+    }
+
+    static I3 unsafeCastI3(Object obj) {
+        try {
+            MethodHandle mh = MethodHandles.identity(Object.class);
+            mh = MethodHandles.explicitCastArguments(mh, mh.type().changeReturnType(I3.class));
+            return (I3)mh.invokeExact((Object) obj);
+        } catch (Throwable e) {
+            throw new Error(e);
+        }
+    }
+
+    static I4 unsafeCastI4(Object obj) {
+        try {
+            MethodHandle mh = MethodHandles.identity(Object.class);
+            mh = MethodHandles.explicitCastArguments(mh, mh.type().changeReturnType(I4.class));
+            return (I4)mh.invokeExact((Object) obj);
+        } catch (Throwable e) {
+            throw new Error(e);
+        }
+    }
+}
