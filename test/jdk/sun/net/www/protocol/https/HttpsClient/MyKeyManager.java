@@ -92,4 +92,56 @@ final class MyKeyManager implements X509KeyManager {
      * socket given the public key type and the list of
      * certificate issuer authorities recognized by the peer (if any).
      */
-    public synchronized String chooseServerAl
+    public synchronized String chooseServerAlias(String keyType,
+            Principal[] issuers, Socket socket) {
+        return "server";
+    }
+
+    /*
+     * Get the matching aliases for authenticating the server side of a secure
+     * socket given the public key type and the list of
+     * certificate issuer authorities recognized by the peer (if any).
+     */
+    public String[] getServerAliases(String keyType, Principal[] issuers) {
+        String[] s = new String[1];
+        s[0] = "server";
+        return s;
+    }
+
+    /**
+     * Returns the certificate chain associated with the given alias.
+     *
+     * @param alias the alias name
+     *
+     * @return the certificate chain (ordered with the user's certificate first
+     * and the root certificate authority last)
+     *
+     * @exception KeyStoreException if the alias is invalid
+     */
+    public X509Certificate[] getCertificateChain(String alias) {
+        Object chain;
+
+        chain = certChainMap.get(alias);
+        if (!(chain instanceof X509Certificate[]))
+            return null;
+        return (X509Certificate[]) chain;
+    }
+
+    /*
+     * Returns the key associated with the given alias, using the given
+     * password to recover it.
+     *
+     * @param alias the alias name
+     *
+     * @return the requested key
+     * @exception KeyStoreException if the alias is invalid
+     */
+    public PrivateKey getPrivateKey(String alias) {
+        Object key;
+
+        key = keyMap.get(alias);
+        if (!(key instanceof PrivateKey))
+            return null;
+        return (PrivateKey)key;
+    }
+}
