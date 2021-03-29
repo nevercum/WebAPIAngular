@@ -131,4 +131,201 @@ public class AnnotationsOnModules extends ModuleTestBase {
                         "--module-path", modulePath.toString(),
                         "-XDrawDiagnostics")
                 .outdir(modulePath)
-                .f
+                .files(findJavaFiles(m2))
+                .run()
+                .writeAll()
+                .getOutput(OutputKind.DIRECT);
+
+        if (!log.isEmpty()) {
+            throw new AssertionError("Output is not empty. Expected no output and no warnings.");
+        }
+
+        ClassFile cf = ClassFile.read(modulePath.resolve("A").resolve("module-info.class"));
+        RuntimeVisibleAnnotations_attribute annotations = (RuntimeVisibleAnnotations_attribute) cf.attributes.map.get(Attribute.RuntimeVisibleAnnotations);
+
+        if (annotations != null && annotations.annotations.length > 0) {
+            throw new AssertionError("Found annotation attributes. Expected no annotations for javadoc @deprecated tag.");
+        }
+
+        if (cf.attributes.map.get(Attribute.Deprecated) != null) {
+            throw new AssertionError("Found Deprecated attribute. Expected no Deprecated attribute for javadoc @deprecated tag.");
+        }
+    }
+
+    @Test
+    public void testEnhancedDeprecatedAnnotation(Path base) throws Exception {
+        Path moduleSrc = base.resolve("module-src");
+        Path m1 = moduleSrc.resolve("src1/A");
+
+        tb.writeJavaFiles(m1,
+                "@Deprecated(since=\"10.X\", forRemoval=true) module A { }");
+
+        Path modulePath = base.resolve("module-path");
+
+        Files.createDirectories(modulePath);
+
+        new JavacTask(tb)
+                .options("--module-source-path", m1.getParent().toString())
+                .outdir(modulePath)
+                .files(findJavaFiles(m1))
+                .run()
+                .writeAll();
+
+        Path m2 = base.resolve("src2/B");
+
+        tb.writeJavaFiles(m2,
+                "module B { requires A; }");
+        List<String> log = new JavacTask(tb)
+                .options("--module-source-path", m2.getParent().toString(),
+                        "--module-path", modulePath.toString(),
+                        "-XDrawDiagnostics")
+                .outdir(modulePath)
+                .files(findJavaFiles(m2))
+                .run()
+                .writeAll()
+                .getOutputLines(OutputKind.DIRECT);
+
+        List<String> expected = List.of("module-info.java:1:21: compiler.warn.has.been.deprecated.for.removal.module: A",
+                "1 warning");
+        if (!log.containsAll(expected)) {
+            throw new AssertionError("Expected output not found. Expected: " + expected);
+        }
+
+        ClassFile cf = ClassFile.read(modulePath.resolve("A").resolve("module-info.class"));
+        RuntimeVisibleAnnotations_attribute annotations = (RuntimeVisibleAnnotations_attribute) cf.attributes.map.get(Attribute.RuntimeVisibleAnnotations);
+
+        if (annotations == null ) {
+            throw new AssertionError("Annotations not found!");
+        }
+        int length = annotations.annotations.length;
+        if (length != 1 ) {
+            throw new AssertionError("Incorrect number of annotations: " + length);
+        }
+        int pairsCount = annotations.annotations[0].num_element_value_pairs;
+        if (pairsCount != 2) {
+            throw new AssertionError("Incorrect number of key-value pairs in annotation: " + pairsCount + " Expected two: forRemoval and since.");
+        }
+    }
+
+    @Test
+    public void testDeprecatedModuleRequiresDeprecatedForRemovalModule(Path base) throws Exception {
+        Path moduleSrc = base.resolve("module-src");
+        Path m1 = moduleSrc.resolve("src1/A");
+
+        tb.writeJavaFiles(m1,
+                "@Deprecated(forRemoval=true) module A { }");
+
+        Path modulePath = base.resolve("module-path");
+
+        Files.createDirectories(modulePath);
+
+        new JavacTask(tb)
+                .options("--module-source-path", m1.getParent().toString())
+                .outdir(modulePath)
+                .files(findJavaFiles(m1))
+                .run()
+                .writeAll();
+
+        Path m2 = base.resolve("src2/B");
+
+        tb.writeJavaFiles(m2,
+                "@Deprecated(forRemoval=false) module B { requires A; }");
+        List<String> log = new JavacTask(tb)
+                .options("--module-source-path", m2.getParent().toString(),
+                        "--module-path", modulePath.toString(),
+                        "-XDrawDiagnostics")
+                .outdir(modulePath)
+                .files(findJavaFiles(m2))
+                .run()
+                .writeAll()
+                .getOutputLines(OutputKind.DIRECT);
+
+        List<String> expected = List.of("module-info.java:1:51: compiler.warn.has.been.deprecated.for.removal.module: A",
+                "1 warning");
+        if (!log.containsAll(expected)) {
+            throw new AssertionError("Expected output not found. Expected: " + expected);
+        }
+    }
+
+    @Test
+    public void testExportsAndOpensToDeprecatedModule(Path base) throws Exception {
+        Path moduleSrc = base.resolve("module-src");
+
+
+        tb.writeJavaFiles(moduleSrc.resolve("B"),
+                "@Deprecated module B { }");
+        tb.writeJavaFiles(moduleSrc.resolve("C"),
+                "@Deprecated(forRemoval=true) module C { }");
+
+        Path modulePath = base.resolve("module-path");
+        Files.createDirectories(modulePath);
+
+        new JavacTask(tb)
+                .options("--module-source-path", moduleSrc.toString())
+                .outdir(modulePath)
+                .files(findJavaFiles(moduleSrc))
+                .run()
+                .writeAll();
+
+        Path m1 = base.resolve("src1/A");
+
+        tb.writeJavaFiles(m1,
+                """
+                    module A {
+                        exports p1 to B; opens p1 to B;
+                        exports p2 to C; opens p2 to C;
+                        exports p3 to B,C; opens p3 to B,C;
+                    }""",
+                "package p1; public class A { }",
+                "package p2; public class A { }",
+                "package p3; public class A { }");
+        String log = new JavacTask(tb)
+                .options("--module-source-path", m1.getParent().toString(),
+                        "--module-path", modulePath.toString(),
+                        "-XDrawDiagnostics")
+                .outdir(modulePath)
+                .files(findJavaFiles(m1))
+                .run()
+                .writeAll()
+                .getOutput(OutputKind.DIRECT);
+
+        if (!log.isEmpty()) {
+            throw new AssertionError("Output is not empty! " + log);
+        }
+    }
+
+    @Test
+    public void testAnnotationWithImport(Path base) throws Exception {
+        Path moduleSrc = base.resolve("module-src");
+        Path m1 = moduleSrc.resolve("m1x");
+
+        tb.writeJavaFiles(m1,
+                          "import m1x.A; @A module m1x { }",
+                          "package m1x; import java.lang.annotation.*; @Target(ElementType.MODULE) public @interface A {}");
+
+        Path modulePath = base.resolve("module-path");
+
+        Files.createDirectories(modulePath);
+
+        new JavacTask(tb)
+                .options("--module-source-path", moduleSrc.toString())
+                .outdir(modulePath)
+                .files(findJavaFiles(m1))
+                .run()
+                .writeAll();
+
+        ClassFile cf = ClassFile.read(modulePath.resolve("m1x").resolve("module-info.class"));
+        RuntimeInvisibleAnnotations_attribute annotations = (RuntimeInvisibleAnnotations_attribute) cf.attributes.map.get(Attribute.RuntimeInvisibleAnnotations);
+
+        if (annotations == null || annotations.annotations.length != 1) {
+            throw new AssertionError("Annotations not correct!");
+        }
+    }
+
+    @Test
+    public void testAnnotationWithImportFromAnotherModule(Path base) throws Exception {
+        Path moduleSrc = base.resolve("module-src");
+        Path m1 = moduleSrc.resolve("src1/A");
+
+        tb.writeJavaFiles(m1,
+                "module A { exports p1; exports 
