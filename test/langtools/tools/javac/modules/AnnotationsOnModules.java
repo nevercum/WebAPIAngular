@@ -328,4 +328,200 @@ public class AnnotationsOnModules extends ModuleTestBase {
         Path m1 = moduleSrc.resolve("src1/A");
 
         tb.writeJavaFiles(m1,
-                "module A { exports p1; exports 
+                "module A { exports p1; exports p2; }",
+                "package p1; import java.lang.annotation.*; @Target(ElementType.MODULE) public @interface A { }",
+                "package p2; import java.lang.annotation.*; @Target(ElementType.MODULE) public @interface B { }");
+
+        Path modulePath = base.resolve("module-path");
+
+        Files.createDirectories(modulePath);
+
+        new JavacTask(tb)
+                .options("--module-source-path", m1.getParent().toString())
+                .outdir(modulePath)
+                .files(findJavaFiles(m1))
+                .run()
+                .writeAll();
+
+        Path m2 = base.resolve("src2/B");
+
+        tb.writeJavaFiles(m2,
+                "import p1.A; @A @p2.B module B { requires A; }");
+        new JavacTask(tb)
+                .options("--module-source-path", m2.getParent().toString(),
+                        "--module-path", modulePath.toString()
+                )
+                .outdir(modulePath)
+                .files(findJavaFiles(m2))
+                .run()
+                .writeAll();
+
+        ClassFile cf = ClassFile.read(modulePath.resolve("B").resolve("module-info.class"));
+        RuntimeInvisibleAnnotations_attribute annotations = (RuntimeInvisibleAnnotations_attribute) cf.attributes.map.get(Attribute.RuntimeInvisibleAnnotations);
+
+        if (annotations == null ) {
+            throw new AssertionError("Annotations not found!");
+        }
+        int length = annotations.annotations.length;
+        if (length != 2 ) {
+            throw new AssertionError("Incorrect number of annotations: " + length);
+        }
+    }
+
+    @Test
+    public void testAnnotationWithImportAmbiguity(Path base) throws Exception {
+        Path moduleSrc = base.resolve("module-src");
+        Path m1 = moduleSrc.resolve("src1/A");
+
+        tb.writeJavaFiles(m1,
+                "module A { exports p1; exports p2; }",
+                "package p1; import java.lang.annotation.*; @Target(ElementType.MODULE) public @interface AAA { }",
+                "package p2; import java.lang.annotation.*; @Target(ElementType.MODULE) public @interface AAA { }");
+
+        Path modulePath = base.resolve("module-path");
+
+        Files.createDirectories(modulePath);
+
+        new JavacTask(tb)
+                .options("--module-source-path", m1.getParent().toString())
+                .outdir(modulePath)
+                .files(findJavaFiles(m1))
+                .run()
+                .writeAll();
+
+        Path m2 = base.resolve("src2/B");
+
+        tb.writeJavaFiles(m2,
+                "import p1.*; import p2.*; @AAA module B { requires A; }");
+        List<String> log = new JavacTask(tb)
+                .options("--module-source-path", m2.getParent().toString(),
+                        "--module-path", modulePath.toString(),
+                        "-XDrawDiagnostics"
+                )
+                .outdir(modulePath)
+                .files(findJavaFiles(m2))
+                .run(Task.Expect.FAIL)
+                .writeAll()
+                .getOutputLines(OutputKind.DIRECT);
+
+        List<String> expected = List.of("module-info.java:1:28: compiler.err.ref.ambiguous: AAA, kindname.class, p2.AAA, p2, kindname.class, p1.AAA, p1",
+                "1 error");
+        if (!log.containsAll(expected)) {
+            throw new AssertionError("Expected output not found. Expected: " + expected);
+        }
+
+    }
+
+    @Test
+    public void testAnnotationWithoutTarget(Path base) throws Exception {
+        Path moduleSrc = base.resolve("module-src");
+        Path m1 = moduleSrc.resolve("m1x");
+
+        tb.writeJavaFiles(m1,
+                          "@test.A module m1x { exports test; }",
+                          "package test; public @interface A { }");
+
+        Path classes = base.resolve("classes");
+        Files.createDirectories(classes);
+
+        new JavacTask(tb)
+                .options("--module-source-path", moduleSrc.toString())
+                .outdir(classes)
+                .files(findJavaFiles(m1))
+                .run()
+                .writeAll();
+
+        ClassFile cf = ClassFile.read(classes.resolve("m1x").resolve("module-info.class"));
+        var invisibleAnnotations = (RuntimeInvisibleAnnotations_attribute) cf.attributes.map.get(Attribute.RuntimeInvisibleAnnotations);
+
+        if (invisibleAnnotations == null) {
+            throw new AssertionError("Annotations not found!");
+        }
+        int length = invisibleAnnotations.annotations.length;
+        if (length != 1) {
+            throw new AssertionError("Incorrect number of annotations: " + length);
+        }
+        Annotation annotation = invisibleAnnotations.annotations[0];
+        String annotationName = cf.constant_pool.getUTF8Value(annotation.type_index).toString();
+        if (!"Ltest/A;".equals(annotationName)) {
+            throw new AssertionError("Incorrect annotation name: " + annotationName);
+        }
+    }
+
+    @Test
+    public void testModuleInfoAnnotationsInAPI(Path base) throws Exception {
+        Path moduleSrc = base.resolve("module-src");
+        Path m1 = moduleSrc.resolve("m1x");
+
+        tb.writeJavaFiles(m1,
+                          "import m1x.*; @A @Deprecated @E @E module m1x { }",
+                          "package m1x; import java.lang.annotation.*; @Target(ElementType.MODULE) public @interface A {}",
+                          "package m1x; import java.lang.annotation.*; @Target(ElementType.MODULE) @Repeatable(C.class) public @interface E {}",
+                          "package m1x; import java.lang.annotation.*; @Target(ElementType.MODULE) public @interface C { public E[] value(); }");
+
+        Path modulePath = base.resolve("module-path");
+
+        Files.createDirectories(modulePath);
+
+        new JavacTask(tb)
+                .options("--module-source-path", moduleSrc.toString(),
+                         "-processor", AP.class.getName())
+                .outdir(modulePath)
+                .files(findJavaFiles(m1))
+                .run()
+                .writeAll();
+
+        Path src = base.resolve("src");
+
+        tb.writeJavaFiles(src,
+                          "class T {}");
+
+        Path out = base.resolve("out");
+
+        Files.createDirectories(out);
+
+        new JavacTask(tb)
+                .options("--module-path", modulePath.toString(),
+                         "--add-modules", "m1x",
+                         "-processor", AP.class.getName())
+                .outdir(out)
+                .files(findJavaFiles(src))
+                .run()
+                .writeAll();
+
+        new JavacTask(tb)
+                .options("--module-path", modulePath.toString() + File.pathSeparator + out.toString(),
+                         "--add-modules", "m1x",
+                         "-processor", AP.class.getName(),
+                         "-proc:only")
+                .classes("m1x/m1x.A")
+                .files(findJavaFiles(src))
+                .run()
+                .writeAll();
+    }
+
+    @SupportedAnnotationTypes("*")
+    public static final class AP extends AbstractProcessor {
+
+        @Override
+        public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+            ModuleElement m1 = processingEnv.getElementUtils().getModuleElement("m1x");
+            Set<String> actualAnnotations = new HashSet<>();
+            Set<String> expectedAnnotations =
+                    new HashSet<>(Arrays.asList("@m1x.A", "@java.lang.Deprecated", "@m1x.C({@m1x.E, @m1x.E})"));
+
+            for (AnnotationMirror am : m1.getAnnotationMirrors()) {
+                actualAnnotations.add(am.toString());
+            }
+
+            if (!expectedAnnotations.equals(actualAnnotations)) {
+                throw new AssertionError("Incorrect annotations: " + actualAnnotations);
+            }
+
+            return false;
+        }
+
+    }
+
+    @Test
+    public void testModuleDepreca
