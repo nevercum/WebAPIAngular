@@ -692,4 +692,60 @@ public class AnnotationsOnModules extends ModuleTestBase {
         for (TestCase tc : testCases) {
             Path testBase = base.resolve(String.valueOf(count));
             Path moduleSrc = testBase.resolve("module-src");
-          
+            Path m = moduleSrc.resolve("m");
+
+            tb.writeJavaFiles(m,
+                              "@test.A(" + tc.use + ") module m { }",
+                              "package test; @java.lang.annotation.Target(java.lang.annotation.ElementType.MODULE) public @interface A { " + tc.decl + "}",
+                              tc.extraDecl);
+
+            Path modulePath = testBase.resolve("module-path");
+
+            Files.createDirectories(modulePath);
+
+            new JavacTask(tb)
+                .options("--module-source-path", moduleSrc.toString())
+                .outdir(modulePath)
+                .files(findJavaFiles(moduleSrc))
+                .run()
+                .writeAll();
+
+            Path classes = testBase.resolve("classes");
+
+            Files.createDirectories(classes);
+
+            new JavacTask(tb)
+                .options("--module-path", modulePath.toString(),
+                         "--add-modules", "m",
+                         "-processorpath", System.getProperty("test.classes"),
+                         "-processor", ProxyTypeValidator.class.getName(),
+                         "-A" + OPT_EXPECTED_ANNOTATIONS + "=" + tc.expectedAnnotations)
+                .outdir(classes)
+                .files(findJavaFiles(extraSrc))
+                .run()
+                .writeAll();
+        }
+    }
+
+    private static final String OPT_EXPECTED_ANNOTATIONS = "expectedAnnotations";
+
+    @SupportedAnnotationTypes("*")
+    @SupportedOptions(OPT_EXPECTED_ANNOTATIONS)
+    public static final class ProxyTypeValidator extends AbstractProcessor {
+
+        @Override
+        public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+            ModuleElement m = processingEnv.getElementUtils().getModuleElement("m");
+            String actualTypes = m.getAnnotationMirrors()
+                                  .stream()
+                                  .map(am -> am.toString())
+                                  .collect(Collectors.joining(", "));
+            if (!Objects.equals(actualTypes, processingEnv.getOptions().get(OPT_EXPECTED_ANNOTATIONS))) {
+                throw new IllegalStateException("Expected annotations not found, actual: " + actualTypes);
+            }
+            return false;
+        }
+
+    }
+
+}
