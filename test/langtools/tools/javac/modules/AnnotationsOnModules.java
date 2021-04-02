@@ -524,4 +524,172 @@ public class AnnotationsOnModules extends ModuleTestBase {
     }
 
     @Test
-    public void testModuleDepreca
+    public void testModuleDeprecation(Path base) throws Exception {
+        Path moduleSrc = base.resolve("module-src");
+        Path m1 = moduleSrc.resolve("m1x");
+
+        tb.writeJavaFiles(m1,
+                          "@Deprecated module m1x { }");
+
+        Path m2 = moduleSrc.resolve("m2x");
+
+        tb.writeJavaFiles(m2,
+                          "@Deprecated module m2x { }");
+
+        Path m3 = moduleSrc.resolve("m3x");
+
+        Path modulePath = base.resolve("module-path");
+
+        Files.createDirectories(modulePath);
+
+        List<String> actual;
+        List<String> expected;
+
+        String DEPRECATED_JAVADOC = "/** @deprecated */";
+        for (String suppress : new String[] {"", DEPRECATED_JAVADOC, "@Deprecated ", "@SuppressWarnings(\"deprecation\") "}) {
+            tb.writeJavaFiles(m3,
+                              suppress + """
+                                  module m3x {
+                                      requires m1x;
+                                      exports api to m1x, m2x;
+                                  }""",
+                              "package api; public class Api { }");
+            System.err.println("compile m3x");
+            actual = new JavacTask(tb)
+                    .options("--module-source-path", moduleSrc.toString(),
+                             "-XDrawDiagnostics")
+                    .outdir(modulePath)
+                    .files(findJavaFiles(moduleSrc))
+                    .run()
+                    .writeAll()
+                    .getOutputLines(OutputKind.DIRECT);
+
+            if (suppress.isEmpty()) {
+                expected = Arrays.asList(
+                        "- compiler.note.deprecated.filename: module-info.java",
+                        "- compiler.note.deprecated.recompile");
+            } else if (suppress.equals(DEPRECATED_JAVADOC)) {
+                expected = Arrays.asList(
+                        "module-info.java:1:19: compiler.warn.missing.deprecated.annotation",
+                        "- compiler.note.deprecated.filename: module-info.java",
+                        "- compiler.note.deprecated.recompile",
+                        "1 warning");
+            } else {
+                expected = Arrays.asList("");
+            }
+
+            if (!expected.equals(actual)) {
+                throw new AssertionError("Unexpected output: " + actual + "; suppress: " + suppress);
+            }
+
+            System.err.println("compile m3x with -Xlint:-deprecation");
+            actual = new JavacTask(tb)
+                    .options("--module-source-path", moduleSrc.toString(),
+                             "-XDrawDiagnostics",
+                             "-Xlint:deprecation")
+                    .outdir(modulePath)
+                    .files(findJavaFiles(moduleSrc))
+                    .run()
+                    .writeAll()
+                    .getOutputLines(OutputKind.DIRECT);
+
+            if (suppress.isEmpty()) {
+                expected = Arrays.asList(
+                        "module-info.java:2:14: compiler.warn.has.been.deprecated.module: m1x",
+                        "1 warning");
+            } else if (suppress.equals(DEPRECATED_JAVADOC)) {
+                expected = Arrays.asList(
+                        "module-info.java:1:19: compiler.warn.missing.deprecated.annotation",
+                        "module-info.java:2:14: compiler.warn.has.been.deprecated.module: m1x",
+                        "2 warnings");
+            } else {
+                expected = Arrays.asList("");
+            }
+
+            if (!expected.equals(actual)) {
+                throw new AssertionError("Unexpected output: " + actual + "; suppress: " + suppress);
+            }
+
+            //load the deprecated module-infos from classfile:
+            System.err.println("compile m3x with -Xlint:-deprecation, loading deprecated modules from classes");
+            actual = new JavacTask(tb)
+                    .options("--module-path", modulePath.toString(),
+                             "-XDrawDiagnostics",
+                             "-Xlint:deprecation")
+                    .outdir(modulePath.resolve("m3x"))
+                    .files(findJavaFiles(moduleSrc.resolve("m3x")))
+                    .run()
+                    .writeAll()
+                    .getOutputLines(OutputKind.DIRECT);
+
+            if (!expected.equals(actual)) {
+                throw new AssertionError("Unexpected output: " + actual + "; suppress: " + suppress);
+            }
+        }
+    }
+
+    @Test
+    public void testAttributeValues(Path base) throws Exception {
+        class TestCase {
+            public final String extraDecl;
+            public final String decl;
+            public final String use;
+            public final String expectedAnnotations;
+
+            public TestCase(String extraDecl, String decl, String use, String expectedAnnotations) {
+                this.extraDecl = extraDecl;
+                this.decl = decl;
+                this.use = use;
+                this.expectedAnnotations = expectedAnnotations;
+            }
+        }
+
+        TestCase[] testCases = new TestCase[] {
+            new TestCase("package test; public enum E {A, B;}",
+                         "public E value();",
+                         "test.E.A",
+                         "@test.A(A)"),
+            new TestCase("package test; public enum E {A, B;}",
+                         "public E[] value();",
+                         "{test.E.A, test.E.B}",
+                         "@test.A({A, B})"),
+            new TestCase("package test; public class Extra {}",
+                         "public Class value();",
+                         "test.Extra.class",
+                         "@test.A(test.Extra.class)"),
+            new TestCase("package test; public class Extra {}",
+                         "public Class[] value();",
+                         "{test.Extra.class, String.class}",
+                         "@test.A({test.Extra.class, java.lang.String.class})"),
+            new TestCase("package test; public @interface Extra { public Class value(); }",
+                         "public test.Extra value();",
+                         "@test.Extra(String.class)",
+                         "@test.A(@test.Extra(java.lang.String.class))"),
+            new TestCase("package test; public @interface Extra { public Class value(); }",
+                         "public test.Extra[] value();",
+                         "{@test.Extra(String.class), @test.Extra(Integer.class)}",
+                         "@test.A({@test.Extra(java.lang.String.class), @test.Extra(java.lang.Integer.class)})"),
+            new TestCase("package test; public class Any { }",
+                         "public int value();",
+                         "1",
+                         "@test.A(1)"),
+            new TestCase("package test; public class Any { }",
+                         "public int[] value();",
+                         "{1, 2}",
+                         "@test.A({1, 2})"),
+            new TestCase("package test; public enum E {A;}",
+                        "int integer(); boolean flag(); double value(); String string(); E enumeration(); ",
+                        "enumeration = test.E.A, integer = 42, flag = true, value = 3.5, string = \"Text\"",
+                        "@test.A(enumeration=A, integer=42, flag=true, value=3.5, string=\"Text\")"),
+        };
+
+        Path extraSrc = base.resolve("extra-src");
+        tb.writeJavaFiles(extraSrc,
+                          "class Any {}");
+
+        int count = 0;
+
+        for (TestCase tc : testCases) {
+            Path testBase = base.resolve(String.valueOf(count));
+            Path moduleSrc = testBase.resolve("module-src");
+          
