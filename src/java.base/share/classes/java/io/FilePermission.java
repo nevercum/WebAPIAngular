@@ -225,4 +225,209 @@ public final class FilePermission extends Permission implements Serializable {
                            String actions) {
         super(name);
         // Customizables
-        this.n
+        this.npath = npath;
+        this.npath2 = npath2;
+        this.actions = actions;
+        this.mask = mask;
+        // Cloneds
+        this.allFiles = input.allFiles;
+        this.invalid = input.invalid;
+        this.recursive = input.recursive;
+        this.directory = input.directory;
+        this.cpath = input.cpath;
+    }
+
+    /**
+     * Returns the alternative path as a Path object, i.e. absolute path
+     * for a relative one, or vice versa.
+     *
+     * @param in a real path w/o "-" or "*" at the end, and not <<ALL FILES>>.
+     * @return the alternative path, or null if cannot find one.
+     */
+    private static Path altPath(Path in) {
+        try {
+            if (!in.isAbsolute()) {
+                return here.resolve(in).normalize();
+            } else {
+                return here.relativize(in).normalize();
+            }
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    static {
+        SharedSecrets.setJavaIOFilePermissionAccess(
+            /**
+             * Creates FilePermission objects with special internals.
+             * See {@link FilePermCompat#newPermPlusAltPath(Permission)} and
+             * {@link FilePermCompat#newPermUsingAltPath(Permission)}.
+             */
+            new JavaIOFilePermissionAccess() {
+                public FilePermission newPermPlusAltPath(FilePermission input) {
+                    if (!input.invalid && input.npath2 == null && !input.allFiles) {
+                        Path npath2 = altPath(input.npath);
+                        if (npath2 != null) {
+                            // Please note the name of the new permission is
+                            // different than the original so that when one is
+                            // added to a FilePermissionCollection it will not
+                            // be merged with the original one.
+                            return new FilePermission(input.getName() + "#plus",
+                                    input,
+                                    input.npath,
+                                    npath2,
+                                    input.mask,
+                                    input.actions);
+                        }
+                    }
+                    return input;
+                }
+                public FilePermission newPermUsingAltPath(FilePermission input) {
+                    if (!input.invalid && !input.allFiles) {
+                        Path npath2 = altPath(input.npath);
+                        if (npath2 != null) {
+                            // New name, see above.
+                            return new FilePermission(input.getName() + "#using",
+                                    input,
+                                    npath2,
+                                    null,
+                                    input.mask,
+                                    input.actions);
+                        }
+                    }
+                    return null;
+                }
+            }
+        );
+    }
+
+    /**
+     * initialize a FilePermission object. Common to all constructors.
+     * Also called during de-serialization.
+     *
+     * @param mask the actions mask to use.
+     *
+     */
+    @SuppressWarnings("removal")
+    private void init(int mask) {
+        if ((mask & ALL) != mask)
+                throw new IllegalArgumentException("invalid actions mask");
+
+        if (mask == NONE)
+                throw new IllegalArgumentException("invalid actions mask");
+
+        if (FilePermCompat.nb) {
+            String name = getName();
+
+            if (name == null)
+                throw new NullPointerException("name can't be null");
+
+            this.mask = mask;
+
+            if (name.equals("<<ALL FILES>>")) {
+                allFiles = true;
+                npath = EMPTY_PATH;
+                // other fields remain default
+                return;
+            }
+
+            boolean rememberStar = false;
+            if (name.endsWith("*")) {
+                rememberStar = true;
+                recursive = false;
+                name = name.substring(0, name.length()-1) + "-";
+            }
+
+            try {
+                // new File() can "normalize" some name, for example, "/C:/X" on
+                // Windows. Some JDK codes generate such illegal names.
+                npath = builtInFS.getPath(new File(name).getPath())
+                        .normalize();
+                // lastName should always be non-null now
+                Path lastName = npath.getFileName();
+                if (lastName != null && lastName.equals(DASH_PATH)) {
+                    directory = true;
+                    recursive = !rememberStar;
+                    npath = npath.getParent();
+                }
+                if (npath == null) {
+                    npath = EMPTY_PATH;
+                }
+                invalid = false;
+            } catch (InvalidPathException ipe) {
+                // Still invalid. For compatibility reason, accept it
+                // but make this permission useless.
+                npath = builtInFS.getPath("-u-s-e-l-e-s-s-");
+                invalid = true;
+            }
+
+        } else {
+            if ((cpath = getName()) == null)
+                throw new NullPointerException("name can't be null");
+
+            this.mask = mask;
+
+            if (cpath.equals("<<ALL FILES>>")) {
+                allFiles = true;
+                directory = true;
+                recursive = true;
+                cpath = "";
+                return;
+            }
+
+            // Validate path by platform's default file system
+            try {
+                String name = cpath.endsWith("*") ? cpath.substring(0, cpath.length() - 1) + "-" : cpath;
+                builtInFS.getPath(new File(name).getPath());
+            } catch (InvalidPathException ipe) {
+                invalid = true;
+                return;
+            }
+
+            // store only the canonical cpath if possible
+            cpath = AccessController.doPrivileged(new PrivilegedAction<>() {
+                public String run() {
+                    try {
+                        String path = cpath;
+                        if (cpath.endsWith("*")) {
+                            // call getCanonicalPath with a path with wildcard character
+                            // replaced to avoid calling it with paths that are
+                            // intended to match all entries in a directory
+                            path = path.substring(0, path.length() - 1) + "-";
+                            path = new File(path).getCanonicalPath();
+                            return path.substring(0, path.length() - 1) + "*";
+                        } else {
+                            return new File(path).getCanonicalPath();
+                        }
+                    } catch (IOException ioe) {
+                        return cpath;
+                    }
+                }
+            });
+
+            int len = cpath.length();
+            char last = ((len > 0) ? cpath.charAt(len - 1) : 0);
+
+            if (last == RECURSIVE_CHAR &&
+                    cpath.charAt(len - 2) == File.separatorChar) {
+                directory = true;
+                recursive = true;
+                cpath = cpath.substring(0, --len);
+            } else if (last == WILD_CHAR &&
+                    cpath.charAt(len - 2) == File.separatorChar) {
+                directory = true;
+                //recursive = false;
+                cpath = cpath.substring(0, --len);
+            } else {
+                // overkill since they are initialized to false, but
+                // commented out here to remind us...
+                //directory = false;
+                //recursive = false;
+            }
+
+            // XXX: at this point the path should be absolute. die if it isn't?
+        }
+    }
+
+    /**
+     * Creates a new FilePermission object wi
