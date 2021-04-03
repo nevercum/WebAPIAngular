@@ -12,4 +12,28 @@
  * version 2 for more details (a copy is included in the LICENSE file that
  * accompanied this code).
  *
- * You should have received a copy of the GNU General Publ
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package jdk.jfr.event.gc.stacktrace;
+
+/**
+ * @test
+ * @key jfr
+ * @requires vm.hasJFR
+ *
+ * @requires vm.gc == "null" | vm.gc == "Serial"
+ * @library /test/lib /test/jdk
+ * @run main/othervm -XX:+UseSerialGC -Xlog:gc* -XX:MaxMetaspaceSize=64M jdk.jfr.event.gc.stacktrace.TestMetaspaceSerialGCAllocationPendingStackTrace
+ */
+public class TestMetaspaceSerialGCAllocationPendingStackTrace {
+
+    public static void main(String[] args) throws Exception {
+        AllocationStackTrace.testMetaspaceSerialGCAllocEvent();
+    }
+}
