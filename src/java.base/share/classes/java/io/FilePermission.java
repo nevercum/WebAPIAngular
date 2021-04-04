@@ -1013,4 +1013,233 @@ public final class FilePermission extends Permission implements Serializable {
     }
 
     /**
-     * Returns a new PermissionCollectio
+     * Returns a new PermissionCollection object for storing FilePermission
+     * objects.
+     * <p>
+     * FilePermission objects must be stored in a manner that allows them
+     * to be inserted into the collection in any order, but that also enables the
+     * PermissionCollection {@code implies}
+     * method to be implemented in an efficient (and consistent) manner.
+     *
+     * <p>For example, if you have two FilePermissions:
+     * <OL>
+     * <LI>  {@code "/tmp/-", "read"}
+     * <LI>  {@code "/tmp/scratch/foo", "write"}
+     * </OL>
+     *
+     * <p>and you are calling the {@code implies} method with the FilePermission:
+     *
+     * <pre>
+     *   "/tmp/scratch/foo", "read,write",
+     * </pre>
+     *
+     * then the {@code implies} function must
+     * take into account both the "/tmp/-" and "/tmp/scratch/foo"
+     * permissions, so the effective permission is "read,write",
+     * and {@code implies} returns true. The "implies" semantics for
+     * FilePermissions are handled properly by the PermissionCollection object
+     * returned by this {@code newPermissionCollection} method.
+     *
+     * @return a new PermissionCollection object suitable for storing
+     * FilePermissions.
+     */
+    @Override
+    public PermissionCollection newPermissionCollection() {
+        return new FilePermissionCollection();
+    }
+
+    /**
+     * WriteObject is called to save the state of the FilePermission
+     * to a stream. The actions are serialized, and the superclass
+     * takes care of the name.
+     */
+    @java.io.Serial
+    private void writeObject(ObjectOutputStream s)
+        throws IOException
+    {
+        // Write out the actions. The superclass takes care of the name
+        // call getActions to make sure actions field is initialized
+        if (actions == null)
+            getActions();
+        s.defaultWriteObject();
+    }
+
+    /**
+     * readObject is called to restore the state of the FilePermission from
+     * a stream.
+     */
+    @java.io.Serial
+    private void readObject(ObjectInputStream s)
+         throws IOException, ClassNotFoundException
+    {
+        // Read in the actions, then restore everything else by calling init.
+        s.defaultReadObject();
+        init(getMask(actions));
+    }
+
+    /**
+     * Create a cloned FilePermission with a different actions.
+     * @param effective the new actions
+     * @return a new object
+     */
+    FilePermission withNewActions(int effective) {
+        return new FilePermission(this.getName(),
+                this,
+                this.npath,
+                this.npath2,
+                effective,
+                null);
+    }
+}
+
+/**
+ * A FilePermissionCollection stores a set of FilePermission permissions.
+ * FilePermission objects
+ * must be stored in a manner that allows them to be inserted in any
+ * order, but enable the implies function to evaluate the implies
+ * method.
+ * For example, if you have two FilePermissions:
+ * <OL>
+ * <LI> "/tmp/-", "read"
+ * <LI> "/tmp/scratch/foo", "write"
+ * </OL>
+ * And you are calling the implies function with the FilePermission:
+ * "/tmp/scratch/foo", "read,write", then the implies function must
+ * take into account both the /tmp/- and /tmp/scratch/foo
+ * permissions, so the effective permission is "read,write".
+ *
+ * @see java.security.Permission
+ * @see java.security.Permissions
+ * @see java.security.PermissionCollection
+ *
+ *
+ * @author Marianne Mueller
+ * @author Roland Schemers
+ *
+ * @serial include
+ *
+ */
+
+final class FilePermissionCollection extends PermissionCollection
+    implements Serializable
+{
+    // Not serialized; see serialization section at end of class
+    private transient ConcurrentHashMap<String, Permission> perms;
+
+    /**
+     * Create an empty FilePermissionCollection object.
+     */
+    public FilePermissionCollection() {
+        perms = new ConcurrentHashMap<>();
+    }
+
+    /**
+     * Adds a permission to the FilePermissionCollection. The key for the hash is
+     * permission.path.
+     *
+     * @param permission the Permission object to add.
+     *
+     * @throws    IllegalArgumentException   if the permission is not a
+     *                                       FilePermission
+     *
+     * @throws    SecurityException   if this FilePermissionCollection object
+     *                                has been marked readonly
+     */
+    @Override
+    public void add(Permission permission) {
+        if (! (permission instanceof FilePermission fp))
+            throw new IllegalArgumentException("invalid permission: "+
+                                               permission);
+        if (isReadOnly())
+            throw new SecurityException(
+                "attempt to add a Permission to a readonly PermissionCollection");
+
+        // Add permission to map if it is absent, or replace with new
+        // permission if applicable.
+        perms.merge(fp.getName(), fp, (existingVal, newVal) -> {
+                int oldMask = ((FilePermission)existingVal).getMask();
+                int newMask = ((FilePermission)newVal).getMask();
+                if (oldMask != newMask) {
+                    int effective = oldMask | newMask;
+                    if (effective == newMask) {
+                        return newVal;
+                    }
+                    if (effective != oldMask) {
+                        return ((FilePermission)newVal).withNewActions(effective);
+                    }
+                }
+                return existingVal;
+            }
+        );
+    }
+
+    /**
+     * Check and see if this set of permissions implies the permissions
+     * expressed in "permission".
+     *
+     * @param permission the Permission object to compare
+     *
+     * @return true if "permission" is a proper subset of a permission in
+     * the set, false if not.
+     */
+    @Override
+    public boolean implies(Permission permission) {
+        if (! (permission instanceof FilePermission fperm))
+            return false;
+
+        int desired = fperm.getMask();
+        int effective = 0;
+        int needed = desired;
+
+        for (Permission perm : perms.values()) {
+            FilePermission fp = (FilePermission)perm;
+            if (((needed & fp.getMask()) != 0) && fp.impliesIgnoreMask(fperm)) {
+                effective |= fp.getMask();
+                if ((effective & desired) == desired) {
+                    return true;
+                }
+                needed = (desired & ~effective);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns an enumeration of all the FilePermission objects in the
+     * container.
+     *
+     * @return an enumeration of all the FilePermission objects.
+     */
+    @Override
+    public Enumeration<Permission> elements() {
+        return perms.elements();
+    }
+
+    @java.io.Serial
+    private static final long serialVersionUID = 2202956749081564585L;
+
+    // Need to maintain serialization interoperability with earlier releases,
+    // which had the serializable field:
+    //    private Vector permissions;
+
+    /**
+     * @serialField permissions java.util.Vector
+     *     A list of FilePermission objects.
+     */
+    @java.io.Serial
+    private static final ObjectStreamField[] serialPersistentFields = {
+        new ObjectStreamField("permissions", Vector.class),
+    };
+
+    /**
+     * @serialData "permissions" field (a Vector containing the FilePermissions).
+     */
+    /**
+     * Writes the contents of the perms field out as a Vector for
+     * serialization compatibility with earlier releases.
+     *
+     * @param  out the {@code ObjectOutputStream} to which data is written
+     * @throws IOException if an I/O error occurs
+     */
+    @java.io.Serial
+    private void writeObject(ObjectOutputStream out) throws IOExce
