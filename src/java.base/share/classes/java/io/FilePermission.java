@@ -790,4 +790,227 @@ public final class FilePermission extends Permission implements Serializable {
         if (obj == this)
             return true;
 
-        
+        if (! (obj instanceof FilePermission that))
+            return false;
+
+        if (this.invalid || that.invalid) {
+            return false;
+        }
+        if (FilePermCompat.nb) {
+            return (this.mask == that.mask) &&
+                    (this.allFiles == that.allFiles) &&
+                    this.npath.equals(that.npath) &&
+                    Objects.equals(npath2, that.npath2) &&
+                    (this.directory == that.directory) &&
+                    (this.recursive == that.recursive);
+        } else {
+            return (this.mask == that.mask) &&
+                    (this.allFiles == that.allFiles) &&
+                    this.cpath.equals(that.cpath) &&
+                    (this.directory == that.directory) &&
+                    (this.recursive == that.recursive);
+        }
+    }
+
+    /**
+     * Returns the hash code value for this object.
+     *
+     * @return a hash code value for this object.
+     */
+    @Override
+    public int hashCode() {
+        if (FilePermCompat.nb) {
+            return Objects.hash(
+                    mask, allFiles, directory, recursive, npath, npath2, invalid);
+        } else {
+            return 0;
+        }
+    }
+
+    /**
+     * Converts an actions String to an actions mask.
+     *
+     * @param actions the action string.
+     * @return the actions mask.
+     */
+    private static int getMask(String actions) {
+        int mask = NONE;
+
+        // Null action valid?
+        if (actions == null) {
+            return mask;
+        }
+
+        // Use object identity comparison against known-interned strings for
+        // performance benefit (these values are used heavily within the JDK).
+        if (actions == SecurityConstants.FILE_READ_ACTION) {
+            return READ;
+        } else if (actions == SecurityConstants.FILE_WRITE_ACTION) {
+            return WRITE;
+        } else if (actions == SecurityConstants.FILE_EXECUTE_ACTION) {
+            return EXECUTE;
+        } else if (actions == SecurityConstants.FILE_DELETE_ACTION) {
+            return DELETE;
+        } else if (actions == SecurityConstants.FILE_READLINK_ACTION) {
+            return READLINK;
+        }
+
+        char[] a = actions.toCharArray();
+
+        int i = a.length - 1;
+        if (i < 0)
+            return mask;
+
+        while (i != -1) {
+            char c;
+
+            // skip whitespace
+            while ((i!=-1) && ((c = a[i]) == ' ' ||
+                               c == '\r' ||
+                               c == '\n' ||
+                               c == '\f' ||
+                               c == '\t'))
+                i--;
+
+            // check for the known strings
+            int matchlen;
+
+            if (i >= 3 && (a[i-3] == 'r' || a[i-3] == 'R') &&
+                          (a[i-2] == 'e' || a[i-2] == 'E') &&
+                          (a[i-1] == 'a' || a[i-1] == 'A') &&
+                          (a[i] == 'd' || a[i] == 'D'))
+            {
+                matchlen = 4;
+                mask |= READ;
+
+            } else if (i >= 4 && (a[i-4] == 'w' || a[i-4] == 'W') &&
+                                 (a[i-3] == 'r' || a[i-3] == 'R') &&
+                                 (a[i-2] == 'i' || a[i-2] == 'I') &&
+                                 (a[i-1] == 't' || a[i-1] == 'T') &&
+                                 (a[i] == 'e' || a[i] == 'E'))
+            {
+                matchlen = 5;
+                mask |= WRITE;
+
+            } else if (i >= 6 && (a[i-6] == 'e' || a[i-6] == 'E') &&
+                                 (a[i-5] == 'x' || a[i-5] == 'X') &&
+                                 (a[i-4] == 'e' || a[i-4] == 'E') &&
+                                 (a[i-3] == 'c' || a[i-3] == 'C') &&
+                                 (a[i-2] == 'u' || a[i-2] == 'U') &&
+                                 (a[i-1] == 't' || a[i-1] == 'T') &&
+                                 (a[i] == 'e' || a[i] == 'E'))
+            {
+                matchlen = 7;
+                mask |= EXECUTE;
+
+            } else if (i >= 5 && (a[i-5] == 'd' || a[i-5] == 'D') &&
+                                 (a[i-4] == 'e' || a[i-4] == 'E') &&
+                                 (a[i-3] == 'l' || a[i-3] == 'L') &&
+                                 (a[i-2] == 'e' || a[i-2] == 'E') &&
+                                 (a[i-1] == 't' || a[i-1] == 'T') &&
+                                 (a[i] == 'e' || a[i] == 'E'))
+            {
+                matchlen = 6;
+                mask |= DELETE;
+
+            } else if (i >= 7 && (a[i-7] == 'r' || a[i-7] == 'R') &&
+                                 (a[i-6] == 'e' || a[i-6] == 'E') &&
+                                 (a[i-5] == 'a' || a[i-5] == 'A') &&
+                                 (a[i-4] == 'd' || a[i-4] == 'D') &&
+                                 (a[i-3] == 'l' || a[i-3] == 'L') &&
+                                 (a[i-2] == 'i' || a[i-2] == 'I') &&
+                                 (a[i-1] == 'n' || a[i-1] == 'N') &&
+                                 (a[i] == 'k' || a[i] == 'K'))
+            {
+                matchlen = 8;
+                mask |= READLINK;
+
+            } else {
+                // parse error
+                throw new IllegalArgumentException(
+                        "invalid permission: " + actions);
+            }
+
+            // make sure we didn't just match the tail of a word
+            // like "ackbarfdelete".  Also, skip to the comma.
+            boolean seencomma = false;
+            while (i >= matchlen && !seencomma) {
+                switch (c = a[i-matchlen]) {
+                case ' ': case '\r': case '\n':
+                case '\f': case '\t':
+                    break;
+                default:
+                    if (c == ',' && i > matchlen) {
+                        seencomma = true;
+                        break;
+                    }
+                    throw new IllegalArgumentException(
+                            "invalid permission: " + actions);
+                }
+                i--;
+            }
+
+            // point i at the location of the comma minus one (or -1).
+            i -= matchlen;
+        }
+
+        return mask;
+    }
+
+    /**
+     * Return the current action mask. Used by the FilePermissionCollection.
+     *
+     * @return the actions mask.
+     */
+    int getMask() {
+        return mask;
+    }
+
+    /**
+     * Return the canonical string representation of the actions.
+     * Always returns present actions in the following order:
+     * read, write, execute, delete, readlink.
+     *
+     * @return the canonical string representation of the actions.
+     */
+    private static String getActions(int mask) {
+        StringJoiner sj = new StringJoiner(",");
+
+        if ((mask & READ) == READ) {
+            sj.add("read");
+        }
+        if ((mask & WRITE) == WRITE) {
+            sj.add("write");
+        }
+        if ((mask & EXECUTE) == EXECUTE) {
+            sj.add("execute");
+        }
+        if ((mask & DELETE) == DELETE) {
+            sj.add("delete");
+        }
+        if ((mask & READLINK) == READLINK) {
+            sj.add("readlink");
+        }
+
+        return sj.toString();
+    }
+
+    /**
+     * Returns the "canonical string representation" of the actions.
+     * That is, this method always returns present actions in the following order:
+     * read, write, execute, delete, readlink. For example, if this FilePermission
+     * object allows both write and read actions, a call to {@code getActions}
+     * will return the string "read,write".
+     *
+     * @return the canonical string representation of the actions.
+     */
+    @Override
+    public String getActions() {
+        if (actions == null)
+            actions = getActions(this.mask);
+
+        return actions;
+    }
+
+    /**
+     * Returns a new PermissionCollectio
