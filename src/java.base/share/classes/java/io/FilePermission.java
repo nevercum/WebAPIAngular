@@ -597,4 +597,197 @@ public final class FilePermission extends Permission implements Serializable {
         if (that.allFiles) {
             return false;
         }
-        if 
+        if (FilePermCompat.nb) {
+            // Left at least same level of wildness as right
+            if ((this.recursive && that.recursive) != that.recursive
+                    || (this.directory && that.directory) != that.directory) {
+                return false;
+            }
+            // Same npath is good as long as both or neither are directories
+            if (this.npath.equals(that.npath)
+                    && this.directory == that.directory) {
+                return true;
+            }
+            int diff = containsPath(this.npath, that.npath);
+            // Right inside left is good if recursive
+            if (diff >= 1 && recursive) {
+                return true;
+            }
+            // Right right inside left if it is element in set
+            if (diff == 1 && directory && !that.directory) {
+                return true;
+            }
+
+            // Hack: if a npath2 field exists, apply the same checks
+            // on it as a fallback.
+            if (this.npath2 != null) {
+                if (this.npath2.equals(that.npath)
+                        && this.directory == that.directory) {
+                    return true;
+                }
+                diff = containsPath(this.npath2, that.npath);
+                if (diff >= 1 && recursive) {
+                    return true;
+                }
+                if (diff == 1 && directory && !that.directory) {
+                    return true;
+                }
+            }
+
+            return false;
+        } else {
+            if (this.directory) {
+                if (this.recursive) {
+                    // make sure that.path is longer then path so
+                    // something like /foo/- does not imply /foo
+                    if (that.directory) {
+                        return (that.cpath.length() >= this.cpath.length()) &&
+                                that.cpath.startsWith(this.cpath);
+                    } else {
+                        return ((that.cpath.length() > this.cpath.length()) &&
+                                that.cpath.startsWith(this.cpath));
+                    }
+                } else {
+                    if (that.directory) {
+                        // if the permission passed in is a directory
+                        // specification, make sure that a non-recursive
+                        // permission (i.e., this object) can't imply a recursive
+                        // permission.
+                        if (that.recursive)
+                            return false;
+                        else
+                            return (this.cpath.equals(that.cpath));
+                    } else {
+                        int last = that.cpath.lastIndexOf(File.separatorChar);
+                        if (last == -1)
+                            return false;
+                        else {
+                            // this.cpath.equals(that.cpath.substring(0, last+1));
+                            // Use regionMatches to avoid creating new string
+                            return (this.cpath.length() == (last + 1)) &&
+                                    this.cpath.regionMatches(0, that.cpath, 0, last + 1);
+                        }
+                    }
+                }
+            } else if (that.directory) {
+                // if this is NOT recursive/wildcarded,
+                // do not let it imply a recursive/wildcarded permission
+                return false;
+            } else {
+                return (this.cpath.equals(that.cpath));
+            }
+        }
+    }
+
+    /**
+     * Returns the depth between an outer path p1 and an inner path p2. -1
+     * is returned if
+     *
+     * - p1 does not contains p2.
+     * - this is not decidable. For example, p1="../x", p2="y".
+     * - the depth is not decidable. For example, p1="/", p2="x".
+     *
+     * This method can return 2 if the depth is greater than 2.
+     *
+     * @param p1 the expected outer path, normalized
+     * @param p2 the expected inner path, normalized
+     * @return the depth in between
+     */
+    private static int containsPath(Path p1, Path p2) {
+
+        // Two paths must have the same root. For example,
+        // there is no contains relation between any two of
+        // "/x", "x", "C:/x", "C:x", and "//host/share/x".
+        if (!Objects.equals(p1.getRoot(), p2.getRoot())) {
+            return -1;
+        }
+
+        // Empty path (i.e. "." or "") is a strange beast,
+        // because its getNameCount()==1 but getName(0) is null.
+        // It's better to deal with it separately.
+        if (p1.equals(EMPTY_PATH)) {
+            if (p2.equals(EMPTY_PATH)) {
+                return 0;
+            } else if (p2.getName(0).equals(DOTDOT_PATH)) {
+                // "." contains p2 iff p2 has no "..". Since
+                // a normalized path can only have 0 or more
+                // ".." at the beginning. We only need to look
+                // at the head.
+                return -1;
+            } else {
+                // and the distance is p2's name count. i.e.
+                // 3 between "." and "a/b/c".
+                return p2.getNameCount();
+            }
+        } else if (p2.equals(EMPTY_PATH)) {
+            int c1 = p1.getNameCount();
+            if (!p1.getName(c1 - 1).equals(DOTDOT_PATH)) {
+                // "." is inside p1 iff p1 is 1 or more "..".
+                // For the same reason above, we only need to
+                // look at the tail.
+                return -1;
+            }
+            // and the distance is the count of ".."
+            return c1;
+        }
+
+        // Good. No more empty paths.
+
+        // Common heads are removed
+
+        int c1 = p1.getNameCount();
+        int c2 = p2.getNameCount();
+
+        int n = Math.min(c1, c2);
+        int i = 0;
+        while (i < n) {
+            if (!p1.getName(i).equals(p2.getName(i)))
+                break;
+            i++;
+        }
+
+        // for p1 containing p2, p1 must be 0-or-more "..",
+        // and p2 cannot have "..". For the same reason, we only
+        // check tail of p1 and head of p2.
+        if (i < c1 && !p1.getName(c1 - 1).equals(DOTDOT_PATH)) {
+            return -1;
+        }
+
+        if (i < c2 && p2.getName(i).equals(DOTDOT_PATH)) {
+            return -1;
+        }
+
+        // and the distance is the name counts added (after removing
+        // the common heads).
+
+        // For example: p1 = "../../..", p2 = "../a".
+        // After removing the common heads, they become "../.." and "a",
+        // and the distance is (3-1)+(2-1) = 3.
+        return c1 - i + c2 - i;
+    }
+
+    /**
+     * Checks two FilePermission objects for equality. Checks that <i>obj</i> is
+     * a FilePermission, and has the same pathname and actions as this object.
+     *
+     * @implNote More specifically, two pathnames are the same if and only if
+     * they have the same wildcard flag and their {@code cpath}
+     * (if {@code jdk.io.permissionsUseCanonicalPath} is {@code true}) or
+     * {@code npath} (if {@code jdk.io.permissionsUseCanonicalPath}
+     * is {@code false}) are equal. Or they are both {@literal "<<ALL FILES>>"}.
+     * <p>
+     * When {@code jdk.io.permissionsUseCanonicalPath} is {@code false}, an
+     * invalid {@code FilePermission} does not equal to any object except
+     * for itself, even if they are created using the same invalid path.
+     *
+     * @param obj the object we are testing for equality with this object.
+     * @return {@code true} if obj is a FilePermission, and has the same
+     *          pathname and actions as this FilePermission object,
+     *          {@code false} otherwise.
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this)
+            return true;
+
+        
