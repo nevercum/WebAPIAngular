@@ -430,4 +430,171 @@ public final class FilePermission extends Permission implements Serializable {
     }
 
     /**
-     * Creates a new FilePermission object wi
+     * Creates a new FilePermission object with the specified actions.
+     * <i>path</i> is the pathname of a file or directory, and <i>actions</i>
+     * contains a comma-separated list of the desired actions granted on the
+     * file or directory. Possible actions are
+     * "read", "write", "execute", "delete", and "readlink".
+     *
+     * <p>A pathname that ends in "/*" (where "/" is
+     * the file separator character, {@code File.separatorChar})
+     * indicates all the files and directories contained in that directory.
+     * A pathname that ends with "/-" indicates (recursively) all files and
+     * subdirectories contained in that directory. The special pathname
+     * {@literal "<<ALL FILES>>"} matches any file.
+     *
+     * <p>A pathname consisting of a single "*" indicates all the files
+     * in the current directory, while a pathname consisting of a single "-"
+     * indicates all the files in the current directory and
+     * (recursively) all files and subdirectories contained in the current
+     * directory.
+     *
+     * <p>A pathname containing an empty string represents an empty path.
+     *
+     * @implNote In this implementation, the
+     * {@systemProperty jdk.io.permissionsUseCanonicalPath} system property
+     * dictates how the {@code path} argument is processed and stored.
+     * <P>
+     * If the value of the system property is set to {@code true}, {@code path}
+     * is canonicalized and stored as a String object named {@code cpath}.
+     * This means a relative path is converted to an absolute path, a Windows
+     * DOS-style 8.3 path is expanded to a long path, and a symbolic link is
+     * resolved to its target, etc.
+     * <P>
+     * If the value of the system property is set to {@code false}, {@code path}
+     * is converted to a {@link java.nio.file.Path} object named {@code npath}
+     * after {@link Path#normalize() normalization}. No canonicalization is
+     * performed which means the underlying file system is not accessed.
+     * If an {@link InvalidPathException} is thrown during the conversion,
+     * this {@code FilePermission} will be labeled as invalid.
+     * <P>
+     * In either case, the "*" or "-" character at the end of a wildcard
+     * {@code path} is removed before canonicalization or normalization.
+     * It is stored in a separate wildcard flag field.
+     * <P>
+     * The default value of the {@code jdk.io.permissionsUseCanonicalPath}
+     * system property is {@code false} in this implementation.
+     * <p>
+     * The value can also be set with a security property using the same name,
+     * but setting a system property will override the security property value.
+     *
+     * @param path the pathname of the file/directory.
+     * @param actions the action string.
+     *
+     * @throws IllegalArgumentException if actions is {@code null}, empty,
+     *         malformed or contains an action other than the specified
+     *         possible actions
+     */
+    public FilePermission(String path, String actions) {
+        super(path);
+        init(getMask(actions));
+    }
+
+    /**
+     * Creates a new FilePermission object using an action mask.
+     * More efficient than the FilePermission(String, String) constructor.
+     * Can be used from within
+     * code that needs to create a FilePermission object to pass into the
+     * {@code implies} method.
+     *
+     * @param path the pathname of the file/directory.
+     * @param mask the action mask to use.
+     */
+    // package private for use by the FilePermissionCollection add method
+    FilePermission(String path, int mask) {
+        super(path);
+        init(mask);
+    }
+
+    /**
+     * Checks if this FilePermission object "implies" the specified permission.
+     * <P>
+     * More specifically, this method returns true if:
+     * <ul>
+     * <li> <i>p</i> is an instanceof FilePermission,
+     * <li> <i>p</i>'s actions are a proper subset of this
+     * object's actions, and
+     * <li> <i>p</i>'s pathname is implied by this object's
+     *      pathname. For example, "/tmp/*" implies "/tmp/foo", since
+     *      "/tmp/*" encompasses all files in the "/tmp" directory,
+     *      including the one named "foo".
+     * </ul>
+     * <P>
+     * Precisely, a simple pathname implies another simple pathname
+     * if and only if they are equal. A simple pathname never implies
+     * a wildcard pathname. A wildcard pathname implies another wildcard
+     * pathname if and only if all simple pathnames implied by the latter
+     * are implied by the former. A wildcard pathname implies a simple
+     * pathname if and only if
+     * <ul>
+     *     <li>if the wildcard flag is "*", the simple pathname's path
+     *     must be right inside the wildcard pathname's path.
+     *     <li>if the wildcard flag is "-", the simple pathname's path
+     *     must be recursively inside the wildcard pathname's path.
+     * </ul>
+     * <P>
+     * {@literal "<<ALL FILES>>"} implies every other pathname. No pathname,
+     * except for {@literal "<<ALL FILES>>"} itself, implies
+     * {@literal "<<ALL FILES>>"}.
+     *
+     * @implNote
+     * If {@code jdk.io.permissionsUseCanonicalPath} is {@code true}, a
+     * simple {@code cpath} is inside a wildcard {@code cpath} if and only if
+     * after removing the base name (the last name in the pathname's name
+     * sequence) from the former the remaining part is equal to the latter,
+     * a simple {@code cpath} is recursively inside a wildcard {@code cpath}
+     * if and only if the former starts with the latter.
+     * <p>
+     * If {@code jdk.io.permissionsUseCanonicalPath} is {@code false}, a
+     * simple {@code npath} is inside a wildcard {@code npath} if and only if
+     * {@code  simple_npath.relativize(wildcard_npath)} is exactly "..",
+     * a simple {@code npath} is recursively inside a wildcard {@code npath}
+     * if and only if {@code simple_npath.relativize(wildcard_npath)} is a
+     * series of one or more "..". This means "/-" implies "/foo" but not "foo".
+     * <p>
+     * An invalid {@code FilePermission} does not imply any object except for
+     * itself. An invalid {@code FilePermission} is not implied by any object
+     * except for itself or a {@code FilePermission} on
+     * {@literal "<<ALL FILES>>"} whose actions is a superset of this
+     * invalid {@code FilePermission}. Even if two {@code FilePermission}
+     * are created with the same invalid path, one does not imply the other.
+     *
+     * @param p the permission to check against.
+     *
+     * @return {@code true} if the specified permission is not
+     *                  {@code null} and is implied by this object,
+     *                  {@code false} otherwise.
+     */
+    @Override
+    public boolean implies(Permission p) {
+        if (!(p instanceof FilePermission that))
+            return false;
+
+        // we get the effective mask. i.e., the "and" of this and that.
+        // They must be equal to that.mask for implies to return true.
+
+        return ((this.mask & that.mask) == that.mask) && impliesIgnoreMask(that);
+    }
+
+    /**
+     * Checks if the Permission's actions are a proper subset of the
+     * this object's actions. Returns the effective mask iff the
+     * this FilePermission's path also implies that FilePermission's path.
+     *
+     * @param that the FilePermission to check against.
+     * @return the effective mask
+     */
+    boolean impliesIgnoreMask(FilePermission that) {
+        if (this == that) {
+            return true;
+        }
+        if (allFiles) {
+            return true;
+        }
+        if (this.invalid || that.invalid) {
+            return false;
+        }
+        if (that.allFiles) {
+            return false;
+        }
+        if 
