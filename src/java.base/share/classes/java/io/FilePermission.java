@@ -1242,4 +1242,39 @@ final class FilePermissionCollection extends PermissionCollection
      * @throws IOException if an I/O error occurs
      */
     @java.io.Serial
-    private void writeObject(ObjectOutputStream out) throws IOExce
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        // Don't call out.defaultWriteObject()
+
+        // Write out Vector
+        Vector<Permission> permissions = new Vector<>(perms.values());
+
+        ObjectOutputStream.PutField pfields = out.putFields();
+        pfields.put("permissions", permissions);
+        out.writeFields();
+    }
+
+    /**
+     * Reads in a Vector of FilePermissions and saves them in the perms field.
+     *
+     * @param  in the {@code ObjectInputStream} from which data is read
+     * @throws IOException if an I/O error occurs
+     * @throws ClassNotFoundException if a serialized class cannot be loaded
+     */
+    @java.io.Serial
+    private void readObject(ObjectInputStream in)
+        throws IOException, ClassNotFoundException
+    {
+        // Don't call defaultReadObject()
+
+        // Read in serialized fields
+        ObjectInputStream.GetField gfields = in.readFields();
+
+        // Get the one we want
+        @SuppressWarnings("unchecked")
+        Vector<Permission> permissions = (Vector<Permission>)gfields.get("permissions", null);
+        perms = new ConcurrentHashMap<>(permissions.size());
+        for (Permission perm : permissions) {
+            perms.put(perm.getName(), perm);
+        }
+    }
+}
