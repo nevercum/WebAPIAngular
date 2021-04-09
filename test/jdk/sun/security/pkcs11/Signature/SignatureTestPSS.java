@@ -102,4 +102,66 @@ public class SignatureTestPSS extends PKCS11Test {
                     System.out.println("Skip test due to " + ex2);
                 }
             }
-        
+        };
+    }
+
+    private KeyPair generateKeys(String keyalg, int size)
+            throws NoSuchAlgorithmException {
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance(keyalg, prov);
+        kpg.initialize(size);
+        return kpg.generateKeyPair();
+    }
+
+    private void checkSignature(byte[] data, PublicKey pub,
+            PrivateKey priv, String hash, String mgfHash)
+            throws NoSuchAlgorithmException, InvalidKeyException,
+            SignatureException, NoSuchProviderException,
+            InvalidAlgorithmParameterException {
+
+        String testName = hash + " and MGF1_" + mgfHash;
+        // only test RSASSA-PSS signature against the supplied hash/mgfHash
+        // if they are supported; otherwise PKCS11 library will throw
+        // CKR_MECHANISM_PARAM_INVALID at Signature.initXXX calls
+        try {
+            MessageDigest md = MessageDigest.getInstance(hash, prov);
+            if (!hash.equalsIgnoreCase(mgfHash)) {
+                md = MessageDigest.getInstance(mgfHash, prov);
+            }
+        } catch (NoSuchAlgorithmException nsae) {
+            System.out.println("Skip testing " + hash + "/" + mgfHash);
+            return;
+        }
+
+        System.out.println("Testing against " + testName);
+        Signature sig = Signature.getInstance(SIGALG, prov);
+        AlgorithmParameterSpec params = new PSSParameterSpec(
+            hash, "MGF1", new MGF1ParameterSpec(mgfHash), 0, 1);
+        sig.setParameter(params);
+        sig.initSign(priv);
+        for (int i = 0; i < UPDATE_TIMES_HUNDRED; i++) {
+            sig.update(data);
+        }
+        byte[] signedData = sig.sign();
+
+        // Make sure signature verifies with original data
+        // do we need to call sig.setParameter(params) again?
+        sig.initVerify(pub);
+        for (int i = 0; i < UPDATE_TIMES_HUNDRED; i++) {
+            sig.update(data);
+        }
+        if (!sig.verify(signedData)) {
+            throw new RuntimeException("Failed to verify signature");
+        }
+
+        // Make sure signature does NOT verify when the original data
+        // has changed
+        sig.initVerify(pub);
+        for (int i = 0; i < UPDATE_TIMES_FIFTY; i++) {
+            sig.update(data);
+        }
+
+        if (sig.verify(signedData)) {
+            throw new RuntimeException("Failed to detect bad signature");
+        }
+    }
+}
