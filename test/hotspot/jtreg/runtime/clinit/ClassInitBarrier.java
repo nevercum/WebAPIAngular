@@ -357,4 +357,122 @@ public class ClassInitBarrier {
                 TestCase0 test = action -> execute(NoClassDefFoundError.class, () -> r.run(action));
 
                 test.run(NON_BLOCKING.get()); // initializing thread
-                checkN
+                checkNotBlocked(test);        // different thread
+                break;
+            }
+            default: throw new Error("wrong phase: " + phase);
+        }
+    }
+
+    static void checkNonBlockingAction(TestCase0 r) {
+        r.run(NON_BLOCKING.get()); // initializing thread
+        checkNotBlocked(r);        // different thread
+    }
+
+    static <T> void checkNonBlockingAction(T recv, TestCase1<T> r) {
+        r.run(recv, NON_BLOCKING.get());                  // initializing thread
+        checkNotBlocked((action) -> r.run(recv, action)); // different thread
+    }
+
+    static void checkFailingAction(TestCase0 r) {
+        r.run(NON_BLOCKING.get()); // initializing thread
+        checkNotBlocked(r);        // different thread
+    }
+
+    static void triggerInitialization(Class<?> cls) {
+        try {
+            Class<?> loadedClass = Class.forName(cls.getName(), true, cls.getClassLoader());
+            if (loadedClass != cls) {
+                throw new Error("wrong class");
+            }
+        } catch (ClassNotFoundException e) {
+            throw new Error(e);
+        }
+    }
+
+    static void checkBlocked(Consumer<Thread> onBlockHandler, Thread.UncaughtExceptionHandler onException, TestCase0 r) {
+        Thread thr = new Thread(() -> {
+            try {
+                r.run(BLOCKING.get());
+                System.out.println("Thread " + Thread.currentThread() + ": Finished successfully");
+            } catch(Throwable e) {
+                System.out.println("Thread " + Thread.currentThread() + ": Exception thrown: " + e);
+                if (!THROW) {
+                    e.printStackTrace();
+                }
+                throw e;
+            }
+        } );
+        thr.setUncaughtExceptionHandler(onException);
+
+        thr.start();
+        try {
+            thr.join(100);
+
+            dump(thr);
+            if (thr.isAlive()) {
+                onBlockHandler.accept(thr); // blocked
+            } else {
+                throw new AssertionError("not blocked");
+            }
+        } catch (InterruptedException e) {
+            throw new Error(e);
+        }
+    }
+
+    static void checkNotBlocked(TestCase0 r) {
+        final Thread thr = new Thread(() -> r.run(NON_BLOCKING.get()));
+        final Throwable[] ex = new Throwable[1];
+        thr.setUncaughtExceptionHandler((t, e) -> {
+            if (thr != t) {
+                ex[0] = new Error("wrong thread: " + thr + " vs " + t);
+            } else {
+                ex[0] = e;
+            }
+        });
+
+        thr.start();
+        try {
+            thr.join(15_000);
+            if (thr.isAlive()) {
+                dump(thr);
+                throw new AssertionError("blocked");
+            }
+        } catch (InterruptedException e) {
+            throw new Error(e);
+        }
+
+        if (ex[0] != null) {
+            throw new AssertionError("no exception expected", ex[0]);
+        }
+    }
+
+    static void maybeThrow() {
+        if (THROW) {
+            changePhase(Phase.INIT_FAILURE);
+            throw new RuntimeException("failed class initialization");
+        }
+    }
+
+    private static void dump(Thread thr) {
+        System.out.println("Thread: " + thr);
+        System.out.println("Thread state: " + thr.getState());
+        if (thr.isAlive()) {
+            for (StackTraceElement frame : thr.getStackTrace()) {
+                System.out.println(frame);
+            }
+        } else {
+            if (FAILED_THREADS.containsKey(thr)) {
+                System.out.println("Failed with an exception: ");
+                FAILED_THREADS.get(thr).toString();
+            } else {
+                System.out.println("Finished successfully");
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Test.run();
+        System.out.println("TEST PASSED");
+    }
+}
