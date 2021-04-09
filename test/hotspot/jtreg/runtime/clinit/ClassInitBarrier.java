@@ -156,3 +156,205 @@ public class ClassInitBarrier {
         static void warmup() {
             for (int i = 0; i < 20_000; i++) {
                 testInvokeStatic(      NON_BLOCKING_WARMUP);
+                testInvokeStaticNative(NON_BLOCKING_WARMUP);
+                testInvokeStaticSync(  NON_BLOCKING_WARMUP);
+                testGetStatic(         NON_BLOCKING_WARMUP);
+                testPutStatic(         NON_BLOCKING_WARMUP);
+                testNewInstanceA(      NON_BLOCKING_WARMUP);
+                testNewInstanceB(      NON_BLOCKING_WARMUP);
+
+                testGetField(new B(),      NON_BLOCKING_WARMUP);
+                testPutField(new B(),      NON_BLOCKING_WARMUP);
+                testInvokeVirtual(new B(), NON_BLOCKING_WARMUP);
+            }
+        }
+
+        static void run() {
+            execute(ExceptionInInitializerError.class, () -> triggerInitialization(A.class));
+            ensureFinished();
+            runTests(); // after initialization is over
+        }
+    }
+
+    // ============================================================================================================== //
+
+    static void execute(Class<? extends Throwable> expectedExceptionClass, Runnable action) {
+        try {
+            action.run();
+            if (THROW) throw failure("no exception thrown");
+        } catch (Throwable e) {
+            if (THROW) {
+                if (e.getClass() == expectedExceptionClass) {
+                    // expected
+                } else {
+                    String msg = String.format("unexpected exception thrown: expected %s, caught %s",
+                            expectedExceptionClass.getName(), e);
+                    throw failure(msg, e);
+                }
+            } else {
+                throw failure("no exception expected", e);
+            }
+        }
+    }
+
+    private static AssertionError failure(String msg) {
+        return new AssertionError(phase + ": " + msg);
+    }
+
+    private static AssertionError failure(String msg, Throwable e) {
+        return new AssertionError(phase + ": " + msg, e);
+    }
+
+    static final List<Thread> BLOCKED_THREADS = Collections.synchronizedList(new ArrayList<>());
+    static final Consumer<Thread> ON_BLOCK = BLOCKED_THREADS::add;
+
+    static final Map<Thread,Throwable> FAILED_THREADS = Collections.synchronizedMap(new HashMap<>());
+    static final Thread.UncaughtExceptionHandler ON_FAILURE = FAILED_THREADS::put;
+
+    private static void ensureBlocked() {
+        for (Thread thr : BLOCKED_THREADS) {
+            try {
+                thr.join(100);
+                if (!thr.isAlive()) {
+                    dump(thr);
+                    throw new AssertionError("not blocked");
+                }
+            } catch (InterruptedException e) {
+                throw new Error(e);
+            }
+        }
+    }
+
+
+    private static void ensureFinished() {
+        for (Thread thr : BLOCKED_THREADS) {
+            try {
+                thr.join(15_000);
+            } catch (InterruptedException e) {
+                throw new Error(e);
+            }
+            if (thr.isAlive()) {
+                dump(thr);
+                throw new AssertionError(thr + ": still blocked");
+            }
+        }
+        for (Thread thr : BLOCKED_THREADS) {
+            if (THROW) {
+                if (!FAILED_THREADS.containsKey(thr)) {
+                    throw new AssertionError(thr + ": exception not thrown");
+                }
+
+                Throwable ex = FAILED_THREADS.get(thr);
+                if (ex.getClass() != NoClassDefFoundError.class) {
+                    throw new AssertionError(thr + ": wrong exception thrown", ex);
+                }
+            } else {
+                if (FAILED_THREADS.containsKey(thr)) {
+                    Throwable ex = FAILED_THREADS.get(thr);
+                    throw new AssertionError(thr + ": exception thrown", ex);
+                }
+            }
+        }
+        if (THROW) {
+            Asserts.assertEquals(BLOCKING_COUNTER.get(), 0);
+        } else {
+            Asserts.assertEquals(BLOCKING_COUNTER.get(), BLOCKING_ACTIONS.get());
+        }
+
+        dumpInfo();
+    }
+
+    interface TestCase0 {
+        void run(Runnable runnable);
+    }
+
+    interface TestCase1<T> {
+        void run(T arg, Runnable runnable);
+    }
+
+    enum Phase { BEFORE_INIT, IN_PROGRESS, FINISHED, INIT_FAILURE }
+
+    static volatile Phase phase = Phase.BEFORE_INIT;
+
+    static void changePhase(Phase newPhase) {
+        dumpInfo();
+
+        Phase oldPhase = phase;
+        switch (oldPhase) {
+            case BEFORE_INIT:
+                Asserts.assertEquals(NON_BLOCKING_ACTIONS.get(), 0);
+                Asserts.assertEquals(NON_BLOCKING_COUNTER.get(), 0);
+
+                Asserts.assertEquals(BLOCKING_ACTIONS.get(),     0);
+                Asserts.assertEquals(BLOCKING_COUNTER.get(),     0);
+                break;
+            case IN_PROGRESS:
+                Asserts.assertEquals(NON_BLOCKING_COUNTER.get(), NON_BLOCKING_ACTIONS.get());
+
+                Asserts.assertEquals(BLOCKING_COUNTER.get(), 0);
+                break;
+            default: throw new Error("wrong phase transition " + oldPhase);
+        }
+        phase = newPhase;
+    }
+
+    static void dumpInfo() {
+        System.out.println("Phase: " + phase);
+        System.out.println("Non-blocking actions: " + NON_BLOCKING_COUNTER.get() + " / " + NON_BLOCKING_ACTIONS.get());
+        System.out.println("Blocking actions:     " + BLOCKING_COUNTER.get()     + " / " + BLOCKING_ACTIONS.get());
+    }
+
+    static final Runnable NON_BLOCKING_WARMUP = () -> {
+        if (phase != Phase.IN_PROGRESS) {
+            throw new AssertionError("NON_BLOCKING: wrong phase: " + phase);
+        }
+    };
+
+    static Runnable disposableAction(final Phase validPhase, final AtomicInteger invocationCounter, final AtomicInteger actionCounter) {
+        actionCounter.incrementAndGet();
+
+        final AtomicBoolean cnt = new AtomicBoolean(false);
+        return () -> {
+            if (cnt.getAndSet(true)) {
+                throw new Error("repeated invocation");
+            }
+            invocationCounter.incrementAndGet();
+            if (phase != validPhase) {
+                throw new AssertionError("NON_BLOCKING: wrong phase: " + phase);
+            }
+        };
+    }
+
+    @FunctionalInterface
+    interface Factory<V> {
+        V get();
+    }
+
+    static final AtomicInteger NON_BLOCKING_COUNTER = new AtomicInteger(0);
+    static final AtomicInteger NON_BLOCKING_ACTIONS = new AtomicInteger(0);
+    static final Factory<Runnable> NON_BLOCKING = () -> disposableAction(phase, NON_BLOCKING_COUNTER, NON_BLOCKING_ACTIONS);
+
+    static final AtomicInteger BLOCKING_COUNTER = new AtomicInteger(0);
+    static final AtomicInteger BLOCKING_ACTIONS = new AtomicInteger(0);
+    static final Factory<Runnable> BLOCKING     = () -> disposableAction(Phase.FINISHED, BLOCKING_COUNTER, BLOCKING_ACTIONS);
+
+    static void checkBlockingAction(TestCase0 r) {
+        switch (phase) {
+            case IN_PROGRESS: {
+                // Barrier during class initalization.
+                r.run(NON_BLOCKING.get());             // initializing thread
+                checkBlocked(ON_BLOCK, ON_FAILURE, r); // different thread
+                break;
+            }
+            case FINISHED: {
+                // No barrier after class initalization is over.
+                r.run(NON_BLOCKING.get()); // initializing thread
+                checkNotBlocked(r);        // different thread
+                break;
+            }
+            case INIT_FAILURE: {
+                // Exception is thrown after class initialization failed.
+                TestCase0 test = action -> execute(NoClassDefFoundError.class, () -> r.run(action));
+
+                test.run(NON_BLOCKING.get()); // initializing thread
+                checkN
