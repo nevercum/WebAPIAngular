@@ -77,4 +77,212 @@ public class Jdb implements AutoCloseable {
     // wait time before check jdb output (in ms)
     private static final long sleepTime = 1000;
     // max time to wait for  jdb output (in ms)
-    private static final long timeout = Utils.adjustTimeo
+    private static final long timeout = Utils.adjustTimeout(60000);
+
+    // pattern for message of a breakpoint hit
+    public static final String BREAKPOINT_HIT = "Breakpoint hit:";
+    // pattern for message of an application exit
+    public static final String APPLICATION_EXIT = "The application exited";
+    // pattern for message of an application disconnect
+    public static final String APPLICATION_DISCONNECTED = "The application has been disconnected";
+
+
+    @Override
+    public void close() throws Exception {
+        shutdown();
+    }
+
+    // waits until the process shutdown or crash
+    public boolean waitFor(long timeout, TimeUnit unit) {
+        try {
+            return jdb.waitFor(Utils.adjustTimeout(timeout), unit);
+        } catch (InterruptedException e) {
+            return false;
+        }
+    }
+
+    public void shutdown() {
+        // shutdown jdb
+        if (jdb.isAlive()) {
+            try {
+                quit();
+                // wait some time after the command for the process termination
+                waitFor(10, TimeUnit.SECONDS);
+            } finally {
+                if (jdb.isAlive()) {
+                    jdb.destroy();
+                }
+            }
+        }
+    }
+
+
+    // waits until string {@pattern} appears in the jdb output, within the last {@code lines} lines.
+    /* Comment from original /test/jdk/com/sun/jdi/ShellScaffold.sh
+        # Now we have to wait for the next jdb prompt.  We wait for a pattern
+        # to appear in the last line of jdb output.  Normally, the prompt is
+        #
+        # 1) ^main[89] @
+        # or
+        # 1) ^[89] @
+        # for virtual threads
+        #
+        # where ^ means start of line, and @ means end of file with no end of line
+        # and 89 is the current command counter. But we have complications e.g.,
+        # the following jdb output can appear:
+        #
+        # 2) a[89] = 10
+        #
+        # The above form is an array assignment and not a prompt.
+        #
+        # 3) ^main[89] main[89] ...
+        #
+        # This occurs if the next cmd is one that causes no jdb output, e.g.,
+        # 'trace methods'.
+        #
+        # 4) ^main[89] [main[89]] .... > @
+        #
+        # jdb prints a > as a prompt after something like a cont.
+        # Thus, even though the above is the last 'line' in the file, it
+        # isn't the next prompt we are waiting for after the cont completes.
+        # HOWEVER, sometimes we see this for a cont command:
+        #
+        #   ^main[89] $
+        #      <lines output for hitting a bkpt>
+        #
+        # 5) ^main[89] > @
+        #
+        # i.e., the > prompt comes out AFTER the prompt we need to wait for.
+    */
+    // compile regexp once
+    private final static String promptPattern = "<?[a-zA-Z0-9_-]*>?\\[[1-9][0-9]*\\] [ >]*$";
+    final static Pattern PROMPT_REGEXP = Pattern.compile(promptPattern);
+
+    public List<String> waitForPrompt(int lines, boolean allowExit) {
+        return waitForPrompt(lines, allowExit, PROMPT_REGEXP);
+    }
+
+    // jdb prompt when debuggee is not started and is not suspended after breakpoint
+    private static final String SIMPLE_PROMPT = "> ";
+    public List<String> waitForSimplePrompt(int lines, boolean allowExit) {
+        return waitForPrompt(lines, allowExit, Pattern.compile(SIMPLE_PROMPT));
+    }
+
+    private List<String> waitForPrompt(int lines, boolean allowExit, Pattern promptRegexp) {
+        long startTime = System.currentTimeMillis();
+        while (System.currentTimeMillis() - startTime < timeout) {
+            try {
+                Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+            synchronized (outputHandler) {
+                if (!outputHandler.updated()) {
+                    try {
+                        outputHandler.wait(sleepTime);
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                } else {
+                    // if something appeared in the jdb output, reset the timeout
+                    startTime = System.currentTimeMillis();
+                }
+            }
+            List<String> reply = outputHandler.get();
+            if ((promptRegexp.flags() & Pattern.MULTILINE) > 0) {
+                String replyString = reply.stream().collect(Collectors.joining(lineSeparator));
+                if (promptRegexp.matcher(replyString).find()) {
+                    logJdb(reply);
+                    return outputHandler.reset();
+                }
+            } else {
+                for (String line : reply.subList(Math.max(0, reply.size() - lines), reply.size())) {
+                    if (promptRegexp.matcher(line).find()) {
+                        logJdb(reply);
+                        return outputHandler.reset();
+                    }
+                }
+            }
+            if (!jdb.isAlive()) {
+                // ensure we get the whole output
+                reply = outputHandler.reset();
+                logJdb(reply);
+                if (!allowExit) {
+                    throw new RuntimeException("waitForPrompt timed out after " + (timeout/1000)
+                            + " seconds, looking for '" + promptRegexp.pattern() + "', in " + lines + " lines");
+                }
+                return reply;
+            }
+        }
+        // timeout
+        logJdb(outputHandler.get());
+        throw new RuntimeException("waitForPrompt timed out after " + (timeout/1000)
+                + " seconds, looking for '" + promptRegexp.pattern() + "', in " + lines + " lines");
+    }
+
+    public List<String> command(JdbCommand cmd) {
+        if (!jdb.isAlive()) {
+            if (cmd.allowExit) {
+                // return remaining output
+                return outputHandler.reset();
+            }
+            throw new RuntimeException("Attempt to send command '" + cmd.cmd + "' to terminated jdb");
+        }
+
+        log("> " + cmd.cmd);
+
+        inputWriter.println(cmd.cmd);
+
+        if (inputWriter.checkError()) {
+            throw new RuntimeException("Unexpected IO error while writing command '" + cmd.cmd + "' to jdb stdin stream");
+        }
+
+        return waitForPrompt(1, cmd.allowExit, cmd.waitForPattern);
+    }
+
+    public List<String> command(String cmd) {
+        return command(new JdbCommand(cmd));
+    }
+
+    // sends "cont" command up to maxTimes until debuggee exit
+    public void contToExit(int maxTimes) {
+        boolean exited = false;
+        JdbCommand cont = JdbCommand.cont().allowExit();
+        for (int i = 0; i < maxTimes && jdb.isAlive(); i++) {
+            String reply = command(cont).stream().collect(Collectors.joining(lineSeparator));
+            if (reply.contains(APPLICATION_EXIT)) {
+                exited = true;
+                break;
+            }
+        }
+        if (!exited && jdb.isAlive()) {
+            throw new RuntimeException("Debuggee did not exit after " + maxTimes + " <cont> commands");
+        }
+    }
+
+    // quits jdb by using "quit" command
+    public void quit() {
+        command(JdbCommand.quit());
+    }
+
+    private void log(String s) {
+        System.out.println(s);
+    }
+
+    private void logJdb(List<String> reply) {
+        jdbOutput.addAll(reply);
+        reply.forEach(s -> log("[jdb] " + s));
+    }
+
+    // returns the whole jdb output as a string
+    public String getJdbOutput() {
+        return jdbOutput.stream().collect(Collectors.joining(lineSeparator));
+    }
+
+    // handler for out/err of the pdb process
+    private class OutputHandler extends OutputStream {
+        // there are 2 buffers:
+        // outStream - data from the process stdout/stderr after last get() call
+        // cachedData - data collected at get(), cleared by reset()
+
+        private final ByteArrayOutputStream outSt
