@@ -285,4 +285,48 @@ public class Jdb implements AutoCloseable {
         // outStream - data from the process stdout/stderr after last get() call
         // cachedData - data collected at get(), cleared by reset()
 
-        private final ByteArrayOutputStream outSt
+        private final ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+        // if the last line in the reply had EOL, the list's last element is empty
+        private final List<String> cachedData = new ArrayList<>();
+
+        @Override
+        public synchronized void write(int b) throws IOException {
+            outStream.write((byte)(b & 0xFF));
+            notifyAll();
+        }
+        @Override
+        public synchronized void write(byte b[], int off, int len) throws IOException {
+            outStream.write(b, off, len);
+            notifyAll();
+        }
+
+        // gets output after the last {@ reset}.
+        // returned data becomes invalid after {@reset}.
+        public synchronized List<String> get() {
+            if (updated()) {
+                // we don't want to discard empty lines
+                String[] newLines = outStream.toString().split("\\R", -1);
+                if (!cachedData.isEmpty()) {
+                    // concat the last line if previous data had no EOL
+                    newLines[0] = cachedData.remove(cachedData.size()-1) + newLines[0];
+                }
+                cachedData.addAll(Arrays.asList(newLines));
+                outStream.reset();
+            }
+            return Collections.unmodifiableList(cachedData);
+        }
+
+        // clears last replay (does not touch replyStream)
+        // returns list as the last get()
+        public synchronized List<String> reset() {
+            List<String> result = new ArrayList<>(cachedData);
+            cachedData.clear();
+            return result;
+        }
+
+        // tests if there are some new data after the last lastReply() call
+        public synchronized boolean updated() {
+            return outStream.size() > 0;
+        }
+    }
+}

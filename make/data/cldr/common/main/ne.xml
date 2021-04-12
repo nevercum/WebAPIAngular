@@ -1,0 +1,2845 @@
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE ldml SYSTEM "../../common/dtd/ldml.dtd">
+<!-- Copyright © 1991-2022 Unicode, Inc.
+For terms of use, see http://www.unicode.org/copyright.html
+SPDX-License-Identifier: Unicode-DFS-2016
+CLDR data files are interpreted according to the LDML specification (http://unicode.org/reports/tr35/)
+
+Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/ for derived annotations.
+-->
+<ldml>
+	<identity>
+		<version number="$Revision$"/>
+		<language type="ne"/>
+	</identity>
+	<localeDisplayNames>
+		<localeDisplayPattern>
+			<localePattern>{0} ({1})</localePattern>
+			<localeSeparator>{0}, {1}</localeSeparator>
+			<localeKeyTypePattern>{0}: {1}</localeKeyTypePattern>
+		</localeDisplayPattern>
+		<languages>
+			<language type="aa">अफार</language>
+			<language type="ab">अब्खाजियाली</language>
+			<language type="ace">अचाइनिज</language>
+			<language type="ach">अकोली</language>
+			<language type="ada">अदाङमे</language>
+			<language type="ady">अदिघे</language>
+			<language type="ae">अवेस्तान</language>
+			<language type="af">अफ्रिकान्स</language>
+			<language type="afh">अफ्रिहिली</language>
+			<language type="agq">आघेम</language>
+			<language type="ain">अइनु</language>
+			<language type="ak">आकान</language>
+			<language type="akk">अक्कादियाली</language>
+			<language type="akz">अलाबामा</language>
+			<language type="ale">अलेउट</language>
+			<language type="aln">घेग अल्बानियाली</language>
+			<language type="alt">दक्षिणी आल्टाइ</language>
+			<language type="am">अम्हारिक</language>
+			<language type="an">अरागोनी</language>
+			<language type="ang">पुरातन अङ्ग्रेजी</language>
+			<language type="ann">ओबोलो</language>
+			<language type="anp">अङ्गिका</language>
+			<language type="ar">अरबी</language>
+			<language type="ar_001">आधुनिक मानक अरबी</language>
+			<language type="arc">अरामाइक</language>
+			<language type="arn">मापुचे</language>
+			<language type="aro">अराओना</language>
+			<language type="arp">अरापाहो</language>
+			<language type="arq">अल्जेरियाली अरबी</language>
+			<language type="ars">नाज्दी अरविक</language>
+			<language type="arw">अरावाक</language>
+			<language type="ary">मोरोक्कोली अरबी</language>
+			<language type="arz">इजिप्ट अरबी</language>
+			<language type="as">आसामी</language>
+			<language type="asa">आसु</language>
+			<language type="ase">अमेरिकी साङ्केतिक भाषा</language>
+			<language type="ast">अस्टुरियाली</language>
+			<language type="atj">आतिकामिको</language>
+			<language type="av">अवारिक</language>
+			<language type="avk">कोटावा</language>
+			<language type="awa">अवधी</language>
+			<language type="ay">ऐमारा</language>
+			<language type="az">अजरबैजानी</language>
+			<language type="az" alt="short">अजेरी</language>
+			<language type="ba">बास्किर</language>
+			<language type="bal">बालुची</language>
+			<language type="ban">बाली</language>
+			<language type="bar">बाभारियाली</language>
+			<language type="bas">बासा</language>
+			<language type="bax">बामुन</language>
+			<language type="bbc">बाताक तोबा</language>
+			<language type="bbj">घोमाला</language>
+			<language type="be">बेलारुसी</language>
+			<language type="bej">बेजा</language>
+			<language type="bem">बेम्बा</language>
+			<language type="bew">बेटावी</language>
+			<language type="bez">बेना</language>
+			<language type="bfd">बाफुट</language>
+			<language type="bfq">बडागा</language>
+			<language type="bg">बुल्गेरियाली</language>
+			<language type="bgn">पश्चिम बालोची</language>
+			<language type="bho">भोजपुरी</language>
+			<language type="bi">बिस्लाम</language>
+			<language type="bik">बिकोल</language>
+			<language type="bin">बिनी</language>
+			<language type="bjn">बन्जार</language>
+			<language type="bkm">कोम</language>
+			<language type="bla">सिक्सिका</language>
+			<language type="bm">बाम्बारा</language>
+			<language type="bn">बंगाली</language>
+			<language type="bo">तिब्बती</language>
+			<language type="bpy">विष्णुप्रिया</language>
+			<language type="bqi">बाख्तिआरी</language>
+			<language type="br">ब्रेटन</language>
+			<language type="bra">ब्रज</language>
+			<language type="brh">ब्राहुइ</language>
+			<language type="brx">बोडो</language>
+			<language type="bs">बोस्नियाली</language>
+			<language type="bss">अकुज</language>
+			<language type="bua">बुरिआत</language>
+			<language type="bug">बुगिनियाली</language>
+			<language type="bum">बुलु</language>
+			<language type="byn">ब्लिन</language>
+			<language type="byv">मेडुम्बा</language>
+			<language type="ca">क्याटालन</language>
+			<language type="cad">काड्डो</language>
+			<language type="car">क्यारिब</language>
+			<language type="cay">कायुगा</language>
+			<language type="cch">अट्साम</language>
+			<language type="ccp">चाक्मा</language>
+			<language type="ce">चेचेन</language>
+			<language type="ceb">सेबुआनो</language>
+			<language type="cgg">चिगा</language>
+			<language type="ch">चामोर्रो</language>
+			<language type="chb">चिब्चा</language>
+			<language type="chg">चागाटाई</language>
+			<language type="chk">चुकेसे</language>
+			<language type="chm">मारी</language>
+			<language type="chn">चिनुक जार्गन</language>
+			<language type="cho">चोक्टाव</language>
+			<language type="chp">चिपेव्यान</language>
+			<language type="chr">चेरोकी</language>
+			<language type="chy">चेयेन्ने</language>
+			<language type="ckb">मध्यवर्ती कुर्दिस</language>
+			<language type="clc">चिलकोटिन</language>
+			<language type="co">कोर्सिकन</language>
+			<language type="cop">कोप्टिक</language>
+			<language type="cps">कापिज्नोन</language>
+			<language type="cr">क्री</language>
+			<language type="crg">मिचिफ</language>
+			<language type="crh">क्रिमियाली तुर्क</language>
+			<language type="crj">दक्षिण पूर्वी क्री</language>
+			<language type="crk">प्लेन्स क्री</language>
+			<language type="crl">उत्तर पूर्वी क्री</language>
+			<language type="crm">मुज क्री</language>
+			<language type="crr">क्यारोलिना एल्गोनक्वियन</language>
+			<language type="crs">सेसेल्वा क्रिओल फ्रान्सेली</language>
+			<language type="cs">चेक</language>
+			<language type="csb">कासुवियन</language>
+			<language type="csw">स्वाम्पी क्री</language>
+			<language type="cu">चर्च स्लाभिक</language>
+			<language type="cv">चुभास</language>
+			<language type="cy">वेल्श</language>
+			<language type="da">डेनिस</language>
+			<language type="dak">डाकोटा</language>
+			<language type="dar">दार्ग्वा</language>
+			<language type="dav">ताइता</language>
+			<language type="de">जर्मन</language>
+			<language type="de_AT">अस्ट्रिएन जर्मन</language>
+			<language type="de_CH">स्वीस हाई जर्मन</language>
+			<language type="del">देलावर</language>
+			<language type="dgr">दोग्रिब</language>
+			<language type="din">दिन्का</language>
+			<language type="dje">जर्मा</language>
+			<language type="doi">डोगरी</language>
+			<language type="dsb">तल्लो सोर्बियन</language>
+			<language type="dtp">केन्द्रीय दुसुन</language>
+			<language type="dua">दुवाला</language>
+			<language type="dum">मध्य डच</language>
+			<language type="dv">दिबेही</language>
+			<language type="dyo">जोला-फोनिल</language>
+			<language type="dyu">द्युला</language>
+			<language type="dz">जोङ्खा</language>
+			<language type="dzg">दाजागा</language>
+			<language type="ebu">एम्बु</language>
+			<language type="ee">इवी</language>
+			<language type="efi">एफिक</language>
+			<language type="egl">एमिलियाली</language>
+			<language type="egy">पुरातन इजिप्टी</language>
+			<language type="eka">एकाजुक</language>
+			<language type="el">ग्रीक</language>
+			<language type="elx">एलामाइट</language>
+			<language type="en">अङ्ग्रेजी</language>
+			<language type="en_AU">अस्ट्रेलियाली अङ्ग्रेजी</language>
+			<language type="en_CA">क्यानाडेली अङ्ग्रेजी</language>
+			<language type="en_GB">बेलायती अङ्ग्रेजी</language>
+			<language type="en_GB" alt="short">संयुक्त अधिराज्य अङ्ग्रेजी</language>
+			<language type="en_US">अमेरिकी अङ्ग्रेजी</language>
+			<language type="en_US" alt="short">युएस अङ्ग्रेजी</language>
+			<language type="enm">मध्य अङ्ग्रेजी</language>
+			<language type="eo">एस्पेरान्तो</language>
+			<language type="es">स्पेनी</language>
+			<language type="es_419">ल्याटिन अमेरिकी स्पेनी</language>
+			<language type="es_ES">युरोपेली स्पेनी</language>
+			<language type="es_MX">मेक्सिकन स्पेनी</language>
+			<language type="esu">केन्द्रीय युपिक</language>
+			<language type="et">इस्टोनियन</language>
+			<language type="eu">बास्क</language>
+			<language type="ewo">इवोन्डो</language>
+			<language type="ext">एक्सट्रेमादुराली</language>
+			<language type="fa">फारसी</language>
+			<language type="fa_AF">दारी</language>
+			<language type="fan">फाङ</language>
+			<language type="fat">फान्टी</language>
+			<language type="ff">फुलाह</language>
+			<language type="fi">फिनिस</language>
+			<language type="fil">फिलिपिनी</language>
+			<language type="fj">फिजियन</language>
+			<language type="fo">फारोज</language>
+			<language type="fon">फोन</language>
+			<language type="fr">फ्रान्सेली</language>
+			<language type="fr_CA">क्यानेडाली फ्रान्सेली</language>
+			<language type="fr_CH">स्विस फ्रेन्च</language>
+			<language type="frc">काहुन फ्रान्सेली</language>
+			<language type="frm">मध्य फ्रान्सेली</language>
+			<language type="fro">पुरातन फ्रान्सेली</language>
+			<language type="frp">अर्पितान</language>
+			<language type="frr">उत्तरी फ्रिजी</language>
+			<language type="frs">पूर्वी फ्रिसियाली</language>
+			<language type="fur">फ्रिउलियाली</language>
+			<language type="fy">पश्चिमी फ्रिसियन</language>
+			<language type="ga">आइरिस</language>
+			<language type="gaa">गा</language>
+			<language type="gag">गगाउज</language>
+			<language type="gan">गान चिनियाँ</language>
+			<language type="gay">गायो</language>
+			<language type="gba">ग्बाया</language>
+			<language type="gd">स्कटिस गाएलिक</language>
+			<language type="gez">गिज</language>
+			<language type="gil">गिल्बर्टी</language>
+			<language type="gl">गलिसियाली</language>
+			<language type="glk">गिलाकी</language>
+			<language type="gmh">मध्य उच्च जर्मन</language>
+			<language type="gn">गुवारानी</language>
+			<language type="goh">पुरातन उच्च जर्मन</language>
+			<language type="gom">गोवा कोन्कानी</language>
+			<language type="gon">गोन्डी</language>
+			<language type="gor">गोरोन्टालो</language>
+			<language type="got">गोथिक</language>
+			<language type="grb">ग्रेबो</language>
+			<language type="grc">पुरातन ग्रिक</language>
+			<language type="gsw">स्वीस जर्मन</language>
+			<language type="gu">गुजराती</language>
+			<language type="gur">फ्राफ्रा</language>
+			<language type="guz">गुसी</language>
+			<language type="gv">मान्क्स</language>
+			<language type="gwi">गुइचिन</language>
+			<language type="ha">हाउसा</language>
+			<language type="hai">हाइदा</language>
+			<language type="hak">हक्का चिनियाँ</language>
+			<language type="haw">हवाइयन</language>
+			<language type="hax">दक्षिणी हैडा</language>
+			<language type="he">हिब्रु</language>
+			<language type="hi">हिन्दी</language>
+			<language type="hi_Latn" alt="variant">हिङ्लिस</language>
+			<language type="hif">फिजी हिन्दी</language>
+			<language type="hil">हिलिगायनोन</language>
+			<language type="hit">हिट्टिटे</language>
+			<language type="hmn">हमोङ</language>
+			<language type="ho">हिरी मोटु</language>
+			<language type="hr">क्रोयसियाली</language>
+			<language type="hsb">माथिल्लो सोर्बियन</language>
+			<language type="hsn">जियाङ चिनियाँ</language>
+			<language type="ht">हैटियाली क्रियोल</language>
+			<language type="hu">हङ्गेरियाली</language>
+			<language type="hup">हुपा</language>
+			<language type="hur">हाल्कोमेलेम</language>
+			<language type="hy">आर्मेनियाली</language>
+			<language type="hz">हेरेरो</language>
+			<language type="ia">इन्टर्लिङ्गुआ</language>
+			<language type="iba">इबान</language>
+			<language type="ibb">इबिबियो</language>
+			<language type="id">इन्डोनेसियाली</language>
+			<language type="ie">इन्टरलिङ्ग्वे</language>
+			<language type="ig">इग्बो</language>
+			<language type="ii">सिचुआन यि</language>
+			<language type="ik">इनुपिआक्</language>
+			<language type="ikt">पश्चिमी क्यानेडेली इनुक्टिटुट</language>
+			<language type="ilo">इयोको</language>
+			<language type="inh">इन्गस</language>
+			<language type="io">इडो</language>
+			<language type="is">आइसल्यान्डियाली</language>
+			<language type="it">इटालेली</language>
+			<language type="iu">इनुक्टिटुट</language>
+			<language type="izh">इन्ग्रियाली</language>
+			<language type="ja">जापानी</language>
+			<language type="jam">जमैकाली क्रेओले अङ्ग्रेजी</language>
+			<language type="jbo">लोज्बान</language>
+			<language type="jgo">न्गोम्बा</language>
+			<language type="jmc">माचामे</language>
+			<language type="jpr">जुडियो-फारसी</language>
+			<language type="jrb">जुडियो-अरबी</language>
+			<language type="jut">जुटिस</language>
+			<language type="jv">जाभानी</language>
+			<language type="ka">जर्जियाली</language>
+			<language type="kaa">कारा-काल्पाक</language>
+			<language type="kab">काबिल</language>
+			<language type="kac">काचिन</language>
+			<language type="kaj">ज्जु</language>
+			<language type="kam">काम्बा</language>
+			<language type="kaw">कावी</language>
+			<language type="kbd">काबार्दियाली</language>
+			<language type="kbl">कानेम्बु</language>
+			<language type="kcg">टुआप</language>
+			<language type="kde">माकोन्डे</language>
+			<language type="kea">काबुभेर्डियानु</language>
+			<language type="ken">केनयाङ</language>
+			<language type="kfo">कोरो</language>
+			<language type="kg">कोङ्गो</language>
+			<language type="kgp">काइनगाङ</language>
+			<language type="kha">खासी</language>
+			<language type="kho">खोटानी</language>
+			<language type="khq">कोयरा चिनी</language>
+			<language type="khw">खोवार</language>
+			<language type="ki">किकुयु</language>
+			<language type="kiu">किर्मान्जकी</language>
+			<language type="kj">कुआन्यामा</language>
+			<language type="kk">काजाख</language>
+			<language type="kkj">काको</language>
+			<language type="kl">कालालिसुट</language>
+			<language type="kln">कालेन्जिन</language>
+			<language type="km">खमेर</language>
+			<language type="kmb">किम्बुन्डु</language>
+			<language type="kn">कन्नाडा</language>
+			<language type="ko">कोरियाली</language>
+			<language type="koi">कोमी-पर्म्याक</language>
+			<language type="kok">कोन्कानी</language>
+			<language type="kos">कोस्राली</language>
+			<language type="kpe">क्पेल्ले</language>
+			<language type="kr">कानुरी</language>
+			<language type="krc">काराचाय-बाल्कर</language>
+			<language type="kri">क्रिओ</language>
+			<language type="krj">किनाराय-ए</language>
+			<language type="krl">करेलियन</language>
+			<language type="kru">कुरुख</language>
+			<language type="ks">कास्मिरी</language>
+			<language type="ksb">शाम्बाला</language>
+			<language type="ksf">बाफिया</language>
+			<language type="ksh">कोलोग्नियाली</language>
+			<language type="ku">कुर्दी</language>
+			<language type="kum">कुमिक</language>
+			<language type="kut">कुतेनाइ</language>
+			<language type="kv">कोमी</language>
+			<language type="kw">कोर्निस</language>
+			<language type="kwk">क्वाकवाला</language>
+			<language type="ky">किर्गिज</language>
+			<language type="la">ल्याटिन</language>
+			<language type="lad">लाडिनो</language>
+			<language type="lag">लाङ्गी</language>
+			<language type="lah">लाहन्डा</language>
+			<language type="lam">लाम्बा</language>
+			<language type="lb">लक्जेम्बर्गी</language>
+			<language type="lez">लाज्घियाली</language>
+			<language type="lfn">लिङ्गुवा फ्राङ्का नोभा</language>
+			<language type="lg">गान्डा</language>
+			<language type="li">लिम्बुर्गी</language>
+			<language type="lij">लिगुरियाली</language>
+			<language type="lil">लिलुएट</language>
+			<language type="liv">लिभोनियाली</language>
+			<language type="lkt">लाकोता</language>
+			<language type="lmo">लोम्बार्ड</language>
+			<language type="ln">लिङ्गाला</language>
+			<language type="lo">लाओ</language>
+			<language type="lol">मोङ्गो</language>
+			<language type="lou">लुसियाना क्रियोल</language>
+			<language type="loz">लोजी</language>
+			<language type="lrc">उत्तरी लुरी</language>
+			<language type="lsm">सामिया</language>
+			<language type="lt">लिथुआनियाली</language>
+			<language type="ltg">लाट्गाली</language>
+			<language type="lu">लुबा-काताङ्गा</language>
+			<language type="lua">लुबा-लुलुआ</language>
+			<language type="lui">लुइसेनो</language>
+			<language type="lun">लुन्डा</language>
+			<language type="luo">लुओ</language>
+			<language type="lus">मिजो</language>
+			<language type="luy">लुइया</language>
+			<language type="lv">लात्भियाली</language>
+			<language type="lzh">साहित्यिक चिनियाँ</language>
+			<language type="lzz">लाज</language>
+			<language type="mad">मादुरेसे</language>
+			<language type="maf">माफा</language>
+			<language type="mag">मगधी</language>
+			<language type="mai">मैथिली</language>
+			<language type="mak">माकासार</language>
+			<language type="man">मान्दिङो</language>
+			<language type="mas">मसाई</language>
+			<language type="mde">माबा</language>
+			<language type="mdf">मोक्ष</language>
+			<language type="mdr">मन्दर</language>
+			<language type="men">मेन्डे</language>
+			<language type="mer">मेरू</language>
+			<language type="mfe">मोरिसेन</language>
+			<language type="mg">मलागासी</language>
+			<language type="mga">मध्य आयरिस</language>
+			<language type="mgh">माखुवा-मिट्टो</language>
+			<language type="mgo">मेटा</language>
+			<language type="mh">मार्साली</language>
+			<language type="mi">माओरी</language>
+			<language type="mic">मिकमाक</language>
+			<language type="min">मिनाङकाबाउ</language>
+			<language type="mk">म्यासेडोनियन</language>
+			<language type="ml">मलयालम</language>
+			<language type="mn">मङ्गोलियाली</language>
+			<language type="mnc">मान्चु</language>
+			<language type="mni">मनिपुरी</language>
+			<language type="moe">इन्नु-ऐमन</language>
+			<language type="moh">मोहक</language>
+			<language type="mos">मोस्सी</language>
+			<language type="mr">मराठी</language>
+			<language type="ms">मलाय</language>
+			<language type="mt">माल्टिज</language>
+			<language type="mua">मुन्डाङ</language>
+			<language type="mul">बहुभाषा</language>
+			<language type="mus">क्रिक</language>
+			<language type="mwl">मिरान्डी</language>
+			<language type="mwr">माडवारी</language>
+			<language type="mwv">मेन्टावाई</language>
+			<language type="my">बर्मेली</language>
+			<language type="mye">म्येने</language>
+			<language type="myv">इर्ज्या</language>
+			<language type="mzn">मजानडेरानी</language>
+			<language type="na">नाउरू</language>
+			<language type="nan">मिन नान चिनियाँ</language>
+			<language type="nap">नेपोलिटान</language>
+			<language type="naq">नामा</language>
+			<language type="nb">नर्वेली बोकमाल</language>
+			<language type="nd">उत्तरी न्डेबेले</language>
+			<language type="nds">तल्लो जर्मन</language>
+			<language type="nds_NL">तल्लो साक्सन</language>
+			<language type="ne">नेपाली</language>
+			<language type="new">नेवारी</language>
+			<language type="ng">न्दोन्गा</language>
+			<language type="nia">नियास</language>
+			<language type="niu">निउएन</language>
+			<language type="njo">अओ नागा</language>
+			<language type="nl">डच</language>
+			<language type="nl_BE">फ्लेमिस</language>
+			<language type="nmg">क्वासियो</language>
+			<language type="nn">नर्वेली नाइनोर्स्क</language>
+			<language type="nnh">न्गिएम्बुन</language>
+			<language type="no">नर्वेली</language>
+			<language type="nog">नोगाइ</language>
+			<language type="non">पुरानो नोर्से</language>
+			<language type="nov">नोभियल</language>
+			<language type="nqo">नको</language>
+			<language type="nr">दक्षिण न्देबेले</language>
+			<language type="nso">उत्तरी सोथो</language>
+			<language type="nus">नुएर</language>
+			<language type="nv">नाभाजो</language>
+			<language type="nwc">परम्परागत नेवारी</language>
+			<language type="ny">न्यान्जा</language>
+			<language type="nym">न्यामवेजी</language>
+			<language type="nyn">न्यान्कोल</language>
+			<language type="nyo">न्योरो</language>
+			<language type="nzi">नजिमा</language>
+			<language type="oc">अक्सिटन</language>
+			<language type="oj">ओजिब्वा</language>
+			<language type="ojb">उत्तरपश्चिम ओजिब्बा</language>
+			<language type="ojc">सेन्ट्रल अजिब्बा</language>
+			<language type="ojs">ओजी क्री</language>
+			<language type="ojw">पश्चिमी ओजिबा</language>
+			<language type="oka">ओकानागान</language>
+			<language type="om">ओरोमो</language>
+			<language type="or">उडिया</language>
+			<language type="os">ओस्सेटिक</language>
+			<language type="osa">ओसागे</language>
+			<language type="ota">अटोमन तुर्की</language>
+			<language type="pa">पंजाबी</language>
+			<language type="pag">पाङ्गासिनान</language>
+			<language type="pal">पाहलावी</language>
+			<language type="pam">पामपाङ्गा</language>
+			<language type="pap">पापियामेन्तो</language>
+			<language type="pau">पालाउवाली</language>
+			<language type="pcd">पिकार्ड</language>
+			<language type="pcm">नाइजेरियाली पिड्जिन</language>
+			<language type="pdc">पेन्सिलभानियाली जर्मन</language>
+			<language type="peo">पुरातन फारसी</language>
+			<language type="pfl">पालाटिन जर्मन</language>
+			<language type="phn">फोनिसियाली</language>
+			<language type="pi">पाली</language>
+			<language type="pis">पिजिन</language>
+			<language type="pl">पोलिस</language>
+			<language type="pms">पिएडमोन्तेसे</language>
+			<language type="pnt">पोन्टिक</language>
+			<language type="pqm">मालिसीट पासामाक्वेडी</language>
+			<language type="prg">प्रसियाली</language>
+			<language type="pro">पुरातन प्रोभेन्काल</language>
+			<language type="ps">पास्तो</language>
+			<language type="pt">पोर्तुगी</language>
+			<language type="pt_BR">ब्राजिली पोर्तुगी</language>
+			<language type="pt_PT">युरोपेली पोर्तुगी</language>
+			<language type="qu">क्वेचुवा</language>
+			<language type="quc">किचे</language>
+			<language type="qug">चिम्बोराजो उच्चस्थान किचुआ</language>
+			<language type="raj">राजस्थानी</language>
+			<language type="rap">रापानुई</language>
+			<language type="rar">रारोटोङ्गान</language>
+			<language type="rhg">रोहिङ्ग्या</language>
+			<language type="rm">रोमानिस</language>
+			<language type="rn">रुन्डी</language>
+			<language type="ro">रोमानियाली</language>
+			<language type="ro_MD">मोल्डाभियाली</language>
+			<language type="rof">रोम्बो</language>
+			<language type="ru">रसियाली</language>
+			<language type="rup">अरोमानीयाली</language>
+			<language type="rw">किन्यारवान्डा</language>
+			<language type="rwk">र्‌वा</language>
+			<language type="sa">संस्कृत</language>
+			<language type="sad">सान्डेअ</language>
+			<language type="sah">साखा</language>
+			<language type="saq">साम्बुरू</language>
+			<language type="sat">सान्ताली</language>
+			<language type="sba">न्गामबाय</language>
+			<language type="sbp">साङ्गु</language>
+			<language type="sc">सार्डिनियाली</language>
+			<language type="scn">सिसिलियाली</language>
+			<language type="sco">स्कट्स</language>
+			<language type="sd">सिन्धी</language>
+			<language type="sdh">दक्षिणी कुर्दिश</language>
+			<language type="se">उत्तरी सामी</language>
+			<language type="seh">सेना</language>
+			<language type="ses">कोयराबोरो सेन्नी</language>
+			<language type="sg">साङ्गो</language>
+			<language type="sga">पुरातन आयरीस</language>
+			<language type="shi">टाचेल्हिट</language>
+			<language type="shn">शान</language>
+			<language type="shu">चाड अरबी</language>
+			<language type="si">सिन्हाली</language>
+			<language type="sk">स्लोभाकियाली</language>
+			<language type="sl">स्लोभेनियाली</language>
+			<language type="slh">दक्षिनी लुस्होस्टेड</language>
+			<language type="sli">तल्लो सिलेसियाली</language>
+			<language type="sm">सामोआ</language>
+			<language type="sma">दक्षिणी सामी</language>
+			<language type="smj">लुले सामी</language>
+			<language type="smn">इनारी सामी</language>
+			<language type="sms">स्कोइट सामी</language>
+			<language type="sn">शोना</language>
+			<language type="snk">सोनिन्के</language>
+			<language type="so">सोमाली</language>
+			<language type="sq">अल्बानियाली</language>
+			<language type="sr">सर्बियाली</language>
+			<language type="srn">स्रानान टोङ्गो</language>
+			<language type="ss">स्वाती</language>
+			<language type="ssy">साहो</language>
+			<language type="st">दक्षिणी सोथो</language>
+			<language type="str">स्ट्रेट स्यालिस</language>
+			<language type="su">सुडानी</language>
+			<language type="suk">सुकुमा</language>
+			<language type="sus">सुसू</language>
+			<language type="sux">सुमेरियाली</language>
+			<language type="sv">स्विडिस</language>
+			<language type="sw">स्वाहिली</language>
+			<language type="sw_CD">कङ्गो स्वाहिली</language>
+			<language type="swb">कोमोरी</language>
+			<language type="syc">परम्परागत सिरियाक</language>
+			<language type="syr">सिरियाक</language>
+			<language type="ta">तामिल</language>
+			<language type="tce">दक्षिनी टुट्चोन</language>
+			<language type="te">तेलुगु</language>
+			<language type="tem">टिम्ने</language>
+			<language type="teo">टेसो</language>
+			<language type="tet">टेटुम</language>
+			<language type="tg">ताजिक</language>
+			<language type="tgx">टागिस</language>
+			<language type="th">थाई</language>
+			<language type="tht">टाहल्टन</language>
+			<language type="ti">टिग्रिन्या</language>
+			<language type="tig">टिग्रे</language>
+			<language type="tk">टर्कमेन</language>
+			<language type="tlh">क्लिङ्गन</language>
+			<language type="tli">ट्लिङ्गिट</language>
+			<language type="tn">ट्स्वाना</language>
+			<language type="to">टोङ्गन</language>
+			<language type="tog">न्यास टोङ्गा</language>
+			<language type="tok">टोकी पोना</language>
+			<language type="tpi">टोक पिसिन</language>
+			<language type="tr">टर्किश</language>
+			<language type="trv">टारोको</language>
+			<language type="ts">ट्सोङ्गा</language>
+			<language type="tt">तातार</language>
+			<language type="ttm">उत्तरी टुचोन</language>
+			<language type="ttt">मुस्लिम टाट</language>
+			<language type="tum">टुम्बुका</language>
+			<language type="tvl">टुभालु</language>
+			<language type="twq">तासावाक</language>
+			<language type="ty">टाहिटियन</language>
+			<language type="tyv">टुभिनियाली</language>
+			<language type="tzm">केन्द्रीय एट्लास टामाजिघट</language>
+			<language type="udm">उड्मुर्ट</language>
+			<language type="ug">उइघुर</language>
+			<language type="uk">युक्रेनी</language>
+			<language type="umb">उम्बुन्डी</language>
+			<language type="und">अज्ञात भाषा</language>
+			<language type="ur">उर्दु</language>
+			<language type="uz">उज्बेकी</language>
+			<language type="vai">भाइ</language>
+			<language type="ve">भेन्डा</language>
+			<language type="vi">भियतनामी</language>
+			<language type="vmf">मुख्य-फ्राङ्कोनियाली</language>
+			<language type="vo">भोलापिक</language>
+			<language type="vun">भुन्जो</language>
+			<language type="wa">वाल्लुन</language>
+			<language type="wae">वाल्सर</language>
+			<language type="wal">वोलेट्टा</language>
+			<language type="war">वारे</language>
+			<language type="wbp">वार्ल्पिरी</language>
+			<language type="wo">वुलुफ</language>
+			<language type="wuu">ऊ चिनियाँ</language>
+			<language type="xal">काल्मिक</language>
+			<language type="xh">खोसा</language>
+			<language type="xmf">मिनग्रेलियाली</language>
+			<language type="xog">सोगा</language>
+			<language type="yav">याङ्बेन</language>
+			<language type="ybb">येम्बा</language>
+			<language type="yi">यिद्दिस</language>
+			<language type="yo">योरूवा</language>
+			<language type="yrl">न्हिनगातु</language>
+			<language type="yue">क्यान्टोनिज</language>
+			<language type="yue" alt="menu">चिनियाँ, क्यान्टोनिज</language>
+			<language type="zbl">ब्लिससिम्बोल्स</language>
+			<language type="zgh">मानक मोरोक्कोन तामाजिघट</language>
+			<language type="zh">चिनियाँ</language>
+			<language type="zh" alt="menu">चिनियाँ, म्यान्डरिन</language>
+			<language type="zh_Hans">सरलिकृत चिनियाँ</language>
+			<language type="zh_Hans" alt="long">सरलिकृत म्यान्डरिन चिनियाँ</language>
+			<language type="zh_Hant">परम्परागत चिनियाँ</language>
+			<language type="zh_Hant" alt="long">परम्परागत म्यान्डरिन चिनियाँ</language>
+			<language type="zu">जुलु</language>
+			<language type="zun">जुनी</language>
+			<language type="zxx">भाषिक सामग्री छैन</language>
+			<language type="zza">जाजा</language>
+		</languages>
+		<scripts>
+			<script type="Adlm">एडलाम</script>
+			<script type="Arab">अरबी</script>
+			<script type="Aran">नास्टालिक</script>
+			<script type="Armi">आर्मी</script>
+			<script type="Armn">आर्मेनियाली</script>
+			<script type="Avst">आभेस्टान</script>
+			<script type="Bali">बाली</script>
+			<script type="Batk">बाटक</script>
+			<script type="Beng">बङ्गाली</script>
+			<script type="Blis">ब्लिजसिम्बोल्स</script>
+			<script type="Bopo">बोपोमोफो</script>
+			<script type="Brah">ब्राह्मी</script>
+			<script type="Brai">ब्रेल</script>
+			<script type="Bugi">बुगिनिज</script>
+			<script type="Buhd">बुहिद</script>
+			<script type="Cakm">काक्म्</script>
+			<script type="Cans">एकीकृत क्यानेडाली आदिवादीको सिलाबिक्स</script>
+			<script type="Cari">कारियन</script>
+			<script type="Cham">चाम</script>
+			<script type="Cher">चेरोकी</script>
+			<script type="Cirt">किर्थ</script>
+			<script type="Copt">कप्टिक</script>
+			<script type="Cprt">कप्रियट</script>
+			<script type="Cyrl">सिरिलिक</script>
+			<script type="Deva">देवानागरी</script>
+			<script type="Dsrt">डेसेरेट</script>
+			<script type="Egyd">इजिप्टियन डेमोटिक</script>
+			<script type="Egyh">इजिप्टियन हाइरटिक</script>
+			<script type="Egyp">इजिप्टियन हाइरोग्लिफ्स</script>
+			<script type="Ethi">इथियोपिक</script>
+			<script type="Geok">ग्रुजियाली खुट्सुरी</script>
+			<script type="Geor">जर्जियाली</script>
+			<script type="Glag">ग्लागोलिटिक</script>
+			<script type="Goth">गोथिक</script>
+			<script type="Grek">ग्रीक</script>
+			<script type="Gujr">गुजराती</script>
+			<script type="Guru">गुरूमुखी</script>
+			<script type="Hanb">हान्ब</script>
+			<script type="Hang">हान्गुल</script>
+			<script type="Hani">हान</script>
+			<script type="Hano">हानुनु</script>
+			<script type="Hans">सरलिकृत चिनियाँ</script>
+			<script type="Hans" alt="stand-alone">सरलीकृत चिनियाँ</script>
+			<script type="Hant">परम्परागत</script>
+			<script type="Hant" alt="stand-alone">परम्परागत चिनियाँ</script>
+			<script type="Hebr">हिब्रु</script>
+			<script type="Hira">हिरागना</script>
+			<script type="Hmng">पहावह हमोङ्ग</script>
+			<script type="Hrkt">काताकाना वा हिरागाना</script>
+			<script type="Hung">पुरानो हङ्गेरियाली</script>
+			<script type="Inds" draft="contributed">इन्दुस</script>
+			<script type="Ital">पुरानो इटालिक</script>
+			<script type="Jamo">जामो</script>
+			<script type="Java">जाभानी</script>
+			<script type="Jpan">जापानी</script>
+			<script type="Kali">कायाहली</script>
+			<script type="Kana">काताकाना</script>
+			<script type="Khar">खारोस्थिति</script>
+			<script type="Khmr">खमेर</script>
+			<script type="Knda">कान्नाडा</script>
+			<script type="Kore">कोरियन</script>
+			<script type="Kthi">क्थी</script>
+			<script type="Lana">लान्ना</script>
+			<script type="Laoo">लाओ</script>
+			<script type="Latf">फ्राक्टुर ल्याटिन</script>
+			<script type="Latg">ग्यालिक ल्याटिन</script>
+			<script type="Latn">ल्याटिन</script>
+			<script type="Lepc">लेप्चा</script>
+			<script type="Limb">लिम्बु</script>
+			<script type="Lyci">लाइसियन</script>
+			<script type="Lydi">लाइडियन</script>
+			<script type="Mand">मान्डाएन</script>
+			<script type="Mani">मानिकाएन</script>
+			<script type="Maya">माया हाइरोग्लिफ्स</script>
+			<script type="Mero">मेरियोटिक</script>
+			<script type="Mlym">मलायालम</script>
+			<script type="Mong">मङ्गोल</script>
+			<script type="Moon">जून</script>
+			<script type="Mtei">माइटेइ मायेक</script>
+			<script type="Mymr">म्यान्मार</script>
+			<script type="Nkoo">एन्को</script>
+			<script type="Ogam">ओघाम</script>
+			<script type="Olck">ओलचिकी</script>
+			<script type="Orkh">ओर्खोन</script>
+			<script type="Orya">ओडिया</script>
+			<script type="Osma">ओस्मान्या</script>
+			<script type="Perm">पुरानो पर्मिक</script>
+			<script type="Phag">फाग्स-पा</script>
+			<script type="Phli">फ्लि</script>
+			<script type="Phlp">फ्ल्प</script>
+			<script type="Phlv">बुक पहल्भी</script>
+			<script type="Phnx">फोनिसियन</script>
+			<script type="Plrd">पोल्लार्ड फोनेटिक</script>
+			<script type="Prti">पिआरटी</script>
+			<script type="Rjng">रेजाङ</script>
+			<script type="Rohg">हानिफी</script>
+			<script type="Roro">रोङ्गोरोङ्गो</script>
+			<script type="Runr">रूनिक</script>
+			<script type="Samr">समारिटन</script>
+			<script type="Sara">सारती</script>
+			<script type="Saur">सौराष्ट्र</script>
+			<script type="Sgnw">साइनराइटिङ</script>
+			<script type="Shaw">शाभियन</script>
+			<script type="Sinh">सिन्हाला</script>
+			<script type="Sund">सुन्डानेली</script>
+			<script type="Sylo">स्ल्योटी नाग्री</script>
+			<script type="Syrc">सिरियाक</script>
+			<script type="Syre">इस्ट्रेनजेलो सिरियाक</script>
+			<script type="Syrj">पश्चिमी सिरियाक</script>
+			<script type="Syrn">पूर्वी सिरियाक</script>
+			<script type="Tagb">टाग्वान्वा</script>
+			<script type="Tale">टाइले</script>
+			<script type="Talu">न्यू टाइ लुइ</script>
+			<script type="Taml">तामिल</script>
+			<script type="Tavt">टाभ्ट</script>
+			<script type="Telu">तेलुगु</script>
+			<script type="Teng">टेङ्वार</script>
+			<script type="Tfng">टिफिनाघ</script>
+			<script type="Tglg">टागालोग</script>
+			<script type="Thaa">थाना</script>
+			<script type="Thai">थाई</script>
+			<script type="Tibt">तिब्बती</script>
+			<script type="Ugar">युगारिटिक</script>
+			<script type="Vaii">भाइ</script>
+			<script type="Visp">दृश्यमय वाणी</script>
+			<script type="Xpeo">पुरानो पर्सियन</script>
+			<script type="Yiii">यी</script>
+			<script type="Zinh">इन्हेरिटेड</script>
+			<script type="Zmth">गणितीय चिन्ह</script>
+			<script type="Zsye">इमोजी</script>
+			<script type="Zsym">प्रतीकहरू</script>
+			<script type="Zxxx">नलेखिएको</script>
+			<script type="Zyyy">साझा</script>
+			<script type="Zzzz">अज्ञात लिपि</script>
+		</scripts>
+		<territories>
+			<territory type="001">विश्व</territory>
+			<territory type="002">अफ्रिका</territory>
+			<territory type="003">उत्तर अमेरिका</territory>
+			<territory type="005">दक्षिण अमेरिका</territory>
+			<territory type="009">ओसनिया</territory>
+			<territory type="011">पश्चिमी अफ्रिका</territory>
+			<territory type="013">केन्द्रीय अमेरिका</territory>
+			<territory type="014">पूर्वी अफ्रिका</territory>
+			<territory type="015">उत्तरी अफ्रिका</territory>
+			<territory type="017">मध्य अफ्रिका</territory>
+			<territory type="018">दक्षिणी अफ्रिका</territory>
+			<territory type="019">अमेरिकास</territory>
+			<territory type="021">उत्तरी अमेरिका</territory>
+			<territory type="029">क्यारिबियन</territory>
+			<territory type="030">पूर्वी एशिया</territory>
+			<territory type="034">दक्षिणी एशिया</territory>
+			<territory type="035">दक्षिण पूर्वी एशिया</territory>
+			<territory type="039">दक्षिणी युरोप</territory>
+			<territory type="053">अष्ट्रालासिया</territory>
+			<territory type="054">मेलानेसिया</territory>
+			<territory type="057">माइक्रोनेसियाली क्षेत्र</territory>
+			<territory type="061">पोलिनेशिया</territory>
+			<territory type="142">एशिया</territory>
+			<territory type="143">केन्द्रीय एशिया</territory>
+			<territory type="145">पश्चिमी एशिया</territory>
+			<territory type="150">युरोप</territory>
+			<territory type="151">पूर्वी युरोप</territory>
+			<territory type="154">उत्तरी युरोप</territory>
+			<territory type="155">पश्चिमी युरोप</territory>
+			<territory type="202">उप-साहारा अफ्रिका</territory>
+			<territory type="419">ल्याटिन अमेरिका</territory>
+			<territory type="AC">असेन्सन टापु</territory>
+			<territory type="AD">अन्डोर्रा</territory>
+			<territory type="AE">संयुक्त अरब इमिराट्स</territory>
+			<territory type="AF">अफगानिस्तान</territory>
+			<territory type="AG">एन्टिगुआ र बारबुडा</territory>
+			<territory type="AI">आङ्गुइला</territory>
+			<territory type="AL">अल्बेनिया</territory>
+			<territory type="AM">आर्मेनिया</territory>
+			<territory type="AO">अङ्गोला</territory>
+			<territory type="AQ">अन्टारटिका</territory>
+			<territory type="AR">अर्जेन्टिना</territory>
+			<territory type="AS">अमेरिकी समोआ</territory>
+			<territory type="AT">अष्ट्रिया</territory>
+			<territory type="AU">अस्ट्रेलिया</territory>
+			<territory type="AW">अरुबा</territory>
+			<territory type="AX">अलान्ड टापुहरु</territory>
+			<territory type="AZ">अजरबैजान</territory>
+			<territory type="BA">बोस्निया एण्ड हर्जगोभिनिया</territory>
+			<territory type="BB">बार्बाडोस</territory>
+			<territory type="BD">बङ्गलादेश</territory>
+			<territory type="BE">बेल्जियम</territory>
+			<territory type="BF">बुर्किना फासो</territory>
+			<territory type="BG">बुल्गेरिया</territory>
+			<territory type="BH">बहराइन</territory>
+			<territory type="BI">बुरूण्डी</territory>
+			<territory type="BJ">बेनिन</territory>
+			<territory type="BL">सेन्ट बार्थेलेमी</territory>
+			<territory type="BM">बर्मुडा</territory>
+			<territory type="BN">ब्रुनाइ</territory>
+			<territory type="BO">बोलिभिया</territory>
+			<territory type="BQ">क्यारिवियन नेदरल्याण्ड्स</territory>
+			<territory type="BR">ब्राजिल</territory>
+			<territory type="BS">बहामास</territory>
+			<territory type="BT">भुटान</territory>
+			<territory type="BV">बुभेट टापु</territory>
+			<territory type="BW">बोट्स्वाना</territory>
+			<territory type="BY">बेलारूस</territory>
+			<territory type="BZ">बेलिज</territory>
+			<territory type="CA">क्यानाडा</territory>
+			<territory type="CC">कोकोस (किलिंग) टापुहरु</territory>
+			<territory type="CD">कङ्गो - किन्शासा</territory>
+			<territory type="CD" alt="variant">कङ्गो (डीआर्‌सी)</territory>
+			<territory type="CF">मध्य अफ्रिकी गणतन्त्र</territory>
+			<territory type="CG">कङ्गो ब्राजाभिल</territory>
+			<territory type="CG" alt="variant">कङ्गो (गणतन्त्र)</territory>
+			<territory type="CH">स्विजरल्याण्ड</territory>
+			<territory type="CI">कोट दिभोर</territory>
+			<territory type="CI" alt="variant">आइभोरी कोस्ट</territory>
+			<territory type="CK">कुक टापुहरु</territory>
+			<territory type="CL">चिली</territory>
+			<territory type="CM">क्यामरून</territory>
+			<territory type="CN">चीन</territory>
+			<territory type="CO">कोलोम्बिया</territory>
+			<territory type="CP">क्लिप्पेर्टन टापु</territory>
+			<territory type="CR">कोष्टारिका</territory>
+			<territory type="CU">क्युबा</territory>
+			<territory type="CV">केप भर्डे</territory>
+			<territory type="CW">कुराकाओ</territory>
+			<territory type="CX">क्रिष्टमस टापु</territory>
+			<territory type="CY">साइप्रस</territory>
+			<territory type="CZ">चेकिया</territory>
+			<territory type="CZ" alt="variant">चेक गणतन्त्र</territory>
+			<territory type="DE">जर्मनी</territory>
+			<territory type="DG">डियगो गार्सिया</territory>
+			<territory type="DJ">डिजिबुटी</territory>
+			<territory type="DK">डेनमार्क</territory>
+			<territory type="DM">डोमिनिका</territory>
+			<territory type="DO">डोमिनिकन गणतन्त्र</territory>
+			<territory type="DZ">अल्जेरिया</territory>
+			<territory type="EA">सिउटा र मेलिला</territory>
+			<territory type="EC">इक्वेडोर</territory>
+			<territory type="EE">इस्टोनिया</territory>
+			<territory type="EG">इजिप्ट</territory>
+			<territory type="EH">पश्चिमी साहारा</territory>
+			<territory type="ER">एरिट्रीया</territory>
+			<territory type="ES">स्पेन</territory>
+			<territory type="ET">इथियोपिया</territory>
+			<territory type="EU">युरोपियन युनियन</territory>
+			<territory type="EZ">युरोजोन</territory>
+			<territory type="FI">फिनल्याण्ड</territory>
+			<territory type="FJ">फिजी</territory>
+			<territory type="FK">फकल्याण्ड टापुहरु</territory>
+			<territory type="FK" alt="variant">फक्ल्याण्ड टापुहरू (इज्लास माल्भिनास)</territory>
+			<territory type="FM">माइक्रोनेसिया</territory>
+			<territory type="FO">फारो टापुहरू</territory>
+			<territory type="FR">फ्रान्स</territory>
+			<territory type="GA">गावोन</territory>
+			<territory type="GB">संयुक्त अधिराज्य</territory>
+			<territory type="GB" alt="short">युके</territory>
+			<territory type="GD">ग्रेनाडा</territory>
+			<territory type="GE">जर्जिया</territory>
+			<territory type="GF">फ्रान्सेली गायना</territory>
+			<territory type="GG">ग्यूर्न्सी</territory>
+			<territory type="GH">घाना</territory>
+			<territory type="GI">जिब्राल्टार</territory>
+			<territory type="GL">ग्रिनल्याण्ड</territory>
+			<territory type="GM">गाम्विया</territory>
+			<territory type="GN">गिनी</territory>
+			<territory type="GP">ग्वाडेलुप</territory>
+			<territory type="GQ">भू-मध्यीय गिनी</territory>
+			<territory type="GR">ग्रीस</territory>
+			<territory type="GS">दक्षिण जर्जिया र दक्षिण स्यान्डवीच टापुहरू</territory>
+			<territory type="GT">ग्वाटेमाला</territory>
+			<territory type="GU">गुवाम</territory>
+			<territory type="GW">गिनी-बिसाउ</territory>
+			<territory type="GY">गुयाना</territory>
+			<territory type="HK">हङकङ चिनियाँ विशेष प्रशासनिक क्षेत्र</territory>
+			<territory type="HK" alt="short">हङकङ</territory>
+			<territory type="HM">हर्ड टापु र म्याकडोनाल्ड टापुहरु</territory>
+			<territory type="HN">हन्डुरास</territory>
+			<territory type="HR">क्रोएशिया</territory>
+			<territory type="HT">हैटी</territory>
+			<territory type="HU">हङ्गेरी</territory>
+			<territory type="IC">क्यानारी टापुहरू</territory>
+			<territory type="ID">इन्डोनेशिया</territory>
+			<territory type="IE">आयरल्याण्ड</territory>
+			<territory type="IL">इजरायल</territory>
+			<territory type="IM">आइल अफ म्यान</territory>
+			<territory type="IN">भारत</territory>
+			<territory type="IO">बेलायती हिन्द महासागर क्षेत्र</territory>
+			<territory type="IQ">इराक</territory>
+			<territory type="IR">इरान</territory>
+			<territory type="IS">आइस्ल्याण्ड</territory>
+			<territory type="IT">इटली</territory>
+			<territory type="JE">जर्सी</territory>
+			<territory type="JM">जमैका</territory>
+			<territory type="JO">जोर्डन</territory>
+			<territory type="JP">जापान</territory>
+			<territory type="KE">केन्या</territory>
+			<territory type="KG">किर्गिस्तान</territory>
+			<territory type="KH">कम्बोडिया</territory>
+			<territory type="KI">किरिबाटी</territory>
+			<territory type="KM">कोमोरोस</territory>
+			<territory type="KN">सेन्ट किट्स र नेभिस</territory>
+			<territory type="KP">उत्तर कोरिया</territory>
+			<territory type="KR">दक्षिण कोरिया</territory>
+			<territory type="KW">कुवेत</territory>
+			<territory type="KY">केयमान टापु</territory>
+			<territory type="KZ">काजाकस्तान</territory>
+			<territory type="LA">लाओस</territory>
+			<territory type="LB">लेबनन</territory>
+			<territory type="LC">सेन्ट लुसिया</territory>
+			<territory type="LI">लिकटेन्सटाइन</territory>
+			<territory type="LK">श्रीलङ्का</territory>
+			<territory type="LR">लाइबेरिया</territory>
+			<territory type="LS">लेसोथो</territory>
+			<territory type="LT">लिथुएनिया</territory>
+			<territory type="LU">लक्जेमबर्ग</territory>
+			<territory type="LV">लाट्भिया</territory>
+			<territory type="LY">लिबिया</territory>
+			<territory type="MA">मोरोक्को</territory>
+			<territory type="MC">मोनाको</territory>
+			<territory type="MD">माल्डोभा</territory>
+			<territory type="ME">मोन्टेनिग्रो</territory>
+			<territory type="MF">सेन्ट मार्टिन</territory>
+			<territory type="MG">माडागास्कर</territory>
+			<territory type="MH">मार्शल टापुहरु</territory>
+			<territory type="MK">उत्तर म्यासेडोनिया</territory>
+			<territory type="ML">माली</territory>
+			<territory type="MM">म्यान्मार (बर्मा)</territory>
+			<territory type="MN">मङ्गोलिया</territory>
+			<territory type="MO">मकाउ चिनियाँ विशेष प्रशासनिक क्षेत्र</territory>
+			<territory type="MO" alt="short">मकाउ</territory>
+			<territory type="MP">उत्तरी मारिआना टापु</territory>
+			<territory type="MQ">मार्टिनिक</territory>
+			<territory type="MR">माउरिटानिया</territory>
+			<territory type="MS">मोन्टसेर्राट</territory>
+			<territory type="MT">माल्टा</territory>
+			<territory type="MU">मौरिसियस</territory>
+			<territory type="MV">माल्दिभ्स</territory>
+			<territory type="MW">मालावी</territory>
+			<territory type="MX">मेक्सिको</territory>
+			<territory type="MY">मलेसिया</territory>
+			<territory type="MZ">मोजाम्बिक</territory>
+			<territory type="NA">नामिबिया</territory>
+			<territory type="NC">न्यु क्यालेडोनिया</territory>
+			<territory type="NE">नाइजर</territory>
+			<territory type="NF">नोरफोल्क टापु</territory>
+			<territory type="NG">नाइजेरिया</territory>
+			<territory type="NI">निकारागुवा</territory>
+			<territory type="NL">नेदरल्याण्ड</territory>
+			<territory type="NO">नर्वे</territory>
+			<territory type="NP">नेपाल</territory>
+			<territory type="NR">नाउरू</territory>
+			<territory type="NU">नियुइ</territory>
+			<territory type="NZ">न्युजिल्याण्ड</territory>
+			<territory type="NZ" alt="variant">आइटिओरोरा न्युजिल्याण्ड</territory>
+			<territory type="OM">ओमन</territory>
+			<territory type="PA">प्यानामा</territory>
+			<territory type="PE">पेरू</territory>
+			<territory type="PF">फ्रान्सेली पोलिनेसिया</territory>
+			<territory type="PG">पपुआ न्यू गाइनिया</territory>
+			<territory type="PH">फिलिपिन्स</territory>
+			<territory type="PK">पाकिस्तान</territory>
+			<territory type="PL">पोल्याण्ड</territory>
+			<territory type="PM">सेन्ट पिर्रे र मिक्केलोन</territory>
+			<territory type="PN">पिटकाइर्न टापुहरु</territory>
+			<territory type="PR">पुएर्टो रिको</territory>
+			<territory type="PS">प्यालेस्टिनी भू-भागहरू</territory>
+			<territory type="PS" alt="short">प्‍यालेस्टाइन</territory>
+			<territory type="PT">पोर्चुगल</territory>
+			<territory type="PW">पलाउ</territory>
+			<territory type="PY">प्याराग्वे</territory>
+			<territory type="QA">कतार</territory>
+			<territory type="QO">बाह्य ओसनिया</territory>
+			<territory type="RE">रियुनियन</territory>
+			<territory type="RO">रोमेनिया</territory>
+			<territory type="RS">सर्बिया</territory>
+			<territory type="RU">रूस</territory>
+			<territory type="RW">रवाण्डा</territory>
+			<territory type="SA">साउदी अरब</territory>
+			<territory type="SB">सोलोमन टापुहरू</territory>
+			<territory type="SC">सेचेलेस</territory>
+			<territory type="SD">सुडान</territory>
+			<territory type="SE">स्विडेन</territory>
+			<territory type="SG">सिङ्गापुर</territory>
+			<territory type="SH">सेन्ट हेलेना</territory>
+			<territory type="SI">स्लोभेनिया</territory>
+			<territory type="SJ">सभाल्बार्ड र जान मायेन</territory>
+			<territory type="SK">स्लोभाकिया</territory>
+			<territory type="SL">सिएर्रा लिओन</territory>
+			<territory type="SM">सान् मारिनो</territory>
+			<territory type="SN">सेनेगल</territory>
+			<territory type="SO">सोमालिया</territory>
+			<territory type="SR">सुरिनेम</territory>
+			<territory type="SS">दक्षिण सुडान</territory>
+			<territory type="ST">साओ टोमे र प्रिन्सिप</territory>
+			<territory type="SV">एल् साल्भाडोर</territory>
+			<territory type="SX">सिन्ट मार्टेन</territory>
+			<territory type="SY">सिरिया</territory>
+			<territory type="SZ">स्वाजिल्याण्ड</territory>
+			<territory type="TA">ट्रिस्टान डा कुन्हा</territory>
+			<territory type="TC">तुर्क र काइकोस टापु</territory>
+			<territory type="TD">चाड</territory>
+			<territory type="TF">फ्रेन्च दक्षिणी राज्यहरू</territory>
+			<territory type="TG">टोगो</territory>
+			<territory type="TH">थाइल्याण्ड</territory>
+			<territory type="TJ">ताजिकिस्तान</territory>
+			<territory type="TK">तोकेलाउ</territory>
+			<territory type="TL">टिमोर-लेस्टे</territory>
+			<territory type="TL" alt="variant">पृर्वी टीमोर</territory>
+			<territory type="TM">तुर्कमेनिस्तान</territory>
+			<territory type="TN">ट्युनिसिया</territory>
+			<territory type="TO">टोंगा</territory>
+			<territory type="TR">टर्की</territory>
+			<territory type="TR" alt="variant">तुर्की</territory>
+			<territory type="TT">त्रिनिडाड एण्ड टोबागो</territory>
+			<territory type="TV">तुभालु</territory>
+			<territory type="TW">ताइवान</territory>
+			<territory type="TZ">तान्जानिया</territory>
+			<territory type="UA">युक्रेन</territory>
+			<territory type="UG">युगाण्डा</territory>
+			<territory type="UM">संयुक्त राज्यका बाह्य टापुहरु</territory>
+			<territory type="UN">संयुक्त राष्ट्र संघ</territory>
+			<territory type="UN" alt="short">यूएन</territory>
+			<territory type="US">संयुक्त राज्य</territory>
+			<territory type="US" alt="short">अमेरिका</territory>
+			<territory type="UY">उरूग्वे</territory>
+			<territory type="UZ">उज्बेकिस्तान</territory>
+			<territory type="VA">भेटिकन सिटी</territory>
+			<territory type="VC">सेन्ट भिन्सेन्ट र ग्रेनाडिन्स</territory>
+			<territory type="VE">भेनेजुएला</territory>
+			<territory type="VG">बेलायती भर्जिन टापुहरू</territory>
+			<territory type="VI">संयुक्त राज्य भर्जिन टापुहरु</territory>
+			<territory type="VN">भिएतनाम</territory>
+			<territory type="VU">भानुआतु</territory>
+			<territory type="WF">वालिस र फुटुना</territory>
+			<territory type="WS">सामोआ</territory>
+			<territory type="XA">सिउडो-एक्सेन्ट्स</territory>
+			<territory type="XB">सिउडो-बिडी</territory>
+			<territory type="XK">कोसोभो</territory>
+			<territory type="YE">येमेन</territory>
+			<territory type="YT">मायोट्ट</territory>
+			<territory type="ZA">दक्षिण अफ्रिका</territory>
+			<territory type="ZM">जाम्बिया</territory>
+			<territory type="ZW">जिम्बाबवे</territory>
+			<territory type="ZZ">अज्ञात क्षेत्र</territory>
+		</territories>
+		<variants>
+			<variant type="AREVELA" draft="contributed">पूर्वी आर्मेनियाली</variant>
+			<variant type="POSIX" draft="contributed">कम्प्युटर</variant>
+		</variants>
+		<keys>
+			<key type="calendar">पात्रो</key>
+			<key type="cf">मुद्राको ढाँचा</key>
+			<key type="collation">क्रमबद्ध सुची</key>
+			<key type="currency">मुद्रा</key>
+			<key type="hc">समय चक्र (12 तथा 24)</key>
+			<key type="lb">पङ्क्ति विच्छेदको शैली</key>
+			<key type="ms">मापन प्रणाली</key>
+			<key type="numbers">अङ्कहरू</key>
+		</keys>
+		<types>
+			<type key="calendar" type="buddhist">बुद्धिष्ट पात्रो</type>
+			<type key="calendar" type="chinese">चिनियाँ पात्रो</type>
+			<type key="calendar" type="coptic">कोप्टिक पात्र</type>
+			<type key="calendar" type="dangi">डाङ्गी पात्रो</type>
+			<type key="calendar" type="ethiopic">इथिओपिक पात्रो</type>
+			<type key="calendar" type="ethiopic-amete-alem">इथियिपियाली आमेट आलेम पात्र</type>
+			<type key="calendar" type="gregorian">ग्रेगोरियन पात्रो</type>
+			<type key="calendar" type="hebrew">हिब्रु पात्रो</type>
+			<type key="calendar" type="indian">भारतीय राष्ट्रिय पात्रो</type>
+			<type key="calendar" type="islamic">इस्लामी पात्रो</type>
+			<type key="calendar" type="islamic-civil">इस्लामी नागरिक पात्रो</type>
+			<type key="calendar" type="islamic-umalqura">इस्लामी पात्रो</type>
+			<type key="calendar" type="iso8601">ISO-8601 पात्रो</type>
+			<type key="calendar" type="japanese">जापानी पात्रो</type>
+			<type key="calendar" type="persian">फारसी पात्रो</type>
+			<type key="calendar" type="roc">चिनियाँ गणतन्त्रको पात्रो</type>
+			<type key="cf" type="account">लेखासम्बन्धी मुद्राको ढाँचा</type>
+			<type key="cf" type="standard">मानक मुद्राको ढाँचा</type>
+			<type key="collation" type="big5han" draft="contributed">परम्परागत चिनिँया क्रमबद्धता पद्दति - बिग फाइभ</type>
+			<type key="collation" type="ducet">पूर्वनिर्धारित युनिकोडको क्रमबद्धता सूची</type>
+			<type key="collation" type="gb2312han" draft="contributed">सरलिकृत चिनियाँ क्रमबद्धता पद्दति-गीबीटुथ्रीवानटु</type>
+			<type key="collation" type="phonebook" draft="contributed">टेलिफोन पुस्तिका क्रमबद्धतापद्दति</type>
+			<type key="collation" type="pinyin" draft="contributed">पिनयिन क्रमबद्धता पद्दति</type>
+			<type key="collation" type="search">सामान्य उद्देशीय खोजी</type>
+			<type key="collation" type="standard">मानक क्रमबद्धता</type>
+			<type key="collation" type="stroke" draft="contributed">स्ट्रोक क्रमबद्धता पद्दति</type>
+			<type key="collation" type="traditional" draft="contributed">परम्परागत क्रमबद्धता पद्दति</type>
+			<type key="hc" type="h11">१२ घण्टे प्रणाली (०–११)</type>
+			<type key="hc" type="h12">१२ घन्टाको प्रणाली (१–१२)</type>
+			<type key="hc" type="h23">२४ घन्टाको प्रणाली (०–२३)</type>
+			<type key="hc" type="h24">२४ घन्टाको प्रणाली (१–२४)</type>
+			<type key="lb" type="loose">पङ्क्ति विच्छेदको खुला शैली</type>
+			<type key="lb" type="normal">पङ्क्ति विच्छेदको सामान्य शैली</type>
+			<type key="lb" type="strict">पङ्क्ति विच्छेदको कडा शैली</type>
+			<type key="ms" type="metric">मेट्रिक प्रणाली</type>
+			<type key="ms" type="uksystem">इम्पेरियल मापन प्रणाली</type>
+			<type key="ms" type="ussystem">संयुक्त राज्य मापन प्रणाली</type>
+			<type key="numbers" type="arab">अरबी भारतीय अङ्कहरू</type>
+			<type key="numbers" type="arabext">विस्तृत अरबी भारतीय अङ्कहरू</type>
+			<type key="numbers" type="armn">आर्मेनियाली अङ्कहरू</type>
+			<type key="numbers" type="armnlow">आर्मेनियाली साना अङ्कहरू</type>
+			<type key="numbers" type="beng">बङ्गाली अङ्कहरू</type>
+			<type key="numbers" type="cakm">चाक्मा अङ्क</type>
+			<type key="numbers" type="deva">देवानागरी</type>
+			<type key="numbers" type="ethi">इथियोपाली अङ्कहरू</type>
+			<type key="numbers" type="fullwide">पूरा चौंडाइका अङ्कहरू</type>
+			<type key="numbers" type="geor">जर्जियाली अङ्कहरू</type>
+			<type key="numbers" type="grek">ग्रीक अङ्कहरू</type>
+			<type key="numbers" type="greklow">ग्रीक साना अङ्कहरू</type>
+			<type key="numbers" type="gujr">गुजराती अङ्कहरू</type>
+			<type key="numbers" type="guru">गुरूमुखी अङ्कहरू</type>
+			<type key="numbers" type="hanidec">चिनियाँ दशमलव अङ्कहरू</type>
+			<type key="numbers" type="hans">सरलिकृत चिनियाँ अङ्कहरू</type>
+			<type key="numbers" type="hansfin">सरलिकृत चिनियाँ वित्तीय अङ्कहरू</type>
+			<type key="numbers" type="hant">परम्परागत चिनियाँ अङ्कहरू</type>
+			<type key="numbers" type="hantfin">परम्परागत चिनियाँ वित्तीय अङ्कहरू</type>
+			<type key="numbers" type="hebr">हिब्रु अङ्कहरू</type>
+			<type key="numbers" type="java">जाभानी अङ्क</type>
+			<type key="numbers" type="jpan">जापानी अङ्कहरू</type>
+			<type key="numbers" type="jpanfin">जापानी वित्तीय अङ्कहरू</type>
+			<type key="numbers" type="khmr">खमेर अङ्कहरू</type>
+			<type key="numbers" type="knda">कन्नाडा अङ्कहरू</type>
+			<type key="numbers" type="laoo">लाओ अङ्कहरू</type>
+			<type key="numbers" type="latn">पश्चिमी अङ्कहरू</type>
+			<type key="numbers" type="mlym">मलायलम अङ्कहरू</type>
+			<type key="numbers" type="mtei">मिटै मेएक अङ्क</type>
+			<type key="numbers" type="mymr">म्यान्मारका अङ्कहरू</type>
+			<type key="numbers" type="olck">ओइ चिकी अङ्क</type>
+			<type key="numbers" type="orya">ओरिया अङ्कहरू</type>
+			<type key="numbers" type="roman">रोमन अङ्कहरू</type>
+			<type key="numbers" type="romanlow">रोमन साना केसका अङ्कहरू</type>
+			<type key="numbers" type="taml">परम्परागत तामिल अङ्कहरू</type>
+			<type key="numbers" type="tamldec">तामिल अङ्कहरू</type>
+			<type key="numbers" type="telu">तेलेगु अङ्कहरू</type>
+			<type key="numbers" type="thai">थाई अङ्कहरू</type>
+			<type key="numbers" type="tibt">तिब्बती अङ्कहरू</type>
+			<type key="numbers" type="vaii">भाई अङ्क</type>
+		</types>
+		<measurementSystemNames>
+			<measurementSystemName type="metric">मेट्रिक</measurementSystemName>
+			<measurementSystemName type="UK">संयुक्त अधिराज्य</measurementSystemName>
+			<measurementSystemName type="US">संयु्क्त राज्य</measurementSystemName>
+		</measurementSystemNames>
+		<codePatterns>
+			<codePattern type="language">भाषा: {0}</codePattern>
+			<codePattern type="script">लिपि: {0}</codePattern>
+			<codePattern type="territory">क्षेत्र: {0}</codePattern>
+		</codePatterns>
+	</localeDisplayNames>
+	<characters>
+		<exemplarCharacters>[\u093C \u0901 \u0902 ः ॐ अ आ इ ई उ ऊ ऋ ऌ ऍ ए ऐ ऑ ओ औ क ख ग घ ङ च छ ज झ ञ ट ठ ड ढ ण त थ द ध न प फ ब भ म य र ल ळ व श ष स ह ऽ ा ि ी \u0941 \u0942 \u0943 \u0945 \u0947 \u0948 ॉ ो ौ \u094D]</exemplarCharacters>
+		<exemplarCharacters type="auxiliary">[\u200C\u200D \u0944]</exemplarCharacters>
+		<exemplarCharacters type="index" draft="contributed">[अ आ इ ई उ ऊ ऋ ए ऐ ओ औ क ख ग घ ङ च छ ज झ ञ ट ठ ड ढ ण त थ द ध न प फ ब भ म य र ल व श ष स ह]</exemplarCharacters>
+		<exemplarCharacters type="numbers">[\- ‑ , . % ‰ + 0० 1१ 2२ 3३ 4४ 5५ 6६ 7७ 8८ 9९]</exemplarCharacters>
+		<exemplarCharacters type="punctuation">[\- ‑ — , ; ! ? । ' ‘ ’ &quot; “ ” ( ) \[ \] \{ \}]</exemplarCharacters>
+		<ellipsis type="initial">…{0}</ellipsis>
+		<ellipsis type="medial">{0}…{1}</ellipsis>
+		<ellipsis type="word-final">{0} …</ellipsis>
+		<ellipsis type="word-initial">… {0}</ellipsis>
+		<ellipsis type="word-medial">{0} … {1}</ellipsis>
+		<moreInformation>?</moreInformation>
+		<parseLenients scope="date" level="lenient">
+			<parseLenient sample=":" draft="contributed">[\:∶︓﹕：]</parseLenient>
+		</parseLenients>
+		<parseLenients scope="general" level="lenient">
+			<parseLenient sample="." draft="contributed">[.․。︒﹒．｡]</parseLenient>
+			<parseLenient sample="’" draft="contributed">['ʼ՚᾽᾿’＇]</parseLenient>
+			<parseLenient sample="%" draft="contributed">[%٪﹪％]</parseLenient>
+			<parseLenient sample="‰" draft="contributed">[؉‰]</parseLenient>
+			<parseLenient sample="$" draft="contributed">[\$﹩＄]</parseLenient>
+			<parseLenient sample="£" draft="contributed">[£₤￡]</parseLenient>
+			<parseLenient sample="¥" draft="contributed">[¥￥]</parseLenient>
+			<parseLenient sample="₩" draft="contributed">[₩￦]</parseLenient>
+			<parseLenient sample="₹" draft="contributed">[₨₹{Rp}{Rs}]</parseLenient>
+		</parseLenients>
+		<parseLenients scope="number" level="lenient">
+			<parseLenient sample="-" draft="contributed">[\-‐‒–⁻₋−➖﹣－]</parseLenient>
+			<parseLenient sample="," draft="contributed">[,،٫、︐︑﹐﹑，､]</parseLenient>
+			<parseLenient sample="+" draft="contributed">[+⁺₊➕﬩﹢＋]</parseLenient>
+		</parseLenients>
+		<parseLenients scope="number" level="stricter">
+			<parseLenient sample="," draft="contributed">[,٫︐﹐，]</parseLenient>
+			<parseLenient sample="." draft="contributed">[.․﹒．｡]</parseLenient>
+		</parseLenients>
+	</characters>
+	<delimiters>
+		<quotationStart>“</quotationStart>
+		<quotationEnd>”</quotationEnd>
+		<alternateQuotationStart>‘</alternateQuotationStart>
+		<alternateQuotationEnd>’</alternateQuotationEnd>
+	</delimiters>
+	<dates>
+		<calendars>
+			<calendar type="generic">
+				<dateFormats>
+					<dateFormatLength type="full">
+						<dateFormat>
+							<pattern>G y MMMM d, EEEE</pattern>
+							<datetimeSkeleton>GyMMMMEEEEd</datetimeSkeleton>
+						</dateFormat>
+					</dateFormatLength>
+					<dateFormatLength type="long">
+						<dateFormat>
+							<pattern>G y MMMM d</pattern>
+							<datetimeSkeleton>GyMMMMd</datetimeSkeleton>
+						</dateFormat>
+					</dateFormatLength>
+					<dateFormatLength type="medium">
+						<dateFormat>
+							<pattern>G y MMM d</pattern>
+							<datetimeSkeleton>GyMMMd</datetimeSkeleton>
+						</dateFormat>
+					</dateFormatLength>
+					<dateFormatLength type="short">
+						<dateFormat>
+							<pattern>GGGGG y-MM-dd</pattern>
+							<datetimeSkeleton>GGGGGyMMdd</datetimeSkeleton>
+						</dateFormat>
+					</dateFormatLength>
+				</dateFormats>
+				<dateTimeFormats>
+					<dateTimeFormatLength type="full">
+						<dateTimeFormat>
+							<pattern>{1}, {0}</pattern>
+						</dateTimeFormat>
+					</dateTimeFormatLength>
+					<dateTimeFormatLength type="long">
+						<dateTimeFormat>
+							<pattern>{1}, {0}</pattern>
+						</dateTimeFormat>
+					</dateTimeFormatLength>
+					<dateTimeFormatLength type="medium">
+						<dateTimeFormat>
+							<pattern>{1},{0}</pattern>
+						</dateTimeFormat>
+						<dateTimeFormat type="atTime">
+							<pattern>{1}, {0}</pattern>
+						</dateTimeFormat>
+					</dateTimeFormatLength>
+					<dateTimeFormatLength type="short">
+						<dateTimeFormat>
+							<pattern>{1},{0}</pattern>
+						</dateTimeFormat>
+						<dateTimeFormat type="atTime">
+							<pattern>{1}, {0}</pattern>
+						</dateTimeFormat>
+					</dateTimeFormatLength>
+					<availableFormats>
+						<dateFormatItem id="Bh">h B</dateFormatItem>
+						<dateFormatItem id="Bhm">h:mm B</dateFormatItem>
+						<dateFormatItem id="Bhms">h:mm:ss B</dateFormatItem>
+						<dateFormatItem id="d">d</dateFormatItem>
+						<dateFormatItem id="E">ccc</dateFormatItem>
+						<dateFormatItem id="EBhm">E h:mm B</dateFormatItem>
+						<dateFormatItem id="EBhms">E h:mm:ss B</dateFormatItem>
+						<dateFormatItem id="Ed">d, E</dateFormatItem>
+						<dateFormatItem id="Ehm">E h:mm a</dateFormatItem>
+						<dateFormatItem id="EHm">E HH:mm</dateFormatItem>
+						<dateFormatItem id="Ehms">E h:mm:ss a</dateFormatItem>
+						<dateFormatItem id="EHms">E HH:mm:ss</dateFormatItem>
+						<dateFormatItem id="Gy">G y</dateFormatItem>
+						<dateFormatItem id="GyMd">M/d/y GGGGG</dateFormatItem>
+						<dateFormatItem id="GyMMM">G y MMM</dateFormatItem>
+						<dateFormatItem id="GyMMMd">G y MMM d</dateFormatItem>
+						<dateFormatItem id="GyMMMEd">G y MMM d, E</dateFormatItem>
+						<dateFormatItem id="h">h a</dateFormatItem>
+						<dateFormatItem id="H">HH</dateFormatItem>
+						<dateFormatItem id="hm">h:mm a</dateFormatItem>
+						<dateFormatItem id="Hm">HH:mm</dateFormatItem>
+						<dateFormatItem id="hms">h:mm:ss a</dateFormatItem>
+						<dateFormatItem id="Hms">HH:mm:ss</dateFormatItem>
+						<dateFormatItem id="M">L</dateFormatItem>
+						<dateFormatItem id="Md">MM-dd</dateFormatItem>
+						<dateFormatItem id="MEd">MM/dd, E</dateFormatItem>
+						<dateFormatItem id="MMM">LLL</dateFormatItem>
+						<dateFormatItem id="MMMd">MMM d</dateFormatItem>
+						<dateFormatItem id="MMMEd">MMM d, E</dateFormatItem>
+						<dateFormatItem id="MMMMd">MMMM d</dateFormatItem>
+						<dateFormatItem id="ms">mm:ss</dateFormatItem>
+						<dateFormatItem id="y">G y</dateFormatItem>
+						<dateFormatItem id="yyyy">G y</dateFormatItem>
+						<dateFormatItem id="yyyyM">GGGGG y-MM</dateFormatItem>
+						<dateFormatItem id="yyyyMd">GGGGG y-MM-dd</dateFormatItem>
+						<dateFormatItem id="yyyyMEd">GGGGG y-MM-dd, E</dateFormatItem>
+						<dateFormatItem id="yyyyMMM">G y MMM</dateFormatItem>
+						<dateFormatItem id="yyyyMMMd">G y MMM d</dateFormatItem>
+						<dateFormatItem id="yyyyMMMEd">G y MMM d, E</dateFormatItem>
+						<dateFormatItem id="yyyyMMMM">G y MMMM</dateFormatItem>
+						<dateFormatItem id="yyyyQQQ">G y QQQ</dateFormatItem>
+						<dateFormatItem id="yyyyQQQQ">G y QQQQ</dateFormatItem>
+					</availableFormats>
+					<intervalFormats>
+						<intervalFormatFallback>{0} – {1}</intervalFormatFallback>
+						<intervalFormatItem id="d">
+							<greatestDifference id="d">d–d</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="M">
+							<greatestDifference id="M">MM–MM</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="Md">
+							<greatestDifference id="d">MM-dd – MM-dd</greatestDifference>
+							<greatestDifference id="M">MM-dd – MM-dd</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="MEd">
+							<greatestDifference id="d">MM/dd, E – MM/dd, E</greatestDifference>
+							<greatestDifference id="M">MM/dd, E – MM/dd, E</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="MMM">
+							<greatestDifference id="M">LLL–LLL</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="MMMd">
+							<greatestDifference id="d">MMM d–d</greatestDifference>
+							<greatestDifference id="M">MMM d – MMM d</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="MMMEd">
+							<greatestDifference id="d">MMM d, E – MMM d, E</greatestDifference>
+							<greatestDifference id="M">MMM d, E – MMM d, E</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="y">
+							<greatestDifference id="y">G y–y</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yM">
+							<greatestDifference id="M">GGGGG y-MM – y-MM</greatestDifference>
+							<greatestDifference id="y">GGGGG y-MM – y-MM</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMd">
+							<greatestDifference id="d">GGGGG y-MM-dd – y-MM-dd</greatestDifference>
+							<greatestDifference id="M">GGGGG y-MM-dd – y-MM-dd</greatestDifference>
+							<greatestDifference id="y">GGGGG y-MM-dd – y-MM-dd</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMEd">
+							<greatestDifference id="d">GGGGG y-MM-dd, E – y-MM-dd, E</greatestDifference>
+							<greatestDifference id="M">GGGGG y-MM-dd, E – y-MM-dd, E</greatestDifference>
+							<greatestDifference id="y">GGGGG y-MM-dd, E – y-MM-dd, E</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMMM">
+							<greatestDifference id="M">G y MMM–MMM</greatestDifference>
+							<greatestDifference id="y">G y MMM – y MMM</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMMMd">
+							<greatestDifference id="d">G y MMM d–d</greatestDifference>
+							<greatestDifference id="M">G y MMM d – MMM d</greatestDifference>
+							<greatestDifference id="y">G y MMM d – y MMM d</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMMMEd">
+							<greatestDifference id="d">G y MMM d, E – MMM d, E</greatestDifference>
+							<greatestDifference id="M">G y MMM d, E – MMM d, E</greatestDifference>
+							<greatestDifference id="y">G y MMM d, E – y MMM d, E</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMMMM">
+							<greatestDifference id="M">G y MMMM–MMMM</greatestDifference>
+							<greatestDifference id="y">G y MMMM – y MMMM</greatestDifference>
+						</intervalFormatItem>
+					</intervalFormats>
+				</dateTimeFormats>
+			</calendar>
+			<calendar type="gregorian">
+				<months>
+					<monthContext type="format">
+						<monthWidth type="abbreviated">
+							<month type="1">जनवरी</month>
+							<month type="2">फेब्रुअरी</month>
+							<month type="3">मार्च</month>
+							<month type="4">अप्रिल</month>
+							<month type="5">मे</month>
+							<month type="6">जुन</month>
+							<month type="7">जुलाई</month>
+							<month type="8">अगस्ट</month>
+							<month type="9">सेप्टेम्बर</month>
+							<month type="10">अक्टोबर</month>
+							<month type="11">नोभेम्बर</month>
+							<month type="12">डिसेम्बर</month>
+						</monthWidth>
+						<monthWidth type="narrow">
+							<month type="1">जन</month>
+							<month type="2">फेब</month>
+							<month type="3">मार्च</month>
+							<month type="4">अप्र</month>
+							<month type="5">मे</month>
+							<month type="6">जुन</month>
+							<month type="7">जुल</month>
+							<month type="8">अग</month>
+							<month type="9">सेप</month>
+							<month type="10">अक्टो</month>
+							<month type="11">नोभे</month>
+							<month type="12">डिसे</month>
+						</monthWidth>
+						<monthWidth type="wide">
+							<month type="1">जनवरी</month>
+							<month type="2">फेब्रुअरी</month>
+							<month type="3">मार्च</month>
+							<month type="4">अप्रिल</month>
+							<month type="5">मे</month>
+							<month type="6">जुन</month>
+							<month type="7">जुलाई</month>
+							<month type="8">अगस्ट</month>
+							<month type="9">सेप्टेम्बर</month>
+							<month type="10">अक्टोबर</month>
+							<month type="11">नोभेम्बर</month>
+							<month type="12">डिसेम्बर</month>
+						</monthWidth>
+					</monthContext>
+					<monthContext type="stand-alone">
+						<monthWidth type="abbreviated">
+							<month type="1">जनवरी</month>
+							<month type="2">फेब्रुअरी</month>
+							<month type="3">मार्च</month>
+							<month type="4">अप्रिल</month>
+							<month type="5">मे</month>
+							<month type="6">जुन</month>
+							<month type="7">जुलाई</month>
+							<month type="8">अगस्ट</month>
+							<month type="9">सेप्टेम्बर</month>
+							<month type="10">अक्टोबर</month>
+							<month type="11">नोभेम्बर</month>
+							<month type="12">डिसेम्बर</month>
+						</monthWidth>
+						<monthWidth type="narrow">
+							<month type="1">जन</month>
+							<month type="2">फेेब</month>
+							<month type="3">मार्च</month>
+							<month type="4">अप्र</month>
+							<month type="5">मे</month>
+							<month type="6">जुन</month>
+							<month type="7">जुल</month>
+							<month type="8">अग</month>
+							<month type="9">सेप</month>
+							<month type="10">अक्टो</month>
+							<month type="11">नोभे</month>
+							<month type="12">डिसे</month>
+						</monthWidth>
+						<monthWidth type="wide">
+							<month type="1">जनवरी</month>
+							<month type="2">फेब्रुअरी</month>
+							<month type="3">मार्च</month>
+							<month type="4">अप्रिल</month>
+							<month type="5">मे</month>
+							<month type="6">जुन</month>
+							<month type="7">जुलाई</month>
+							<month type="8">अगस्ट</month>
+							<month type="9">सेप्टेम्बर</month>
+							<month type="10">अक्टोबर</month>
+							<month type="11">नोभेम्बर</month>
+							<month type="12">डिसेम्बर</month>
+						</monthWidth>
+					</monthContext>
+				</months>
+				<days>
+					<dayContext type="format">
+						<dayWidth type="abbreviated">
+							<day type="sun">आइत</day>
+							<day type="mon">सोम</day>
+							<day type="tue">मङ्गल</day>
+							<day type="wed">बुध</day>
+							<day type="thu">बिहि</day>
+							<day type="fri">शुक्र</day>
+							<day type="sat">शनि</day>
+						</dayWidth>
+						<dayWidth type="narrow">
+							<day type="sun">आ</day>
+							<day type="mon">सो</day>
+							<day type="tue">म</day>
+							<day type="wed">बु</day>
+							<day type="thu">बि</day>
+							<day type="fri">शु</day>
+							<day type="sat">श</day>
+						</dayWidth>
+						<dayWidth type="short">
+							<day type="sun">आइत</day>
+							<day type="mon">सोम</day>
+							<day type="tue">मङ्गल</day>
+							<day type="wed">बुध</day>
+							<day type="thu">बिहि</day>
+							<day type="fri">शुक्र</day>
+							<day type="sat">शनि</day>
+						</dayWidth>
+						<dayWidth type="wide">
+							<day type="sun">आइतबार</day>
+							<day type="mon">सोमबार</day>
+							<day type="tue">मङ्गलबार</day>
+							<day type="wed">बुधबार</day>
+							<day type="thu">बिहिबार</day>
+							<day type="fri">शुक्रबार</day>
+							<day type="sat">शनिबार</day>
+						</dayWidth>
+					</dayContext>
+					<dayContext type="stand-alone">
+						<dayWidth type="abbreviated">
+							<day type="sun">आइत</day>
+							<day type="mon">सोम</day>
+							<day type="tue">मङ्गल</day>
+							<day type="wed">बुध</day>
+							<day type="thu">बिहि</day>
+							<day type="fri">शुक्र</day>
+							<day type="sat">शनि</day>
+						</dayWidth>
+						<dayWidth type="narrow">
+							<day type="sun">आ</day>
+							<day type="mon">सो</day>
+							<day type="tue">म</day>
+							<day type="wed">बु</day>
+							<day type="thu">बि</day>
+							<day type="fri">शु</day>
+							<day type="sat">श</day>
+						</dayWidth>
+						<dayWidth type="short">
+							<day type="sun">आइत</day>
+							<day type="mon">सोम</day>
+							<day type="tue">मङ्गल</day>
+							<day type="wed">बुध</day>
+							<day type="thu">बिहि</day>
+							<day type="fri">शुक्र</day>
+							<day type="sat">शनि</day>
+						</dayWidth>
+						<dayWidth type="wide">
+							<day type="sun">आइतबार</day>
+							<day type="mon">सोमबार</day>
+							<day type="tue">मङ्गलबार</day>
+							<day type="wed">बुधबार</day>
+							<day type="thu">बिहिबार</day>
+							<day type="fri">शुक्रबार</day>
+							<day type="sat">शनिबार</day>
+						</dayWidth>
+					</dayContext>
+				</days>
+				<quarters>
+					<quarterContext type="format">
+						<quarterWidth type="abbreviated">
+							<quarter type="1">पहिलो सत्र</quarter>
+							<quarter type="2">दोस्रो सत्र</quarter>
+							<quarter type="3">तेस्रो सत्र</quarter>
+							<quarter type="4">चौथो सत्र</quarter>
+						</quarterWidth>
+						<quarterWidth type="narrow">
+							<quarter type="1">१</quarter>
+							<quarter type="2">२</quarter>
+							<quarter type="3">३</quarter>
+							<quarter type="4">४</quarter>
+						</quarterWidth>
+						<quarterWidth type="wide">
+							<quarter type="1">पहिलो सत्र</quarter>
+							<quarter type="2">दोस्रो सत्र</quarter>
+							<quarter type="3">तेस्रो सत्र</quarter>
+							<quarter type="4">चौथो सत्र</quarter>
+						</quarterWidth>
+					</quarterContext>
+					<quarterContext type="stand-alone">
+						<quarterWidth type="abbreviated">
+							<quarter type="1">पहिलो सत्र</quarter>
+							<quarter type="2">दोस्रो सत्र</quarter>
+							<quarter type="3">तेस्रो सत्र</quarter>
+							<quarter type="4">चौथो सत्र</quarter>
+						</quarterWidth>
+						<quarterWidth type="narrow">
+							<quarter type="1">१</quarter>
+							<quarter type="2">२</quarter>
+							<quarter type="3">३</quarter>
+							<quarter type="4">४</quarter>
+						</quarterWidth>
+						<quarterWidth type="wide">
+							<quarter type="1">पहिलो सत्र</quarter>
+							<quarter type="2">दोस्रो सत्र</quarter>
+							<quarter type="3">तेस्रो सत्र</quarter>
+							<quarter type="4">चौथो सत्र</quarter>
+						</quarterWidth>
+					</quarterContext>
+				</quarters>
+				<dayPeriods>
+					<dayPeriodContext type="format">
+						<dayPeriodWidth type="abbreviated">
+							<dayPeriod type="midnight">मध्यरात</dayPeriod>
+							<dayPeriod type="am">पूर्वाह्न</dayPeriod>
+							<dayPeriod type="noon">मध्यान्ह</dayPeriod>
+							<dayPeriod type="pm">अपराह्न</dayPeriod>
+							<dayPeriod type="morning1">बिहान</dayPeriod>
+							<dayPeriod type="afternoon1">अपरान्ह</dayPeriod>
+							<dayPeriod type="afternoon2">साँझ</dayPeriod>
+							<dayPeriod type="evening1">बेलुकी</dayPeriod>
+							<dayPeriod type="night1">रात</dayPeriod>
+						</dayPeriodWidth>
+						<dayPeriodWidth type="narrow">
+							<dayPeriod type="midnight">मध्यरात</dayPeriod>
+							<dayPeriod type="am">पूर्वाह्न</dayPeriod>
+							<dayPeriod type="noon">मध्यान्ह</dayPeriod>
+							<dayPeriod type="pm">अपराह्न</dayPeriod>
+							<dayPeriod type="morning1">बिहान</dayPeriod>
+							<dayPeriod type="afternoon1">अपरान्ह</dayPeriod>
+							<dayPeriod type="afternoon2">साँझ</dayPeriod>
+							<dayPeriod type="evening1">बेलुकी</dayPeriod>
+							<dayPeriod type="night1">रात</dayPeriod>
+						</dayPeriodWidth>
+						<dayPeriodWidth type="wide">
+							<dayPeriod type="midnight">मध्यरात</dayPeriod>
+							<dayPeriod type="am">पूर्वाह्न</dayPeriod>
+							<dayPeriod type="noon">मध्यान्ह</dayPeriod>
+							<dayPeriod type="pm">अपराह्न</dayPeriod>
+							<dayPeriod type="morning1">बिहान</dayPeriod>
+							<dayPeriod type="afternoon1">अपरान्ह</dayPeriod>
+							<dayPeriod type="afternoon2">साँझ</dayPeriod>
+							<dayPeriod type="evening1">बेलुकी</dayPeriod>
+							<dayPeriod type="night1">रात</dayPeriod>
+						</dayPeriodWidth>
+					</dayPeriodContext>
+					<dayPeriodContext type="stand-alone">
+						<dayPeriodWidth type="abbreviated">
+							<dayPeriod type="midnight">मध्यरात</dayPeriod>
+							<dayPeriod type="am">पूर्वाह्न</dayPeriod>
+							<dayPeriod type="noon">मध्यान्ह</dayPeriod>
+							<dayPeriod type="pm">अपराह्न</dayPeriod>
+							<dayPeriod type="morning1">बिहान</dayPeriod>
+							<dayPeriod type="afternoon1">अपरान्ह</dayPeriod>
+							<dayPeriod type="afternoon2">साँझ</dayPeriod>
+							<dayPeriod type="evening1">बेलुकी</dayPeriod>
+							<dayPeriod type="night1">रात</dayPeriod>
+						</dayPeriodWidth>
+						<dayPeriodWidth type="narrow">
+							<dayPeriod type="midnight">मध्यरात</dayPeriod>
+							<dayPeriod type="am">पूर्वाह्न</dayPeriod>
+							<dayPeriod type="noon">मध्यान्ह</dayPeriod>
+							<dayPeriod type="pm">अपराह्न</dayPeriod>
+							<dayPeriod type="morning1">बिहान</dayPeriod>
+							<dayPeriod type="afternoon1">अपरान्ह</dayPeriod>
+							<dayPeriod type="afternoon2">साँझ</dayPeriod>
+							<dayPeriod type="evening1">बेलुकी</dayPeriod>
+							<dayPeriod type="night1">रात</dayPeriod>
+						</dayPeriodWidth>
+						<dayPeriodWidth type="wide">
+							<dayPeriod type="midnight">मध्यरात</dayPeriod>
+							<dayPeriod type="am">पूर्वाह्न</dayPeriod>
+							<dayPeriod type="noon">मध्यान्ह</dayPeriod>
+							<dayPeriod type="pm">अपराह्न</dayPeriod>
+							<dayPeriod type="morning1">बिहान</dayPeriod>
+							<dayPeriod type="afternoon1">अपरान्ह</dayPeriod>
+							<dayPeriod type="afternoon2">साँझ</dayPeriod>
+							<dayPeriod type="evening1">बेलुकी</dayPeriod>
+							<dayPeriod type="night1">रात</dayPeriod>
+						</dayPeriodWidth>
+					</dayPeriodContext>
+				</dayPeriods>
+				<eras>
+					<eraNames>
+						<era type="0">ईसा पूर्व</era>
+						<era type="0" alt="variant">इस्वीपूर्व</era>
+						<era type="1">सन्</era>
+						<era type="1" alt="variant">ईसा काल</era>
+					</eraNames>
+					<eraAbbr>
+						<era type="0">ईसा पूर्व</era>
+						<era type="0" alt="variant">इस्वीपूर्व</era>
+						<era type="1">सन्</era>
+						<era type="1" alt="variant">ईसा काल</era>
+					</eraAbbr>
+				</eras>
+				<dateFormats>
+					<dateFormatLength type="full">
+						<dateFormat>
+							<pattern>y MMMM d, EEEE</pattern>
+							<datetimeSkeleton>yMMMMEEEEd</datetimeSkeleton>
+						</dateFormat>
+					</dateFormatLength>
+					<dateFormatLength type="long">
+						<dateFormat>
+							<pattern>y MMMM d</pattern>
+							<datetimeSkeleton>yMMMMd</datetimeSkeleton>
+						</dateFormat>
+					</dateFormatLength>
+					<dateFormatLength type="medium">
+						<dateFormat>
+							<pattern>y MMM d</pattern>
+							<datetimeSkeleton>yMMMd</datetimeSkeleton>
+						</dateFormat>
+					</dateFormatLength>
+					<dateFormatLength type="short">
+						<dateFormat>
+							<pattern>yy/M/d</pattern>
+							<datetimeSkeleton>yyMd</datetimeSkeleton>
+						</dateFormat>
+					</dateFormatLength>
+				</dateFormats>
+				<timeFormats>
+					<timeFormatLength type="full">
+						<timeFormat>
+							<pattern>HH:mm:ss zzzz</pattern>
+							<datetimeSkeleton>HHmmsszzzz</datetimeSkeleton>
+						</timeFormat>
+					</timeFormatLength>
+					<timeFormatLength type="long">
+						<timeFormat>
+							<pattern>HH:mm:ss z</pattern>
+							<datetimeSkeleton>HHmmssz</datetimeSkeleton>
+						</timeFormat>
+					</timeFormatLength>
+					<timeFormatLength type="medium">
+						<timeFormat>
+							<pattern>HH:mm:ss</pattern>
+							<datetimeSkeleton>HHmmss</datetimeSkeleton>
+						</timeFormat>
+					</timeFormatLength>
+					<timeFormatLength type="short">
+						<timeFormat>
+							<pattern>HH:mm</pattern>
+							<datetimeSkeleton>HHmm</datetimeSkeleton>
+						</timeFormat>
+					</timeFormatLength>
+				</timeFormats>
+				<dateTimeFormats>
+					<dateTimeFormatLength type="full">
+						<dateTimeFormat>
+							<pattern>{1} {0}</pattern>
+						</dateTimeFormat>
+						<dateTimeFormat type="atTime">
+							<pattern>{1}: {0}</pattern>
+						</dateTimeFormat>
+					</dateTimeFormatLength>
+					<dateTimeFormatLength type="long">
+						<dateTimeFormat>
+							<pattern>{1} {0}</pattern>
+						</dateTimeFormat>
+						<dateTimeFormat type="atTime">
+							<pattern>{1}: {0}</pattern>
+						</dateTimeFormat>
+					</dateTimeFormatLength>
+					<dateTimeFormatLength type="medium">
+						<dateTimeFormat>
+							<pattern>{1}, {0}</pattern>
+						</dateTimeFormat>
+						<dateTimeFormat type="atTime">
+							<pattern>{1}, {0}</pattern>
+						</dateTimeFormat>
+					</dateTimeFormatLength>
+					<dateTimeFormatLength type="short">
+						<dateTimeFormat>
+							<pattern>{1}, {0}</pattern>
+						</dateTimeFormat>
+						<dateTimeFormat type="atTime">
+							<pattern>{1}, {0}</pattern>
+						</dateTimeFormat>
+					</dateTimeFormatLength>
+					<availableFormats>
+						<dateFormatItem id="Bh">h B</dateFormatItem>
+						<dateFormatItem id="Bhm">h:mm B</dateFormatItem>
+						<dateFormatItem id="Bhms">h:mm:ss B</dateFormatItem>
+						<dateFormatItem id="d">d</dateFormatItem>
+						<dateFormatItem id="E">ccc</dateFormatItem>
+						<dateFormatItem id="EBhm">E h:mm B</dateFormatItem>
+						<dateFormatItem id="EBhms">E h:mm:ss B</dateFormatItem>
+						<dateFormatItem id="Ed">d E</dateFormatItem>
+						<dateFormatItem id="Ehm">E h:mm a</dateFormatItem>
+						<dateFormatItem id="EHm">E HH:mm</dateFormatItem>
+						<dateFormatItem id="Ehms">E h:mm:ss a</dateFormatItem>
+						<dateFormatItem id="EHms">E HH:mm:ss</dateFormatItem>
+						<dateFormatItem id="Gy">G y</dateFormatItem>
+						<dateFormatItem id="GyMd">M/d/y GGGGG</dateFormatItem>
+						<dateFormatItem id="GyMMM">G y MMM</dateFormatItem>
+						<dateFormatItem id="GyMMMd">G y MMM d</dateFormatItem>
+						<dateFormatItem id="GyMMMEd">G y MMM d, E</dateFormatItem>
+						<dateFormatItem id="h">h a</dateFormatItem>
+						<dateFormatItem id="H">HH</dateFormatItem>
+						<dateFormatItem id="hm">h:mm a</dateFormatItem>
+						<dateFormatItem id="Hm">HH:mm</dateFormatItem>
+						<dateFormatItem id="hms">h:mm:ss a</dateFormatItem>
+						<dateFormatItem id="Hms">HH:mm:ss</dateFormatItem>
+						<dateFormatItem id="hmsv">h:mm:ss a v</dateFormatItem>
+						<dateFormatItem id="Hmsv">HH:mm:ss v</dateFormatItem>
+						<dateFormatItem id="hmv">h:mm a v</dateFormatItem>
+						<dateFormatItem id="Hmv">HH:mm v</dateFormatItem>
+						<dateFormatItem id="M">L</dateFormatItem>
+						<dateFormatItem id="Md">MM-dd</dateFormatItem>
+						<dateFormatItem id="MEd">MM-dd, E</dateFormatItem>
+						<dateFormatItem id="MMM">LLL</dateFormatItem>
+						<dateFormatItem id="MMMd">MMM d</dateFormatItem>
+						<dateFormatItem id="MMMEd">MMM d, E</dateFormatItem>
+						<dateFormatItem id="MMMMd">MMMM d</dateFormatItem>
+						<dateFormatItem id="MMMMW" count="one">MMMM को W हप्ता</dateFormatItem>
+						<dateFormatItem id="MMMMW" count="other">MMMM को W हप्ता</dateFormatItem>
+						<dateFormatItem id="ms">mm:ss</dateFormatItem>
+						<dateFormatItem id="y">y</dateFormatItem>
+						<dateFormatItem id="yM">y-MM</dateFormatItem>
+						<dateFormatItem id="yMd">y-MM-dd</dateFormatItem>
+						<dateFormatItem id="yMEd">y-MM-dd, E</dateFormatItem>
+						<dateFormatItem id="yMMM">y MMM</dateFormatItem>
+						<dateFormatItem id="yMMMd">y MMM d</dateFormatItem>
+						<dateFormatItem id="yMMMEd">y MMM d, E</dateFormatItem>
+						<dateFormatItem id="yMMMM">y MMMM</dateFormatItem>
+						<dateFormatItem id="yQQQ">y QQQ</dateFormatItem>
+						<dateFormatItem id="yQQQQ">y QQQQ</dateFormatItem>
+						<dateFormatItem id="yw" count="one">Y को w हप्ता</dateFormatItem>
+						<dateFormatItem id="yw" count="other">Y को w हप्ता</dateFormatItem>
+					</availableFormats>
+					<appendItems>
+						<appendItem request="Timezone">{0} {1}</appendItem>
+					</appendItems>
+					<intervalFormats>
+						<intervalFormatFallback>{0} – {1}</intervalFormatFallback>
+						<intervalFormatItem id="d">
+							<greatestDifference id="d">d–d</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="Gy">
+							<greatestDifference id="G">y G – y G</greatestDifference>
+							<greatestDifference id="y">y – y G</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="GyM">
+							<greatestDifference id="G">M/y G – M/y G</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="h">
+							<greatestDifference id="a">h a – h a</greatestDifference>
+							<greatestDifference id="h">h–h a</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="H">
+							<greatestDifference id="H">HH–HH</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="hm">
+							<greatestDifference id="a">h:mm a – h:mm a</greatestDifference>
+							<greatestDifference id="h">h:mm–h:mm a</greatestDifference>
+							<greatestDifference id="m">h:mm–h:mm a</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="Hm">
+							<greatestDifference id="H">HH:mm–HH:mm</greatestDifference>
+							<greatestDifference id="m">HH:mm–HH:mm</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="hmv">
+							<greatestDifference id="a">h:mm a – h:mm a v</greatestDifference>
+							<greatestDifference id="h">h:mm–h:mm a v</greatestDifference>
+							<greatestDifference id="m">h:mm–h:mm a v</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="Hmv">
+							<greatestDifference id="H">HH:mm–HH:mm v</greatestDifference>
+							<greatestDifference id="m">HH:mm–HH:mm v</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="hv">
+							<greatestDifference id="a">h a – h a v</greatestDifference>
+							<greatestDifference id="h">h–h a v</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="Hv">
+							<greatestDifference id="H">HH–HH v</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="M">
+							<greatestDifference id="M">MM–MM</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="Md">
+							<greatestDifference id="d">MM-dd – MM-dd</greatestDifference>
+							<greatestDifference id="M">MM-dd – MM-dd</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="MEd">
+							<greatestDifference id="d">MM-dd, E – MM-dd, E</greatestDifference>
+							<greatestDifference id="M">MM-dd, E – MM-dd, E</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="MMM">
+							<greatestDifference id="M">LLL–LLL</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="MMMd">
+							<greatestDifference id="d">MMM d–d</greatestDifference>
+							<greatestDifference id="M">MMM d – MMM d</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="MMMEd">
+							<greatestDifference id="d">MMM d, E – MMM d, E</greatestDifference>
+							<greatestDifference id="M">MMM d, E – MMM d, E</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="y">
+							<greatestDifference id="y">y–y</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yM">
+							<greatestDifference id="M">y-MM – y-MM</greatestDifference>
+							<greatestDifference id="y">y-MM – y-MM</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMd">
+							<greatestDifference id="d">y-MM-dd – y-MM-dd</greatestDifference>
+							<greatestDifference id="M">y-MM-dd – y-MM-dd</greatestDifference>
+							<greatestDifference id="y">y-MM-dd – y-MM-dd</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMEd">
+							<greatestDifference id="d">y-MM-dd, E – y-MM-dd, E</greatestDifference>
+							<greatestDifference id="M">y-MM-dd, E – y-MM-dd, E</greatestDifference>
+							<greatestDifference id="y">y-MM-dd, E – y-MM-dd, E</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMMM">
+							<greatestDifference id="M">y MMM–MMM</greatestDifference>
+							<greatestDifference id="y">y MMM – y MMM</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMMMd">
+							<greatestDifference id="d">y MMM d–d</greatestDifference>
+							<greatestDifference id="M">y MMM d – MMM d</greatestDifference>
+							<greatestDifference id="y">y MMM d – y MMM d</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMMMEd">
+							<greatestDifference id="d">y MMM d, E – MMM d, E</greatestDifference>
+							<greatestDifference id="M">y MMM d, E – MMM d, E</greatestDifference>
+							<greatestDifference id="y">y MMM d, E – y MMM d, E</greatestDifference>
+						</intervalFormatItem>
+						<intervalFormatItem id="yMMMM">
+							<greatestDifference id="M">y MMMM–MMMM</greatestDifference>
+							<greatestDifference id="y">y MMMM – y MMMM</greatestDifference>
+						</intervalFormatItem>
+					</intervalFormats>
+				</dateTimeFormats>
+			</calendar>
+			<calendar type="indian">
+				<months>
+					<monthContext type="format">
+						<monthWidth type="abbreviated">
+							<month type="1">चै</month>
+							<month type="2">बै</month>
+							<month type="3">जे</month>
+							<month type="4">अ</month>
+							<month type="5">श्रा</month>
+							<month type="6">भा</month>
+							<month type="7">अश्वि</month>
+							<month type="8">का</month>
+							<month type="9">मं</month>
+							<month type="10">पौ</month>
+							<month type="11">मा</month>
+							<month type="12">फा</month>
+						</monthWidth>
+						<monthWidth type="narrow">
+							<month type="1">१</month>
+							<month type="2">२</month>
+							<month type="3">३</month>
+							<month type="4">४</month>
+							<month type="5">५</month>
+							<month type="6">६</month>
+							<month type="7">७</month>
+							<month type="8">८</month>
+							<month type="9">९</month>
+							<month type="10">१०</month>
+							<month type="11">११</month>
+							<month type="12">१२</month>
+						</monthWidth>
+						<monthWidth type="wide">
+							<month type="1" draft="contributed">चैत</month>
+							<month type="2" draft="contributed">वैशाख</month>
+							<month type="3" draft="contributed">जेठ</month>
+							<month type="4" draft="contributed">असार</month>
+							<month type="5" draft="contributed">साउन</month>
+							<month type="6" draft="contributed">भदौ</month>
+							<month type="7" draft="contributed">असोज</month>
+							<month type="8" draft="contributed">कात्तिक</month>
+							<month type="9" draft="contributed">मङसिर</month>
+							<month type="10" draft="contributed">पुस</month>
+							<month type="11" draft="contributed">माघ</month>
+							<month type="12" draft="contributed">फागुन</month>
+						</monthWidth>
+					</monthContext>
+					<monthContext type="stand-alone">
+						<monthWidth type="abbreviated">
+							<month type="1">चै</month>
+							<month type="2">बै</month>
+							<month type="3">जे</month>
+							<month type="4">अ</month>
+							<month type="5">श्रा</month>
+							<month type="6">भा</month>
+							<month type="7">अश्वि</month>
+							<month type="8">का</month>
+							<month type="9">मं</month>
+							<month type="10">पौ</month>
+							<month type="11">मा</month>
+							<month type="12">फा</month>
+						</monthWidth>
+						<monthWidth type="narrow">
+							<month type="1">१</month>
+							<month type="2">२</month>
+							<month type="3">३</month>
+							<month type="4">४</month>
+							<month type="5">५</month>
+							<month type="6">६</month>
+							<month type="7">७</month>
+							<month type="8">८</month>
+							<month type="9">९</month>
+							<month type="10">१०</month>
+							<month type="11">११</month>
+							<month type="12">१२</month>
+						</monthWidth>
+						<monthWidth type="wide">
+							<month type="1">चेत्र</month>
+							<month type="2">वैसाख</month>
+							<month type="3">जेष्ठ</month>
+							<month type="4">आषाढ</month>
+							<month type="5">श्रावन</month>
+							<month type="6">भाद्र</month>
+							<month type="7">आश्विन</month>
+							<month type="8">कार्तिक</month>
+							<month type="9">मंसिर</month>
+							<month type="10">पौष</month>
+							<month type="11">माघ</month>
+							<month type="12">फाल्गुन</month>
+						</monthWidth>
+					</monthContext>
+				</months>
+				<eras>
+					<eraAbbr>
+						<era type="0">साक</era>
+					</eraAbbr>
+				</eras>
+			</calendar>
+		</calendars>
+		<fields>
+			<field type="era">
+				<displayName>काल</displayName>
+			</field>
+			<field type="era-short">
+				<displayName>काल</displayName>
+			</field>
+			<field type="era-narrow">
+				<displayName>काल</displayName>
+			</field>
+			<field type="year">
+				<displayName>वर्ष</displayName>
+				<relative type="-1">गत वर्ष</relative>
+				<relative type="0">यो वर्ष</relative>
+				<relative type="1">आगामी वर्ष</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} वर्षमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} वर्षमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} वर्ष अघि</relativeTimePattern>
+					<relativeTimePattern count="other">{0} वर्ष अघि</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="year-short">
+				<displayName>वर्ष</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} वर्षमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} वर्षमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} वर्ष अघि</relativeTimePattern>
+					<relativeTimePattern count="other">{0} वर्ष अघि</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="year-narrow">
+				<displayName>वर्ष</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} वर्षमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} वर्षमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} वर्ष अघि</relativeTimePattern>
+					<relativeTimePattern count="other">{0} वर्ष अघि</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="quarter">
+				<displayName>सत्र</displayName>
+				<relative type="-1">अघिल्लो सत्र</relative>
+				<relative type="0">यो सत्र</relative>
+				<relative type="1">अर्को सत्र</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">+{0} सत्रमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0}सत्रमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0}सत्र अघि</relativeTimePattern>
+					<relativeTimePattern count="other">{0}सत्र अघि</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="quarter-short">
+				<displayName>सत्र</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0}सत्रमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0}सत्रमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0}सत्र अघि</relativeTimePattern>
+					<relativeTimePattern count="other">{0}सत्र अघि</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="quarter-narrow">
+				<displayName>सत्र</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0}सत्रमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0}सत्रमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0}सत्र अघि</relativeTimePattern>
+					<relativeTimePattern count="other">{0}सत्र अघि</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="month">
+				<displayName>महिना</displayName>
+				<relative type="-1">गत महिना</relative>
+				<relative type="0">यो महिना</relative>
+				<relative type="1">अर्को महिना</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} महिनामा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} महिनामा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} महिना पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} महिना पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="month-short">
+				<displayName>महिना</displayName>
+				<relative type="-1">गत महिना</relative>
+				<relative type="0">यो महिना</relative>
+				<relative type="1">आगामी महिना</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} महिनामा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} महिनामा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} महिना पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} महिना पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="month-narrow">
+				<displayName>महिना</displayName>
+				<relative type="-1">गत महिना</relative>
+				<relative type="0">यो महिना</relative>
+				<relative type="1">आगामी महिना</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} महिनामा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} महिनामा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} महिना पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} महिना पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="week">
+				<displayName>हप्ता</displayName>
+				<relative type="-1">गत हप्ता</relative>
+				<relative type="0">यो हप्ता</relative>
+				<relative type="1">आउने हप्ता</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} हप्तामा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} हप्तामा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} हप्ता पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} हप्ता पहिले</relativeTimePattern>
+				</relativeTime>
+				<relativePeriod>{0}को हप्ता</relativePeriod>
+			</field>
+			<field type="week-short">
+				<displayName>हप्ता</displayName>
+				<relative type="-1">गत हप्ता</relative>
+				<relative type="0">यो हप्ता</relative>
+				<relative type="1">आगामी हप्ता</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} हप्तामा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} हप्तामा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} हप्ता पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} हप्ता पहिले</relativeTimePattern>
+				</relativeTime>
+				<relativePeriod>{0} को हप्ता</relativePeriod>
+			</field>
+			<field type="week-narrow">
+				<displayName>हप्ता</displayName>
+				<relative type="-1">गत हप्ता</relative>
+				<relative type="0">यो हप्ता</relative>
+				<relative type="1">आगामी हप्ता</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} हप्तामा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} हप्तामा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} हप्ता पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} हप्ता पहिले</relativeTimePattern>
+				</relativeTime>
+				<relativePeriod>{0} को हप्ता</relativePeriod>
+			</field>
+			<field type="weekOfMonth">
+				<displayName>महिनाको हप्ता</displayName>
+			</field>
+			<field type="weekOfMonth-short">
+				<displayName>महिनाको हप्ता</displayName>
+			</field>
+			<field type="weekOfMonth-narrow">
+				<displayName>महिनाको हप्ता</displayName>
+			</field>
+			<field type="day">
+				<displayName>बार</displayName>
+				<relative type="-2">अस्ति</relative>
+				<relative type="-1">हिजो</relative>
+				<relative type="0">आज</relative>
+				<relative type="1">भोलि</relative>
+				<relative type="2">पर्सि</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} दिनमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} दिनमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} दिन पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} दिन पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="day-short">
+				<displayName>बार</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} दिनमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} दिनमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} दिन पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} दिन पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="day-narrow">
+				<displayName>बार</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} दिनमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} दिनमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} दिन पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} दिन पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="dayOfYear">
+				<displayName>वर्षको बार</displayName>
+			</field>
+			<field type="dayOfYear-short">
+				<displayName>वर्षको बार</displayName>
+			</field>
+			<field type="dayOfYear-narrow">
+				<displayName>वर्षको बार</displayName>
+			</field>
+			<field type="weekday">
+				<displayName>हप्ताको बार</displayName>
+			</field>
+			<field type="weekday-short">
+				<displayName>हप्ताको बार</displayName>
+			</field>
+			<field type="weekday-narrow">
+				<displayName>हप्ताको बार</displayName>
+			</field>
+			<field type="weekdayOfMonth">
+				<displayName>महिनाको हप्तादिन</displayName>
+			</field>
+			<field type="weekdayOfMonth-short">
+				<displayName>महिनाको हप्तादिन</displayName>
+			</field>
+			<field type="weekdayOfMonth-narrow">
+				<displayName>महिनाको हप्तादिन</displayName>
+			</field>
+			<field type="sun">
+				<relative type="-1">गत आइतबार</relative>
+				<relative type="0">यो आइतबार</relative>
+				<relative type="1">अर्को आइतबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} आइतबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} आइतबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0}आइतबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} आइतबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="sun-short">
+				<relative type="-1">गत आइतबार</relative>
+				<relative type="0">यो आइतबार</relative>
+				<relative type="1">अर्को आइतबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} आइतबारहरूमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} आइतबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} आइतबारहरू पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} आइतबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="sun-narrow">
+				<relative type="-1">गत आइतबार</relative>
+				<relative type="0">यो आइतबार</relative>
+				<relative type="1">अर्को आइतबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} आइतबारहरूमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} आइतबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} आइतबारहरू पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} आइतबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="mon">
+				<relative type="-1">गत सोमबार</relative>
+				<relative type="0">यो सोमबार</relative>
+				<relative type="1">अर्को सोमबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} सोमबारहरूमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सोमबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} सोमबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सोमबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="mon-short">
+				<relative type="-1">गत सोमबार</relative>
+				<relative type="0">यो सोमबार</relative>
+				<relative type="1">अर्को सोमबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} सोमबारहरूमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सोमबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} सोमबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सोमबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="mon-narrow">
+				<relative type="-1">गत सोमबार</relative>
+				<relative type="0">यो सोमबार</relative>
+				<relative type="1">अर्को सोमबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} सोमबारहरूमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सोमबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} सोमबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0}सोमबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="tue">
+				<relative type="-1">गत मंगलबार</relative>
+				<relative type="0">यो मंगलबार</relative>
+				<relative type="1">अर्को मंगलबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} मंगलबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मंगलबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} मंगलबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मंगलबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="tue-short">
+				<relative type="-1">गत मंगलबार</relative>
+				<relative type="0">यो मंगलबार</relative>
+				<relative type="1">अर्को मंगलबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} मंगलबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मंगलबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} मंगलबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मंगलबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="tue-narrow">
+				<relative type="-1">गत मंगलबार</relative>
+				<relative type="0">यो मंगलबार</relative>
+				<relative type="1">अर्को मंगलबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} मंगलबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मंगलबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} मंगलबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मंगलबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="wed">
+				<relative type="-1">गत बुधबार</relative>
+				<relative type="0">यो बुधबार</relative>
+				<relative type="1">अर्को बुधबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} बुधबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बुधबारमाहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} बुधबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बुधबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="wed-short">
+				<relative type="-1">गत बुधबार</relative>
+				<relative type="0">यो बुधबार</relative>
+				<relative type="1">अर्को बुधबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} बुधबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बुधबारमाहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} बुधबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बुधबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="wed-narrow">
+				<relative type="-1">गत बुधबार</relative>
+				<relative type="0">यो बुधबार</relative>
+				<relative type="1">अर्को बुधबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} बुधबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बुधबारमाहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} बुधबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बुधबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="thu">
+				<relative type="-1">गत बिहिबार</relative>
+				<relative type="0">यो बिहिबार</relative>
+				<relative type="1">अर्को बिहिबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} बिहिबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बिहिबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} बिहिबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बिहिबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="thu-short">
+				<relative type="-1">गत बिहिबार</relative>
+				<relative type="0">यो बिहिबार</relative>
+				<relative type="1">अर्को बिहिबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} बिहिबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बिहिबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} बिहिबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बिहिबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="thu-narrow">
+				<relative type="-1">गत बिहिबार</relative>
+				<relative type="0">यो बिहिबार</relative>
+				<relative type="1">अर्को बिहिबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} बिहिबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बिहिबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} बिहिबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} बिहिबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="fri">
+				<relative type="-1">गत शुक्रबार</relative>
+				<relative type="0">यो शुक्रबार</relative>
+				<relative type="1">अर्को शुक्रबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} शुक्रबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शुक्रबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} शुक्रबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शुक्रबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="fri-short">
+				<relative type="-1">गत शुक्रबार</relative>
+				<relative type="0">यो शुक्रबार</relative>
+				<relative type="1">अर्को शुक्रबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} शुक्रबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शुक्रबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} शुक्रबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शुक्रबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="fri-narrow">
+				<relative type="-1">गत शुक्रबार</relative>
+				<relative type="0">यो शुक्रबार</relative>
+				<relative type="1">अर्को शुक्रबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} शुक्रबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शुक्रबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} शुक्रबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शुक्रबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="sat">
+				<relative type="-1">गत शनिबार</relative>
+				<relative type="0">यो शनिबार</relative>
+				<relative type="1">अर्को शनिबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} शनिबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शनिबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} शनिबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शनिबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="sat-short">
+				<relative type="-1">गत शनिबार</relative>
+				<relative type="0">यो शनिबार</relative>
+				<relative type="1">अर्को शनिबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} शनिबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शनिबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} शनिबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शनिबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="sat-narrow">
+				<relative type="-1">गत शनिबार</relative>
+				<relative type="0">यो शनिबार</relative>
+				<relative type="1">अर्को शनिबार</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} शनिबारमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शनिबारहरूमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} शनिबार पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} शनिबारहरू पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="dayperiod-short">
+				<displayName>पूर्वाह्न / अपराह्न</displayName>
+			</field>
+			<field type="dayperiod">
+				<displayName>पूर्वाह्न / अपराह्न</displayName>
+			</field>
+			<field type="dayperiod-narrow">
+				<displayName>पूर्वाह्न / अपराह्न</displayName>
+			</field>
+			<field type="hour">
+				<displayName>घण्टा</displayName>
+				<relative type="0">यस घडीमा</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} घण्टामा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} घण्टामा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} घण्टा पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} घण्टा पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="hour-short">
+				<displayName>घण्टा</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} घण्टामा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} घण्टामा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} घण्टा पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} घण्टा पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="hour-narrow">
+				<displayName>घण्टा</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} घण्टामा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} घण्टामा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} घण्टा पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} घण्टा पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="minute">
+				<displayName>मिनेट</displayName>
+				<relative type="0">यही मिनेटमा</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} मिनेटमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मिनेटमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} मिनेट पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मिनेट पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="minute-short">
+				<displayName>मिनेट</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} मिनेटमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मिनेटमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} मिनेट पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मिनेट पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="minute-narrow">
+				<displayName>मिनेट</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} मिनेटमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मिनेटमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} मिनेट पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} मिनेट पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="second">
+				<displayName>सेकेन्ड</displayName>
+				<relative type="0">अहिले</relative>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} सेकेन्डमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सेकेन्डमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} सेकेन्ड पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सेकेन्ड पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="second-short">
+				<displayName>सेकेन्ड</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} सेकेन्डमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सेकेन्डमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} सेकेन्ड पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सेकेन्ड पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="second-narrow">
+				<displayName>सेकेन्ड</displayName>
+				<relativeTime type="future">
+					<relativeTimePattern count="one">{0} सेकेन्डमा</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सेकेन्डमा</relativeTimePattern>
+				</relativeTime>
+				<relativeTime type="past">
+					<relativeTimePattern count="one">{0} सेकेन्ड पहिले</relativeTimePattern>
+					<relativeTimePattern count="other">{0} सेकेन्ड पहिले</relativeTimePattern>
+				</relativeTime>
+			</field>
+			<field type="zone">
+				<displayName>क्षेत्र</displayName>
+			</field>
+			<field type="zone-short">
+				<displayName>समय क्षेत्र</displayName>
+			</field>
+			<field type="zone-narrow">
+				<displayName>समय क्षेत्र</displayName>
+			</field>
+		</fields>
+		<timeZoneNames>
+			<hourFormat>+HH:mm;-HH:mm</hourFormat>
+			<gmtFormat>GMT{0}</gmtFormat>
+			<gmtZeroFormat>GMT</gmtZeroFormat>
+			<regionFormat>{0} समय</regionFormat>
+			<regionFormat type="daylight">{0} (+१)</regionFormat>
+			<regionFormat type="standard">{0} (+०)</regionFormat>
+			<fallbackFormat>{1} ({0})</fallbackFormat>
+			<zone type="America/Santa_Isabel">
+				<exemplarCity>सान्टा ईसाबेल</exemplarCity>
+			</zone>
+			<zone type="Etc/UTC">
+				<long>
+					<standard>समन्वित विश्व समय</standard>
+				</long>
+			</zone>
+			<zone type="Etc/Unknown">
+				<exemplarCity>अज्ञात शहर</exemplarCity>
+			</zone>
+			<zone type="Europe/Andorra">
+				<exemplarCity>आन्डोर्रा</exemplarCity>
+			</zone>
+			<zone type="Asia/Dubai">
+				<exemplarCity>दुबही</exemplarCity>
+			</zone>
+			<zone type="Asia/Kabul">
+				<exemplarCity>काबुल</exemplarCity>
+			</zone>
+			<zone type="America/Antigua">
+				<exemplarCity>एन्टिगुवा</exemplarCity>
+			</zone>
+			<zone type="America/Anguilla">
+				<exemplarCity>एङ्ग्विल्ला</exemplarCity>
+			</zone>
+			<zone type="Europe/Tirane">
+				<exemplarCity>टिराने</exemplarCity>
+			</zone>
+			<zone type="Asia/Yerevan">
+				<exemplarCity>येरेभान</exemplarCity>
+			</zone>
+			<zone type="Africa/Luanda">
+				<exemplarCity>लुवान्डा</exemplarCity>
+			</zone>
+			<zone type="Antarctica/Rothera">
+				<exemplarCity>रोथेरा</exemplarCity>
+			</zone>
+			<zone type="Antarctica/Palmer">
+				<exemplarCity>पाल्मेर</exemplarCity>
+			</zone>
+			<zone type="Antarctica/Troll">
+				<exemplarCity>ट्रोल</exemplarCity>
+			</zone>
+			<zone type="Antarctica/Syowa">
+				<exemplarCity>सिओआ</exemplarCity>
+			</zone>
+			<zone type="Antarctica/Mawson">
+				<exemplarCity>माउसन</exemplarCity>
+			</zone>
+			<zone type="Antarctica/Davis">
+				<exemplarCity>डेभिस</exemplarCity>
+			</zone>
+			<zone type="Antarctica/Vostok">
+				<exemplarCity>भास्टोक</exemplarCity>
+			</zone>
+			<zone type="Antarctica/Casey">
+				<exemplarCity>केजे</exemplarCity>
+			</zone>
+			<zone type="Antarctica/DumontDUrville">
+				<exemplarCity>दुमोन्ट डि उर्भेल्ले</exemplarCity>
+			</zone>
+			<zone type="Antarctica/McMurdo">
+				<exemplarCity>माकमुर्डो</exemplarCity>
+			</zone>
+			<zone type="America/Argentina/Rio_Gallegos">
+				<exemplarCity>रियो ग्यालेगोस</exemplarCity>
+			</zone>
+			<zone type="America/Mendoza">
+				<exemplarCity>मेन्डोजा</exemplarCity>
+			</zone>
+			<zone type="America/Argentina/San_Juan">
+				<exemplarCity>सान जुवान</exemplarCity>
+			</zone>
+			<zone type="America/Argentina/Ushuaia">
+				<exemplarCity>उशुआइआ</exemplarCity>
+			</zone>
+			<zone type="America/Argentina/La_Rioja">
+				<exemplarCity>ला रियोजा</exemplarCity>
+			</zone>
+			<zone type="America/Argentina/San_Luis">
+				<exemplarCity>सान लुइस</exemplarCity>
+			</zone>
+			<zone type="America/Catamarca">
+				<exemplarCity>कातामार्का</exemplarCity>
+			</zone>
+			<zone type="America/Argentina/Salta">
+				<exemplarCity>साल्टा</exemplarCity>
+			</zone>
+			<zone type="America/Jujuy">
+				<exemplarCity>जुजुई</exemplarCity>
+			</zone>
+			<zone type="America/Argentina/Tucuman">
+				<exemplarCity>टुकुमान</exemplarCity>
+			</zone>
+			<zone type="America/Cordoba">
+				<exemplarCity>कोरडोवा</exemplarCity>
+			</zone>
+			<zone type="America/Buenos_Aires">
+				<exemplarCity>ब्यनेश आयर्स</exemplarCity>
+			</zone>
+			<zone type="Pacific/Pago_Pago">
+				<exemplarCity>पागो पागो</exemplarCity>
+			</zone>
+			<zone type="Europe/Vienna">
+				<exemplarCity>भियना</exemplarCity>
+			</zone>
+			<zone type="Australia/Perth">
+				<exemplarCity>पर्थ</exemplarCity>
+			</zone>
+			<zone type="Australia/Eucla">
+				<exemplarCity>इयुक्ला</exemplarCity>
+			</zone>
+			<zone type="Australia/Darwin">
+				<exemplarCity>डार्विन</exemplarCity>
+			</zone>
+			<zone type="Australia/Adelaide">
+				<exemplarCity>एडेलेड</exemplarCity>
+			</zone>
+			<zone type="Australia/Broken_Hill">
+				<exemplarCity>ब्रोकन हिल</exemplarCity>
+			</zone>
+			<zone type="Australia/Melbourne">
+				<exemplarCity>मेल्बर्न</exemplarCity>
+			</zone>
+			<zone type="Australia/Currie">
+				<exemplarCity>क्युरी</exemplarCity>
+			</zone>
+			<zone type="Australia/Hobart">
+				<exemplarCity>होभार्ट</exemplarCity>
+			</zone>
+			<zone type="Australia/Lindeman">
+				<exemplarCity>लिन्डेम्यान</exemplarCity>
+			</zone>
+			<zone type="Australia/Sydney">
+				<exemplarCity>सिड्नी</exemplarCity>
+			</zone>
+			<zone type="Australia/Brisbane">
+				<exemplarCity>ब्रिस्बेन</exemplarCity>
+			</zone>
+			<zone type="Antarctica/Macquarie">
+				<exemplarCity>मक्वारिई</exemplarCity>
+			</zone>
+			<zone type="Australia/Lord_Howe">
+				<exemplarCity>लर्ड होवे</exemplarCity>
+			</zone>
+			<zone type="America/Aruba">
+				<exemplarCity>अरुबा</exemplarCity>
+			</zone>
+			<zone type="Europe/Mariehamn">
+				<exemplarCity>म्यारिह्याम्न</exemplarCity>
+			</zone>
+			<zone type="Asia/Baku">
+				<exemplarCity>बाकु</exemplarCity>
+			</zone>
+			<zone type="Europe/Sarajevo">
+				<exemplarCity>साराजेभो</exemplarCity>
+			</zone>
+			<zone type="America/Barbados">
+				<exemplarCity>बार्बाडोस</exemplarCity>
+			</zone>
+			<zone type="Asia/Dhaka">
+				<exemplarCity>ढाका</exemplarCity>
+			</zone>
+			<zone type="Europe/Brussels">
+				<exemplarCity>ब्रसेल्स</exemplarCity>
+			</zone>
+			<zone type="Africa/Ouagadougou">
+				<exemplarCity>औआगाडौगौ</exemplarCity>
+			</zone>
+			<zone type="Europe/Sofia">
+				<exemplarCity>सोफिया</exemplarCity>
+			</zone>
+			<zone type="Asia/Bahrain">
+				<exemplarCity>बहराईन</exemplarCity>
+			</zone>
+			<zone type="Africa/Bujumbura">
+				<exemplarCity>बुजुम्बुरा</exemplarCity>
+			</zone>
