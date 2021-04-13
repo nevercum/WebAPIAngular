@@ -61,4 +61,27 @@ public class Bug6537167 {
     @Test
     public void test926007_2() throws Exception {
         TransformerFactory factory = TransformerFactory.newInstance();
-        // factory.setAttribute("generate-
+        // factory.setAttribute("generate-translet", Boolean.TRUE);
+        File f = new File(getClass().getResource("home.xsl").getPath());
+        Templates t = factory.newTemplates(new StreamSource(f));
+        Transformer transformer = t.newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+
+        transformer.transform(new StreamSource(getClass().getResourceAsStream("src.xml")), new StreamResult(System.out));
+    }
+
+    @Test
+    public void test926007_3() throws Exception {
+        TransformerFactory factory = TransformerFactory.newInstance();
+        // factory.setAttribute("generate-translet", Boolean.TRUE);
+        File f = new File(getClass().getResource("upload-media.xsl").getPath());
+        Templates t = factory.newTemplates(new StreamSource(f));
+        Transformer transformer = t.newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+
+        transformer.transform(new StreamSource(getClass().getResourceAsStream("src.xml")), new StreamResult(System.out));
+    }
+
+}
