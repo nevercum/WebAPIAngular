@@ -229,4 +229,191 @@ class SocketAdaptor
             return sc.getOption(name).intValue();
         } catch (IOException x) {
             Net.translateToSocketException(x);
-            return -1;          // keep comp
+            return -1;          // keep compiler happy
+        }
+    }
+
+    @Override
+    public void setTcpNoDelay(boolean on) throws SocketException {
+        setBooleanOption(StandardSocketOptions.TCP_NODELAY, on);
+    }
+
+    @Override
+    public boolean getTcpNoDelay() throws SocketException {
+        return getBooleanOption(StandardSocketOptions.TCP_NODELAY);
+    }
+
+    @Override
+    public void setSoLinger(boolean on, int linger) throws SocketException {
+        if (!on)
+            linger = -1;
+        setIntOption(StandardSocketOptions.SO_LINGER, linger);
+    }
+
+    @Override
+    public int getSoLinger() throws SocketException {
+        return getIntOption(StandardSocketOptions.SO_LINGER);
+    }
+
+    @Override
+    public void sendUrgentData(int data) throws IOException {
+        int n = sc.sendOutOfBandData((byte) data);
+        if (n == 0)
+            throw new IOException("Socket buffer full");
+    }
+
+    @Override
+    public void setOOBInline(boolean on) throws SocketException {
+        setBooleanOption(ExtendedSocketOption.SO_OOBINLINE, on);
+    }
+
+    @Override
+    public boolean getOOBInline() throws SocketException {
+        return getBooleanOption(ExtendedSocketOption.SO_OOBINLINE);
+    }
+
+    @Override
+    public void setSoTimeout(int timeout) throws SocketException {
+        if (!sc.isOpen())
+            throw new SocketException("Socket is closed");
+        if (timeout < 0)
+            throw new IllegalArgumentException("timeout < 0");
+        this.timeout = timeout;
+    }
+
+    @Override
+    public int getSoTimeout() throws SocketException {
+        if (!sc.isOpen())
+            throw new SocketException("Socket is closed");
+        return timeout;
+    }
+
+    @Override
+    public void setSendBufferSize(int size) throws SocketException {
+        // size 0 valid for SocketChannel, invalid for Socket
+        if (size <= 0)
+            throw new IllegalArgumentException("Invalid send size");
+        setIntOption(StandardSocketOptions.SO_SNDBUF, size);
+    }
+
+    @Override
+    public int getSendBufferSize() throws SocketException {
+        return getIntOption(StandardSocketOptions.SO_SNDBUF);
+    }
+
+    @Override
+    public void setReceiveBufferSize(int size) throws SocketException {
+        // size 0 valid for SocketChannel, invalid for Socket
+        if (size <= 0)
+            throw new IllegalArgumentException("Invalid receive size");
+        setIntOption(StandardSocketOptions.SO_RCVBUF, size);
+    }
+
+    @Override
+    public int getReceiveBufferSize() throws SocketException {
+        return getIntOption(StandardSocketOptions.SO_RCVBUF);
+    }
+
+    @Override
+    public void setKeepAlive(boolean on) throws SocketException {
+        setBooleanOption(StandardSocketOptions.SO_KEEPALIVE, on);
+    }
+
+    @Override
+    public boolean getKeepAlive() throws SocketException {
+        return getBooleanOption(StandardSocketOptions.SO_KEEPALIVE);
+    }
+
+    @Override
+    public void setTrafficClass(int tc) throws SocketException {
+        setIntOption(StandardSocketOptions.IP_TOS, tc);
+    }
+
+    @Override
+    public int getTrafficClass() throws SocketException {
+        return getIntOption(StandardSocketOptions.IP_TOS);
+    }
+
+    @Override
+    public void setReuseAddress(boolean on) throws SocketException {
+        setBooleanOption(StandardSocketOptions.SO_REUSEADDR, on);
+    }
+
+    @Override
+    public boolean getReuseAddress() throws SocketException {
+        return getBooleanOption(StandardSocketOptions.SO_REUSEADDR);
+    }
+
+    @Override
+    public void close() throws IOException {
+        sc.close();
+    }
+
+    @Override
+    public void shutdownInput() throws IOException {
+        try {
+            sc.shutdownInput();
+        } catch (Exception x) {
+            Net.translateException(x);
+        }
+    }
+
+    @Override
+    public void shutdownOutput() throws IOException {
+        try {
+            sc.shutdownOutput();
+        } catch (Exception x) {
+            Net.translateException(x);
+        }
+    }
+
+    @Override
+    public String toString() {
+        if (sc.isConnected())
+            return "Socket[addr=" + getInetAddress() +
+                ",port=" + getPort() +
+                ",localport=" + getLocalPort() + "]";
+        return "Socket[unconnected]";
+    }
+
+    @Override
+    public boolean isConnected() {
+        return sc.isConnected();
+    }
+
+    @Override
+    public boolean isBound() {
+        return sc.localAddress() != null;
+    }
+
+    @Override
+    public boolean isClosed() {
+        return !sc.isOpen();
+    }
+
+    @Override
+    public boolean isInputShutdown() {
+        return !sc.isInputOpen();
+    }
+
+    @Override
+    public boolean isOutputShutdown() {
+        return !sc.isOutputOpen();
+    }
+
+    @Override
+    public <T> Socket setOption(SocketOption<T> name, T value) throws IOException {
+        sc.setOption(name, value);
+        return this;
+    }
+
+    @Override
+    public <T> T getOption(SocketOption<T> name) throws IOException {
+        return sc.getOption(name);
+    }
+
+    @Override
+    public Set<SocketOption<?>> supportedOptions() {
+        return sc.supportedOptions();
+    }
+}
