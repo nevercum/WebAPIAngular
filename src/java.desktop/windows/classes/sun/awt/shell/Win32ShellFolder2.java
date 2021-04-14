@@ -252,4 +252,184 @@ final class Win32ShellFolder2 extends ShellFolder {
     private void setRelativePIDL(long relativePIDL) {
         disposer.relativePIDL = relativePIDL;
     }
-    
+    /*
+     * The following are for caching various shell folder properties.
+     */
+    private long pIShellIcon = -1L;
+    private String folderType = null;
+    private String displayName = null;
+    private Image smallIcon = null;
+    private Image largeIcon = null;
+    private Boolean isDir = null;
+    private final boolean isLib;
+    private static final String FNAME = COLUMN_NAME;
+    private static final String FSIZE = COLUMN_SIZE;
+    private static final String FTYPE = "FileChooser.fileTypeHeaderText";
+    private static final String FDATE = COLUMN_DATE;
+
+    /*
+     * The following is to identify the My Documents folder as being special
+     */
+    private boolean isPersonal;
+
+    private static String composePathForCsidl(int csidl) throws IOException, InterruptedException {
+        String path = getFileSystemPath(csidl);
+        return path == null
+                ? ("ShellFolder: 0x" + Integer.toHexString(csidl))
+                : path;
+    }
+
+    /**
+     * Create a system special shell folder, such as the
+     * desktop or Network Neighborhood.
+     */
+    Win32ShellFolder2(final int csidl) throws IOException, InterruptedException {
+        // Desktop is parent of DRIVES and NETWORK, not necessarily
+        // other special shell folders.
+        super(null, composePathForCsidl(csidl));
+        isLib = false;
+
+        invoke(new Callable<Void>() {
+            public Void call() throws InterruptedException {
+                if (csidl == DESKTOP) {
+                    initDesktop();
+                } else {
+                    initSpecial(getDesktop().getIShellFolder(), csidl);
+                    // At this point, the native method initSpecial() has set our relativePIDL
+                    // relative to the Desktop, which may not be our immediate parent. We need
+                    // to traverse this ID list and break it into a chain of shell folders from
+                    // the top, with each one having an immediate parent and a relativePIDL
+                    // relative to that parent.
+                    long pIDL = disposer.relativePIDL;
+                    parent = getDesktop();
+                    while (pIDL != 0) {
+                        // Get a child pidl relative to 'parent'
+                        long childPIDL = copyFirstPIDLEntry(pIDL);
+                        if (childPIDL != 0) {
+                            // Get a handle to the rest of the ID list
+                            // i,e, parent's grandchilren and down
+                            pIDL = getNextPIDLEntry(pIDL);
+                            if (pIDL != 0) {
+                                // Now we know that parent isn't immediate to 'this' because it
+                                // has a continued ID list. Create a shell folder for this child
+                                // pidl and make it the new 'parent'.
+                                parent = createShellFolder((Win32ShellFolder2) parent, childPIDL);
+                            } else {
+                                // No grandchildren means we have arrived at the parent of 'this',
+                                // and childPIDL is directly relative to parent.
+                                disposer.relativePIDL = childPIDL;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                return null;
+            }
+        }, InterruptedException.class);
+
+        sun.java2d.Disposer.addObjectRecord(disposerReferent, disposer);
+    }
+
+
+    /**
+     * Create a system shell folder
+     */
+    Win32ShellFolder2(Win32ShellFolder2 parent, long pIShellFolder, long relativePIDL, String path, boolean isLib) {
+        super(parent, (path != null) ? path : "ShellFolder: ");
+        this.isLib = isLib;
+        this.disposer.pIShellFolder = pIShellFolder;
+        this.disposer.relativePIDL = relativePIDL;
+        sun.java2d.Disposer.addObjectRecord(disposerReferent, disposer);
+    }
+
+
+    /**
+     * Creates a shell folder with a parent and relative PIDL
+     */
+    static Win32ShellFolder2 createShellFolder(Win32ShellFolder2 parent, long pIDL)
+            throws InterruptedException {
+        String path = invoke(new Callable<String>() {
+            public String call() {
+                return getFileSystemPath(parent.getIShellFolder(), pIDL);
+            }
+        }, RuntimeException.class);
+        String libPath = resolveLibrary(path);
+        if (libPath == null) {
+            return new Win32ShellFolder2(parent, 0, pIDL, path, false);
+        } else {
+            return new Win32ShellFolder2(parent, 0, pIDL, libPath, true);
+        }
+    }
+
+    // Initializes the desktop shell folder
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private native void initDesktop();
+
+    // Initializes a special, non-file system shell folder
+    // from one of the above constants
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private native void initSpecial(long desktopIShellFolder, int csidl);
+
+    /** Marks this folder as being the My Documents (Personal) folder */
+    public void setIsPersonal() {
+        isPersonal = true;
+    }
+
+    /**
+     * This method is implemented to make sure that no instances
+     * of {@code ShellFolder} are ever serialized. If {@code isFileSystem()} returns
+     * {@code true}, then the object is representable with an instance of
+     * {@code java.io.File} instead. If not, then the object depends
+     * on native PIDL state and should not be serialized.
+     *
+     * @return a {@code java.io.File} replacement object. If the folder
+     * is a not a normal directory, then returns the first non-removable
+     * drive (normally "C:\").
+     */
+    @Serial
+    protected Object writeReplace() throws java.io.ObjectStreamException {
+        return invoke(new Callable<File>() {
+            public File call() {
+                if (isFileSystem()) {
+                    return new File(getPath());
+                } else {
+                    Win32ShellFolder2 drives = Win32ShellFolderManager2.getDrives();
+                    if (drives != null) {
+                        File[] driveRoots = drives.listFiles();
+                        if (driveRoots != null) {
+                            for (int i = 0; i < driveRoots.length; i++) {
+                                if (driveRoots[i] instanceof Win32ShellFolder2) {
+                                    Win32ShellFolder2 sf = (Win32ShellFolder2) driveRoots[i];
+                                    if (sf.isFileSystem() && !sf.hasAttribute(ATTRIB_REMOVABLE)) {
+                                        return new File(sf.getPath());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Ouch, we have no hard drives. Return something "valid" anyway.
+                    return new File("C:\\");
+                }
+            }
+        });
+    }
+
+
+    /**
+     * Finalizer to clean up any COM objects or PIDLs used by this object.
+     */
+    protected void dispose() {
+        disposer.dispose();
+    }
+
+
+    // Given a (possibly multi-level) relative PIDL (with respect to
+    // the desktop, at least in all of the usage cases in this code),
+    // return a pointer to the next entry. Does not mutate the PIDL in
+    // any way. Returns 0 if the null terminator is reached.
+    // Needs to be accessible to Win32ShellFolderManager2
+    static native long getNextPIDLEntry(long pIDL);
+
+    // Given a (possibly multi-level) relative PIDL (with respect to
+    // the desktop, at
