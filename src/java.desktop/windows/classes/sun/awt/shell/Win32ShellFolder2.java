@@ -432,4 +432,205 @@ final class Win32ShellFolder2 extends ShellFolder {
     static native long getNextPIDLEntry(long pIDL);
 
     // Given a (possibly multi-level) relative PIDL (with respect to
-    // the desktop, at
+    // the desktop, at least in all of the usage cases in this code),
+    // copy the first entry into a newly-allocated PIDL. Returns 0 if
+    // the PIDL is at the end of the list.
+    // Needs to be accessible to Win32ShellFolderManager2
+    static native long copyFirstPIDLEntry(long pIDL);
+
+    // Given a parent's absolute PIDL and our relative PIDL, build an absolute PIDL
+    private static native long combinePIDLs(long ppIDL, long pIDL);
+
+    // Release a PIDL object
+    // Needs to be accessible to Win32ShellFolderManager2
+    static native void releasePIDL(long pIDL);
+
+    // Release an IShellFolder object
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native void releaseIShellFolder(long pIShellFolder);
+
+    /**
+     * Accessor for IShellFolder
+     */
+    private long getIShellFolder() {
+        if (disposer.pIShellFolder == 0) {
+            try {
+                disposer.pIShellFolder = invoke(new Callable<Long>() {
+                    public Long call() {
+                        assert(isDirectory());
+                        assert(parent != null);
+                        long parentIShellFolder = getParentIShellFolder();
+                        if (parentIShellFolder == 0) {
+                            throw new InternalError("Parent IShellFolder was null for "
+                                    + getAbsolutePath());
+                        }
+                        // We are a directory with a parent and a relative PIDL.
+                        // We want to bind to the parent so we get an
+                        // IShellFolder instance associated with us.
+                        long pIShellFolder = bindToObject(parentIShellFolder,
+                                disposer.relativePIDL);
+                        if (pIShellFolder == 0) {
+                            throw new InternalError("Unable to bind "
+                                    + getAbsolutePath() + " to parent");
+                        }
+                        return pIShellFolder;
+                    }
+                }, RuntimeException.class);
+            } catch (InterruptedException e) {
+                // Ignore error
+            }
+        }
+        return disposer.pIShellFolder;
+    }
+
+    /**
+     * Get the parent ShellFolder's IShellFolder interface
+     */
+    public long getParentIShellFolder() {
+        Win32ShellFolder2 parent = (Win32ShellFolder2)getParentFile();
+        if (parent == null) {
+            // Parent should only be null if this is the desktop, whose
+            // relativePIDL is relative to its own IShellFolder.
+            return getIShellFolder();
+        }
+        return parent.getIShellFolder();
+    }
+
+    /**
+     * Accessor for relative PIDL
+     */
+    public long getRelativePIDL() {
+        if (disposer.relativePIDL == 0) {
+            throw new InternalError("Should always have a relative PIDL");
+        }
+        return disposer.relativePIDL;
+    }
+
+    private long getAbsolutePIDL() {
+        if (parent == null) {
+            // This is the desktop
+            return getRelativePIDL();
+        } else {
+            if (disposer.absolutePIDL == 0) {
+                disposer.absolutePIDL = combinePIDLs(((Win32ShellFolder2)parent).getAbsolutePIDL(), getRelativePIDL());
+            }
+
+            return disposer.absolutePIDL;
+        }
+    }
+
+    /**
+     * Helper function to return the desktop
+     */
+    public Win32ShellFolder2 getDesktop() {
+        return Win32ShellFolderManager2.getDesktop();
+    }
+
+    /**
+     * Helper function to return the desktop IShellFolder interface
+     */
+    public long getDesktopIShellFolder() {
+        return getDesktop().getIShellFolder();
+    }
+
+    private static boolean pathsEqual(String path1, String path2) {
+        // Same effective implementation as Win32FileSystem
+        return path1.equalsIgnoreCase(path2);
+    }
+
+    /**
+     * Check to see if two ShellFolder objects are the same
+     */
+    public boolean equals(Object o) {
+        if (!(o instanceof Win32ShellFolder2 rhs)) {
+            // Short-circuit circuitous delegation path
+            if (!(o instanceof File)) {
+                return super.equals(o);
+            }
+            return pathsEqual(getPath(), ((File) o).getPath());
+        }
+        if ((parent == null && rhs.parent != null) ||
+            (parent != null && rhs.parent == null)) {
+            return false;
+        }
+
+        if (isFileSystem() && rhs.isFileSystem()) {
+            // Only folders with identical parents can be equal
+            return (pathsEqual(getPath(), rhs.getPath()) &&
+                    (parent == rhs.parent || parent.equals(rhs.parent)));
+        }
+
+        if (parent == rhs.parent || parent.equals(rhs.parent)) {
+            try {
+                return pidlsEqual(getParentIShellFolder(), disposer.relativePIDL, rhs.disposer.relativePIDL);
+            } catch (InterruptedException e) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean pidlsEqual(final long pIShellFolder, final long pidl1, final long pidl2)
+            throws InterruptedException {
+        return invoke(new Callable<Boolean>() {
+            public Boolean call() {
+                return compareIDs(pIShellFolder, pidl1, pidl2) == 0;
+            }
+        }, RuntimeException.class);
+    }
+
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native int compareIDs(long pParentIShellFolder, long pidl1, long pidl2);
+
+    private volatile Boolean cachedIsFileSystem;
+
+    /**
+     * @return Whether this is a file system shell folder
+     */
+    public boolean isFileSystem() {
+        if (cachedIsFileSystem == null) {
+            cachedIsFileSystem = hasAttribute(ATTRIB_FILESYSTEM);
+        }
+
+        return cachedIsFileSystem;
+    }
+
+    /**
+     * Return whether the given attribute flag is set for this object
+     */
+    public boolean hasAttribute(final int attribute) {
+        Boolean result = invoke(new Callable<Boolean>() {
+            public Boolean call() {
+                // Caching at this point doesn't seem to be cost efficient
+                return (getAttributes0(getParentIShellFolder(),
+                    getRelativePIDL(), attribute)
+                    & attribute) != 0;
+            }
+        });
+
+        return result != null && result;
+    }
+
+    /**
+     * Returns the queried attributes specified in attrsMask.
+     *
+     * Could plausibly be used for attribute caching but have to be
+     * very careful not to touch network drives and file system roots
+     * with a full attrsMask
+     * NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+     */
+
+    private static native int getAttributes0(long pParentIShellFolder, long pIDL, int attrsMask);
+
+    // Return the path to the underlying file system object
+    // Should be called from the COM thread
+    private static String getFileSystemPath(final long parentIShellFolder, final long relativePIDL) {
+        int linkedFolder = ATTRIB_LINK | ATTRIB_FOLDER;
+        if (parentIShellFolder == Win32ShellFolderManager2.getNetwork().getIShellFolder() &&
+                getAttributes0(parentIShellFolder, relativePIDL, linkedFolder) == linkedFolder) {
+
+            String s =
+                    getFileSystemPath(Win32ShellFolderManager2.getDesktop().getIShellFolder(),
+                            getLinkLocation(parentIShellFolder, relativePIDL, false));
+            if (s != nul
