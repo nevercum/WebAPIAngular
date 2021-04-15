@@ -633,4 +633,166 @@ final class Win32ShellFolder2 extends ShellFolder {
             String s =
                     getFileSystemPath(Win32ShellFolderManager2.getDesktop().getIShellFolder(),
                             getLinkLocation(parentIShellFolder, relativePIDL, false));
-            if (s != nul
+            if (s != null && s.startsWith("\\\\")) {
+                return s;
+            }
+        }
+        String path = getDisplayNameOf(parentIShellFolder, relativePIDL,
+                        SHGDN_FORPARSING);
+        return path;
+    }
+
+    private static String resolveLibrary(String path) {
+        // if this is a library its default save location is taken as a path
+        // this is a temp fix until java.io starts support Libraries
+        if( path != null && path.startsWith("::{") &&
+                path.toLowerCase().endsWith(".library-ms")) {
+            for (KnownFolderDefinition kf : KnownLibraries.INSTANCE) {
+                if (path.toLowerCase().endsWith(
+                        "\\" + kf.relativePath.toLowerCase()) &&
+                        path.toUpperCase().startsWith(
+                        kf.parsingName.substring(0, 40).toUpperCase())) {
+                    return kf.saveLocation;
+                }
+            }
+        }
+        return null;
+    }
+
+    // Needs to be accessible to Win32ShellFolderManager2
+    static String getFileSystemPath(final int csidl) throws IOException, InterruptedException {
+        String path = invoke(new Callable<String>() {
+            public String call() throws IOException {
+                return getFileSystemPath0(csidl);
+            }
+        }, IOException.class);
+        if (path != null) {
+            @SuppressWarnings("removal")
+            SecurityManager security = System.getSecurityManager();
+            if (security != null) {
+                security.checkRead(path);
+            }
+        }
+        return path;
+    }
+
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native String getFileSystemPath0(int csidl) throws IOException;
+
+    // Return whether the path is a network root.
+    // Path is assumed to be non-null
+    private static boolean isNetworkRoot(String path) {
+        return (path.equals("\\\\") || path.equals("\\") || path.equals("//") || path.equals("/"));
+    }
+
+    /**
+     * @return The parent shell folder of this shell folder, null if
+     * there is no parent
+     */
+    public File getParentFile() {
+        return parent;
+    }
+
+    public boolean isDirectory() {
+        if (isDir == null) {
+            // Folders with SFGAO_BROWSABLE have "shell extension" handlers and are
+            // not traversable in JFileChooser.
+            if (hasAttribute(ATTRIB_FOLDER) && !hasAttribute(ATTRIB_BROWSABLE)) {
+                isDir = Boolean.TRUE;
+            } else if (isLink()) {
+                ShellFolder linkLocation = getLinkLocation(false);
+                isDir = Boolean.valueOf(linkLocation != null && linkLocation.isDirectory());
+            } else {
+                isDir = Boolean.FALSE;
+            }
+        }
+        return isDir.booleanValue();
+    }
+
+    /*
+     * Functions for enumerating an IShellFolder's children
+     */
+    // Returns an IEnumIDList interface for an IShellFolder.  The value
+    // returned must be released using releaseEnumObjects().
+    private long getEnumObjects(final boolean includeHiddenFiles) throws InterruptedException {
+        return invoke(new Callable<Long>() {
+            public Long call() {
+                boolean isDesktop = disposer.pIShellFolder == getDesktopIShellFolder();
+
+                return getEnumObjects(disposer.pIShellFolder, isDesktop, includeHiddenFiles);
+            }
+        }, RuntimeException.class);
+    }
+
+    // Returns an IEnumIDList interface for an IShellFolder.  The value
+    // returned must be released using releaseEnumObjects().
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private native long getEnumObjects(long pIShellFolder, boolean isDesktop,
+                                       boolean includeHiddenFiles);
+    // Returns the next sequential child as a relative PIDL
+    // from an IEnumIDList interface.  The value returned must
+    // be released using releasePIDL().
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private native long getNextChild(long pEnumObjects);
+    // Releases the IEnumIDList interface
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private native void releaseEnumObjects(long pEnumObjects);
+
+    // Returns the IShellFolder of a child from a parent IShellFolder
+    // and a relative PIDL.  The value returned must be released
+    // using releaseIShellFolder().
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native long bindToObject(long parentIShellFolder, long pIDL);
+
+    /**
+     * @return An array of shell folders that are children of this shell folder
+     *         object. The array will be empty if the folder is empty.  Returns
+     *         {@code null} if this shellfolder does not denote a directory.
+     */
+    public File[] listFiles(final boolean includeHiddenFiles) {
+        @SuppressWarnings("removal")
+        SecurityManager security = System.getSecurityManager();
+        if (security != null) {
+            security.checkRead(getPath());
+        }
+
+        try {
+            File[] files = invoke(new Callable<File[]>() {
+                public File[] call() throws InterruptedException {
+                    if (!isDirectory()) {
+                        return null;
+                    }
+                    // Links to directories are not directories and cannot be parents.
+                    // This does not apply to folders in My Network Places (NetHood)
+                    // because they are both links and real directories!
+                    if (isLink() && !hasAttribute(ATTRIB_FOLDER)) {
+                        return new File[0];
+                    }
+
+                    Win32ShellFolder2 desktop = Win32ShellFolderManager2.getDesktop();
+                    Win32ShellFolder2 personal = Win32ShellFolderManager2.getPersonal();
+
+                    // If we are a directory, we have a parent and (at least) a
+                    // relative PIDL. We must first ensure we are bound to the
+                    // parent so we have an IShellFolder to query.
+                    long pIShellFolder = getIShellFolder();
+                    // Now we can enumerate the objects in this folder.
+                    ArrayList<Win32ShellFolder2> list = new ArrayList<Win32ShellFolder2>();
+                    long pEnumObjects = getEnumObjects(includeHiddenFiles);
+                    if (pEnumObjects != 0) {
+                        try {
+                            long childPIDL;
+                            int testedAttrs = ATTRIB_FILESYSTEM | ATTRIB_FILESYSANCESTOR;
+                            do {
+                                childPIDL = getNextChild(pEnumObjects);
+                                boolean releasePIDL = true;
+                                if (childPIDL != 0 &&
+                                        (getAttributes0(pIShellFolder, childPIDL, testedAttrs) & testedAttrs) != 0) {
+                                    Win32ShellFolder2 childFolder;
+                                    if (Win32ShellFolder2.this.equals(desktop)
+                                            && personal != null
+                                            && pidlsEqual(pIShellFolder, childPIDL, personal.disposer.relativePIDL)) {
+                                        childFolder = personal;
+                                    } else {
+                                        childFolder = createShellFolder(Win32ShellFolder2.this, childPIDL);
+                      
