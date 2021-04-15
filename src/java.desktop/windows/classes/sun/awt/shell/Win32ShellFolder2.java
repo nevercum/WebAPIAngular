@@ -795,4 +795,202 @@ final class Win32ShellFolder2 extends ShellFolder {
                                         childFolder = personal;
                                     } else {
                                         childFolder = createShellFolder(Win32ShellFolder2.this, childPIDL);
-                      
+                                        releasePIDL = false;
+                                    }
+                                    list.add(childFolder);
+                                }
+                                if (releasePIDL) {
+                                    releasePIDL(childPIDL);
+                                }
+                            } while (childPIDL != 0 && !Thread.currentThread().isInterrupted());
+                        } finally {
+                            releaseEnumObjects(pEnumObjects);
+                        }
+                    }
+                    return Thread.currentThread().isInterrupted()
+                        ? new File[0]
+                        : list.toArray(new ShellFolder[list.size()]);
+                }
+            }, InterruptedException.class);
+
+            return Win32ShellFolderManager2.checkFiles(files);
+        } catch (InterruptedException e) {
+            return new File[0];
+        }
+    }
+
+
+    /**
+     * Look for (possibly special) child folder by it's path
+     *
+     * @return The child shellfolder, or null if not found.
+     */
+    Win32ShellFolder2 getChildByPath(final String filePath) throws InterruptedException {
+        return invoke(new Callable<Win32ShellFolder2>() {
+            public Win32ShellFolder2 call() throws InterruptedException {
+                long pIShellFolder = getIShellFolder();
+                long pEnumObjects = getEnumObjects(true);
+                Win32ShellFolder2 child = null;
+                long childPIDL;
+
+                while ((childPIDL = getNextChild(pEnumObjects)) != 0) {
+                    if (getAttributes0(pIShellFolder, childPIDL, ATTRIB_FILESYSTEM) != 0) {
+                        String path = getFileSystemPath(pIShellFolder, childPIDL);
+                        if(isLib) path = resolveLibrary( path );
+                        if (path != null && path.equalsIgnoreCase(filePath)) {
+                            long childIShellFolder = bindToObject(pIShellFolder, childPIDL);
+                            child = new Win32ShellFolder2(Win32ShellFolder2.this,
+                                    childIShellFolder, childPIDL, path, isLib);
+                            break;
+                        }
+                    }
+                    releasePIDL(childPIDL);
+                }
+                releaseEnumObjects(pEnumObjects);
+                return child;
+            }
+        }, InterruptedException.class);
+    }
+
+    private volatile Boolean cachedIsLink;
+
+    /**
+     * @return Whether this shell folder is a link
+     */
+    public boolean isLink() {
+        if (cachedIsLink == null) {
+            cachedIsLink = hasAttribute(ATTRIB_LINK);
+        }
+
+        return cachedIsLink;
+    }
+
+    /**
+     * @return Whether this shell folder is marked as hidden
+     */
+    public boolean isHidden() {
+        return hasAttribute(ATTRIB_HIDDEN);
+    }
+
+
+    // Return the link location of a shell folder
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native long getLinkLocation(long parentIShellFolder,
+                                        long relativePIDL, boolean resolve);
+
+    /**
+     * @return The shell folder linked to by this shell folder, or null
+     * if this shell folder is not a link or is a broken or invalid link
+     */
+    public ShellFolder getLinkLocation()  {
+        return getLinkLocation(true);
+    }
+
+    private Win32ShellFolder2 getLinkLocation(final boolean resolve) {
+        return invoke(new Callable<Win32ShellFolder2>() {
+            public Win32ShellFolder2 call() {
+                if (!isLink()) {
+                    return null;
+                }
+
+                Win32ShellFolder2 location = null;
+                long linkLocationPIDL = getLinkLocation(getParentIShellFolder(),
+                        getRelativePIDL(), resolve);
+                if (linkLocationPIDL != 0) {
+                    try {
+                        location =
+                                Win32ShellFolderManager2.createShellFolderFromRelativePIDL(getDesktop(),
+                                        linkLocationPIDL);
+                    } catch (InterruptedException | FileNotFoundException e) {
+                        // Return null
+                    } catch (InternalError e) {
+                        // Could be a link to a non-bindable object, such as a network connection
+                        // TODO: getIShellFolder() should throw FileNotFoundException instead
+                    }
+                }
+                return location;
+            }
+        });
+    }
+
+    // Parse a display name into a PIDL relative to the current IShellFolder.
+    long parseDisplayName(final String name) throws IOException, InterruptedException {
+        return invoke(new Callable<Long>() {
+            public Long call() throws IOException {
+                return parseDisplayName0(getIShellFolder(), name);
+            }
+        }, IOException.class);
+    }
+
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native long parseDisplayName0(long pIShellFolder, String name) throws IOException;
+
+    // Return the display name of a shell folder
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native String getDisplayNameOf(long parentIShellFolder,
+                                                  long relativePIDL,
+                                                  int attrs);
+
+    // Returns data of all Known Folders registered in the system
+    private static native KnownFolderDefinition[] loadKnownFolders();
+
+    /**
+     * @return The name used to display this shell folder
+     */
+    public String getDisplayName() {
+        if (displayName == null) {
+            displayName =
+                invoke(new Callable<String>() {
+                    public String call() {
+                        return getDisplayNameOf(getParentIShellFolder(),
+                                getRelativePIDL(), SHGDN_NORMAL);
+                    }
+                });
+        }
+        return displayName;
+    }
+
+    // Return the folder type of a shell folder
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native String getFolderType(long pIDL);
+
+    /**
+     * @return The type of shell folder as a string
+     */
+    public String getFolderType() {
+        if (folderType == null) {
+            final long absolutePIDL = getAbsolutePIDL();
+            folderType =
+                invoke(new Callable<String>() {
+                    public String call() {
+                        return getFolderType(absolutePIDL);
+                    }
+                });
+        }
+        return folderType;
+    }
+
+    // Return the executable type of a file system shell folder
+    private native String getExecutableType(String path);
+
+    /**
+     * @return The executable type as a string
+     */
+    public String getExecutableType() {
+        if (!isFileSystem()) {
+            return null;
+        }
+        return getExecutableType(getAbsolutePath());
+    }
+
+
+
+    // Icons
+
+    private static Map<Integer, Image> smallSystemImages = new HashMap<>();
+    private static Map<Integer, Image> largeSystemImages = new HashMap<>();
+    private static Map<Integer, Image> smallLinkedSystemImages = new HashMap<>();
+    private static Map<Integer, Image> largeLinkedSystemImages = new HashMap<>();
+
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native long getIShellIcon(l
