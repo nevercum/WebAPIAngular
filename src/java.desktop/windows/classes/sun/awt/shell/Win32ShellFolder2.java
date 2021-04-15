@@ -993,4 +993,161 @@ final class Win32ShellFolder2 extends ShellFolder {
     private static Map<Integer, Image> largeLinkedSystemImages = new HashMap<>();
 
     // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
-    private static native long getIShellIcon(l
+    private static native long getIShellIcon(long pIShellFolder);
+
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native int getIconIndex(long parentIShellIcon, long relativePIDL);
+
+    // Return the icon of a file system shell folder in the form of an HICON
+    private static native long getIcon(String absolutePath, boolean getLargeIcon);
+
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native long extractIcon(long parentIShellFolder, long relativePIDL,
+                                           int size, boolean getDefaultIcon);
+
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native boolean hiResIconAvailable(long parentIShellFolder, long relativePIDL);
+
+    // Returns an icon from the Windows system icon list in the form of an HICON
+    private static native long getSystemIcon(int iconID);
+    private static native long getIconResource(String libName, int iconID,
+                                               int cxDesired, int cyDesired);
+
+    // Return the bits from an HICON.  This has a side effect of setting
+    // the imageHash variable for efficient caching / comparing.
+    private static native int[] getIconBits(long hIcon);
+    // Dispose the HICON
+    private static native void disposeIcon(long hIcon);
+
+    // Get buttons from native toolbar implementation.
+    static native int[] getStandardViewButton0(int iconIndex, boolean small);
+
+    // Should be called from the COM thread
+    private long getIShellIcon() {
+        if (pIShellIcon == -1L) {
+            pIShellIcon = getIShellIcon(getIShellFolder());
+        }
+
+        return pIShellIcon;
+    }
+
+    private static Image makeIcon(long hIcon) {
+        if (hIcon != 0L && hIcon != -1L) {
+            // Get the bits.  This has the side effect of setting the imageHash value for this object.
+            final int[] iconBits = getIconBits(hIcon);
+            if (iconBits != null) {
+                // icons are always square
+                final int iconSize = (int) Math.sqrt(iconBits.length);
+                final BufferedImage img =
+                        new BufferedImage(iconSize, iconSize, BufferedImage.TYPE_INT_ARGB);
+                img.setRGB(0, 0, iconSize, iconSize, iconBits, 0, iconSize);
+                return img;
+            }
+        }
+        return null;
+    }
+
+
+    /**
+     * @return The icon image used to display this shell folder
+     */
+    public Image getIcon(final boolean getLargeIcon) {
+        Image icon = getLargeIcon ? largeIcon : smallIcon;
+        int size = getLargeIcon ? LARGE_ICON_SIZE : SMALL_ICON_SIZE;
+        if (icon == null) {
+            icon =
+                invoke(new Callable<Image>() {
+                    public Image call() {
+                        Image newIcon = null;
+                        Image newIcon2 = null;
+                        if (isLink()) {
+                            Win32ShellFolder2 folder = getLinkLocation(false);
+                            if (folder != null && folder.isLibrary()) {
+                                return folder.getIcon(getLargeIcon);
+                            }
+                        }
+                        if (isFileSystem() || isLibrary()) {
+                            long parentIShellIcon = (parent != null)
+                                ? ((Win32ShellFolder2) parent).getIShellIcon()
+                                : 0L;
+                            long relativePIDL = getRelativePIDL();
+
+                            // These are cached per type (using the index in the system image list)
+                            int index = getIconIndex(parentIShellIcon, relativePIDL);
+                            if (index > 0) {
+                                Map<Integer, Image> imageCache;
+                                if (isLink()) {
+                                    imageCache = getLargeIcon ? largeLinkedSystemImages : smallLinkedSystemImages;
+                                } else {
+                                    imageCache = getLargeIcon ? largeSystemImages : smallSystemImages;
+                                }
+                                newIcon = imageCache.get(Integer.valueOf(index));
+                                if (newIcon == null) {
+                                    long hIcon = getIcon(getAbsolutePath(), getLargeIcon);
+                                    newIcon = makeIcon(hIcon);
+                                    disposeIcon(hIcon);
+                                    if (newIcon != null) {
+                                        imageCache.put(Integer.valueOf(index), newIcon);
+                                    }
+                                }
+                                if (newIcon != null) {
+                                    if (isLink()) {
+                                        imageCache = getLargeIcon ? smallLinkedSystemImages
+                                                : largeLinkedSystemImages;
+                                    } else {
+                                        imageCache = getLargeIcon ? smallSystemImages : largeSystemImages;
+                                    }
+                                    newIcon2 = imageCache.get(index);
+                                    if (newIcon2 == null) {
+                                        long hIcon = getIcon(getAbsolutePath(), !getLargeIcon);
+                                        newIcon2 = makeIcon(hIcon);
+                                        disposeIcon(hIcon);
+                                    }
+                                }
+
+                                if (newIcon2 != null) {
+                                    Map<Integer, Image> bothIcons = new HashMap<>(2);
+                                    bothIcons.put(getLargeIcon ? LARGE_ICON_SIZE : SMALL_ICON_SIZE, newIcon);
+                                    bothIcons.put(getLargeIcon ? SMALL_ICON_SIZE : LARGE_ICON_SIZE, newIcon2);
+                                    newIcon = new MultiResolutionIconImage(getLargeIcon ? LARGE_ICON_SIZE
+                                            : SMALL_ICON_SIZE, bothIcons);
+                                }
+                            }
+                        }
+
+                        if (hiResIconAvailable(getParentIShellFolder(), getRelativePIDL()) || newIcon == null) {
+                            int size = getLargeIcon ? LARGE_ICON_SIZE : SMALL_ICON_SIZE;
+                            newIcon = getIcon(size, size);
+                        }
+
+                        if (newIcon == null) {
+                            newIcon = Win32ShellFolder2.super.getIcon(getLargeIcon);
+                        }
+                        return newIcon;
+                    }
+                });
+        }
+        return icon;
+    }
+
+    /**
+     * The data is not available yet.
+     * @see
+     * <a href="https://learn.microsoft.com/en-us/windows/win32/com/com-error-codes-1">COM
+     * Error Codes</a>.
+     */
+    private static final long E_PENDING = 0x8000000AL;
+
+    /**
+     * @return The icon image of specified size used to display this shell folder
+     */
+    public Image getIcon(int width, int height) {
+        int size = Math.max(width, height);
+        return invoke(() -> {
+            Image newIcon = null;
+            if (isLink()) {
+                Win32ShellFolder2 folder = getLinkLocation(false);
+                if (folder != null && folder.isLibrary()) {
+                    return folder.getIcon(size, size);
+                }
+           
