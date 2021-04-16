@@ -265,4 +265,29 @@ class DuplicateLVTT {
                 5 274 48 49 2;
                 8 271 50 51 3;
                 13 266 52 53 4;
-                17 262 54 5
+                17 262 54 55 6;
+                21 258 56 57 7;
+                26 253 58 59 8;
+                30 249 60 61 10;
+                39 240 62 63 11;
+              }
+            } // end LocalVariableTable
+            ;
+            Attr(#64) { // LocalVariableTypeTable
+              [] { // LocalVariableTypeTable
+                39 240 62 65 11;
+                39 240 62 65 11;
+              }
+            } // end LocalVariableTypeTable
+          } // Attributes
+        } // end Code
+      } // Attributes
+    } // Member
+  } // methods
+
+  [] { // Attributes
+    Attr(#66) { // SourceFile
+      #67;
+    } // end SourceFile
+  } // Attributes
+} // end class DuplicateLVTT
