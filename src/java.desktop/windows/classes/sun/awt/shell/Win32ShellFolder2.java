@@ -1340,4 +1340,130 @@ final class Win32ShellFolder2 extends ShellFolder {
         // synchronize the whole code of the sort method once
         invoke(new Callable<Void>() {
             public Void call() {
-                files.sort(new ColumnCo
+                files.sort(new ColumnComparator(Win32ShellFolder2.this, 0));
+
+                return null;
+            }
+        });
+    }
+
+    private static class ColumnComparator implements Comparator<File> {
+        private final Win32ShellFolder2 shellFolder;
+
+        private final int columnIdx;
+
+        public ColumnComparator(Win32ShellFolder2 shellFolder, int columnIdx) {
+            this.shellFolder = shellFolder;
+            this.columnIdx = columnIdx;
+        }
+
+        // compares 2 objects within this folder by the specified column
+        public int compare(final File o, final File o1) {
+            Integer result = invoke(new Callable<Integer>() {
+                public Integer call() {
+                    if (o instanceof Win32ShellFolder2
+                        && o1 instanceof Win32ShellFolder2) {
+                        // delegates comparison to native method
+                        return compareIDsByColumn(shellFolder.getIShellFolder(),
+                            ((Win32ShellFolder2) o).getRelativePIDL(),
+                            ((Win32ShellFolder2) o1).getRelativePIDL(),
+                            columnIdx);
+                    }
+                    return 0;
+                }
+            });
+
+            return result == null ? 0 : result;
+        }
+    }
+
+    // Extracts libraries and their default save locations from Known Folders list
+    private static List<KnownFolderDefinition> getLibraries() {
+        return invoke(new Callable<List<KnownFolderDefinition>>() {
+            @Override
+            public List<KnownFolderDefinition> call() throws Exception {
+                KnownFolderDefinition[] all = loadKnownFolders();
+                List<KnownFolderDefinition> folders = new ArrayList<>();
+                if (all != null) {
+                    for (KnownFolderDefinition kf : all) {
+                        if (kf.relativePath == null || kf.parsingName == null ||
+                                kf.saveLocation == null) {
+                            continue;
+                        }
+                        folders.add(kf);
+                    }
+                }
+                return folders;
+            }
+        });
+    }
+
+    static class MultiResolutionIconImage extends AbstractMultiResolutionImage {
+        final int baseSize;
+        final Map<Integer, Image> resolutionVariants = new HashMap<>();
+
+        public MultiResolutionIconImage(int baseSize, Map<Integer, Image> resolutionVariants) {
+            assert !resolutionVariants.containsValue(null)
+                   : "There are null icons in the MRI variants map";
+            this.baseSize = baseSize;
+            this.resolutionVariants.putAll(resolutionVariants);
+        }
+
+        public MultiResolutionIconImage(int baseSize, Image image) {
+            assert image != null : "Null icon passed as the base image for MRI";
+            this.baseSize = baseSize;
+            this.resolutionVariants.put(baseSize, image);
+        }
+
+        @Override
+        public int getWidth(ImageObserver observer) {
+            return baseSize;
+        }
+
+        @Override
+        public int getHeight(ImageObserver observer) {
+            return baseSize;
+        }
+
+        @Override
+        protected Image getBaseImage() {
+            return getResolutionVariant(baseSize, baseSize);
+        }
+
+        @Override
+        public Image getResolutionVariant(double width, double height) {
+            int dist = 0;
+            Image retVal = null;
+            // We only care about width since we don't support non-square icons
+            int w = (int) width;
+            int retindex = 0;
+            for (Integer i : resolutionVariants.keySet()) {
+                if (retVal == null || dist > Math.abs(i - w)
+                        || (dist == Math.abs(i - w) && i > retindex)) {
+                    retindex = i;
+                    dist = Math.abs(i - w);
+                    retVal = resolutionVariants.get(i);
+                    if (i == w) {
+                        break;
+                    }
+                }
+            }
+            if (retVal.getWidth(null) != w) {
+                BufferedImage newVariant = new BufferedImage(w, w, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g2d = newVariant.createGraphics();
+                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                g2d.drawImage(retVal, 0,0, w, w, null);
+                g2d.dispose();
+                resolutionVariants.put(w, newVariant);
+                retVal = newVariant;
+            }
+            return retVal;
+        }
+
+        @Override
+        public List<Image> getResolutionVariants() {
+            return Collections.unmodifiableList(
+                    new ArrayList<Image>(resolutionVariants.values()));
+        }
+    }
+}
