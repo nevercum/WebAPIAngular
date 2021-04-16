@@ -1150,4 +1150,194 @@ final class Win32ShellFolder2 extends ShellFolder {
                 if (folder != null && folder.isLibrary()) {
                     return folder.getIcon(size, size);
                 }
-           
+            }
+            Map<Integer, Image> multiResolutionIcon = new HashMap<>();
+            int start = size > MAX_QUALITY_ICON ? ICON_RESOLUTIONS.length - 1 : 0;
+            int increment = size > MAX_QUALITY_ICON ? -1 : 1;
+            int end = size > MAX_QUALITY_ICON ? -1 : ICON_RESOLUTIONS.length;
+            for (int i = start; i != end; i += increment) {
+                int s = ICON_RESOLUTIONS[i];
+                if (size < MIN_QUALITY_ICON || size > MAX_QUALITY_ICON
+                        || (s >= size && s <= size*2)) {
+                    long hIcon = extractIcon(getParentIShellFolder(),
+                            getRelativePIDL(), s, false);
+
+                    // E_PENDING: loading can take time so get the default
+                    if (hIcon == E_PENDING || hIcon == 0) {
+                        hIcon = extractIcon(getParentIShellFolder(),
+                                getRelativePIDL(), s, true);
+                        if (hIcon == 0) {
+                            if (isDirectory()) {
+                                newIcon = getShell32Icon(FOLDER_ICON_ID, size);
+                            } else {
+                                newIcon = getShell32Icon(FILE_ICON_ID, size);
+                            }
+                            if (newIcon == null) {
+                                return null;
+                            }
+                            if (!(newIcon instanceof MultiResolutionImage)) {
+                                newIcon = new MultiResolutionIconImage(size, newIcon);
+                            }
+                            return newIcon;
+                        }
+                    }
+                    newIcon = makeIcon(hIcon);
+                    disposeIcon(hIcon);
+
+                    multiResolutionIcon.put(s, newIcon);
+                    if (size < MIN_QUALITY_ICON || size > MAX_QUALITY_ICON) {
+                        break;
+                    }
+                }
+            }
+            return new MultiResolutionIconImage(size, multiResolutionIcon);
+        });
+    }
+
+    /**
+     * Gets an icon from the Windows system icon list as an {@code Image}
+     */
+    static Image getSystemIcon(SystemIcon iconType) {
+        long hIcon = getSystemIcon(iconType.getIconID());
+        Image icon = makeIcon(hIcon);
+        if (LARGE_ICON_SIZE != icon.getWidth(null)) {
+            icon = new MultiResolutionIconImage(LARGE_ICON_SIZE, icon);
+        }
+        disposeIcon(hIcon);
+        return icon;
+    }
+
+    /**
+     * Gets an icon from the Windows system icon list as an {@code Image}
+     */
+    static Image getShell32Icon(int iconID, int size) {
+        long hIcon = getIconResource("shell32.dll", iconID, size, size);
+        if (hIcon != 0) {
+            Image icon = makeIcon(hIcon);
+            if (size != icon.getWidth(null)) {
+                icon = new MultiResolutionIconImage(size, icon);
+            }
+            disposeIcon(hIcon);
+            return icon;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the canonical form of this abstract pathname.  Equivalent to
+     * <code>new&nbsp;Win32ShellFolder2(getParentFile(), this.{@link java.io.File#getCanonicalPath}())</code>.
+     *
+     * @see java.io.File#getCanonicalFile
+     */
+    public File getCanonicalFile() throws IOException {
+        return this;
+    }
+
+    /*
+     * Indicates whether this is a special folder (includes My Documents)
+     */
+    public boolean isSpecial() {
+        return isPersonal || !isFileSystem() || (this == getDesktop());
+    }
+
+    /**
+     * Compares this object with the specified object for order.
+     *
+     * @see sun.awt.shell.ShellFolder#compareTo(File)
+     */
+    public int compareTo(File file2) {
+        if (!(file2 instanceof Win32ShellFolder2)) {
+            if (isFileSystem() && !isSpecial()) {
+                return super.compareTo(file2);
+            } else {
+                return -1; // Non-file shellfolders sort before files
+            }
+        }
+        return Win32ShellFolderManager2.compareShellFolders(this, (Win32ShellFolder2) file2);
+    }
+
+    // native constants from commctrl.h
+    private static final int LVCFMT_LEFT = 0;
+    private static final int LVCFMT_RIGHT = 1;
+    private static final int LVCFMT_CENTER = 2;
+
+    public ShellFolderColumnInfo[] getFolderColumns() {
+        ShellFolder library = resolveLibrary();
+        if (library != null) return library.getFolderColumns();
+        return invoke(new Callable<ShellFolderColumnInfo[]>() {
+            public ShellFolderColumnInfo[] call() {
+                ShellFolderColumnInfo[] columns = doGetColumnInfo(getIShellFolder());
+
+                if (columns != null) {
+                    List<ShellFolderColumnInfo> notNullColumns =
+                            new ArrayList<ShellFolderColumnInfo>();
+                    for (int i = 0; i < columns.length; i++) {
+                        ShellFolderColumnInfo column = columns[i];
+                        if (column != null) {
+                            column.setAlignment(column.getAlignment() == LVCFMT_RIGHT
+                                    ? SwingConstants.RIGHT
+                                    : column.getAlignment() == LVCFMT_CENTER
+                                    ? SwingConstants.CENTER
+                                    : SwingConstants.LEADING);
+
+                            column.setComparator(new ColumnComparator(Win32ShellFolder2.this, i));
+
+                            notNullColumns.add(column);
+                        }
+                    }
+                    columns = new ShellFolderColumnInfo[notNullColumns.size()];
+                    notNullColumns.toArray(columns);
+                }
+                return columns;
+            }
+        });
+    }
+
+    public Object getFolderColumnValue(final int column) {
+        if(!isLibrary()) {
+            ShellFolder library = resolveLibrary();
+            if (library != null) return library.getFolderColumnValue(column);
+        }
+        return invoke(new Callable<Object>() {
+            public Object call() {
+                return doGetColumnValue(getParentIShellFolder(), getRelativePIDL(), column);
+            }
+        });
+    }
+
+    boolean isLibrary() {
+        return isLib;
+    }
+
+    private ShellFolder resolveLibrary() {
+        for (ShellFolder f = this; f != null; f = f.parent) {
+            if (!f.isFileSystem()) {
+                if (f instanceof Win32ShellFolder2 &&
+                                           ((Win32ShellFolder2)f).isLibrary()) {
+                    try {
+                        return getShellFolder(new File(getPath()));
+                    } catch (FileNotFoundException e) {
+                    }
+                }
+                break;
+            }
+        }
+        return null;
+    }
+
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private native ShellFolderColumnInfo[] doGetColumnInfo(long iShellFolder2);
+
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private native Object doGetColumnValue(long parentIShellFolder2, long childPIDL, int columnIdx);
+
+    // NOTE: this method uses COM and must be called on the 'COM thread'. See ComInvoker for the details
+    private static native int compareIDsByColumn(long pParentIShellFolder, long pidl1, long pidl2, int columnIdx);
+
+
+    public void sortChildren(final List<? extends File> files) {
+        // To avoid loads of synchronizations with Invoker and improve performance we
+        // synchronize the whole code of the sort method once
+        invoke(new Callable<Void>() {
+            public Void call() {
+                files.sort(new ColumnCo
