@@ -104,4 +104,42 @@ public class PatchModuleClassList {
             "PatchModuleMain", PLATFORM_CLASS.replace('/', '.'));
         OutputAnalyzer oa2 = new OutputAnalyzer(pb.start());
         oa2.shouldContain("I pass too!");
-        oa2.shouldHaveExitValue(0
+        oa2.shouldHaveExitValue(0);
+
+        // check the generated classlist file
+        content = new String(Files.readAllBytes(Paths.get(classList)));
+        if (content.indexOf(PLATFORM_CLASS) >= 0) {
+            throw new RuntimeException(PLATFORM_CLASS + " should not be in the classlist");
+        }
+
+        // Case 3. A class to be loaded from the bootclasspath/a
+
+        // Create a simple class file
+        source = "public class Hello { "                         +
+                 "    public static void main(String args[]) { " +
+                 "        System.out.println(\"Hello\"); "       +
+                 "    } "                                        +
+                 "}";
+
+        ClassFileInstaller.writeClassToDisk("Hello",
+             InMemoryJavaCompiler.compile("Hello", source),
+             System.getProperty("test.classes"));
+
+        // Build hello.jar
+        BasicJarBuilder.build("hello", "Hello");
+        moduleJar = BasicJarBuilder.getTestJar("hello.jar");
+
+        classList = "hello.list";
+        pb = ProcessTools.createTestJvm(
+            "-XX:DumpLoadedClassList=" + classList,
+            "-Xbootclasspath/a:" + moduleJar,
+            "Hello");
+        new OutputAnalyzer(pb.start()).shouldHaveExitValue(0);
+
+        // check the generated classlist file
+        content = new String(Files.readAllBytes(Paths.get(classList)));
+        if (content.indexOf("Hello") < 0) {
+            throw new RuntimeException("Hello should be in the classlist");
+        }
+    }
+}
