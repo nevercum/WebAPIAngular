@@ -118,4 +118,32 @@ class ProtectedMemberAccess2 {
     int z = lx.spm();                           // illegal
 
     int i = x.pi;                               // illegal
-    int j = x.spi; 
+    int j = x.spi;                              // illegal
+
+    int n = sx.pi;                              // illegal
+    int m = sx.spi;                             // illegal
+
+    int k = lx.pi;                              // illegal
+    int l = lx.spi;                             // illegal
+
+    pkg.SuperClass.pC  obj1;                    // illegal
+    pkg.SuperClass.spC obj2;                    // illegal
+
+    pkg.SuperClass.pI  obj3;                    // illegal
+    pkg.SuperClass.spI obj4;                    // illegal
+
+    Object o1 = (pkg.SuperClass.pC) null;       // illegal
+    Object o2 = (pkg.SuperClass.spC) null;      // illegal
+
+    Object o3 = (pkg.SuperClass.pI) null;       // illegal
+    Object o4 = (pkg.SuperClass.spI) null;      // illegal
+
+    class C1 extends pkg.SuperClass.pC {}       // illegal
+    class C2 extends pkg.SuperClass.spC {}      // illegal
+
+    //interface I1 extends pkg.SuperClass.pI {}
+    //interface I2 extends pkg.SuperClass.spI {}
+
+  }
+
+}
