@@ -257,4 +257,177 @@ public class setvalue001 {
                             byte bt2 = btv2.value();
 
                             objRef.setValue(fsbt1, btv2);
-       
+                            objRef.setValue(fsbt2, btv1);
+
+                            btv1 = (ByteValue) objRef.getValue(fsbt1);
+                            if (btv1.value() != bt2) {
+                                log3("ERROR: getValue(fsbt1) != bt2");
+                                testExitCode = FAILED;
+                            }
+                            btv2 = (ByteValue) objRef.getValue(fsbt2);
+                            if (btv2.value() != bt1) {
+                                log3("ERROR: getValue(fsbt2) != bt1");
+                                testExitCode = FAILED;
+                            }
+                            break;
+
+                    case 2:
+                            log2("      checking up on char");
+
+                            CharValue chv1 = (CharValue) objRef.getValue(fsch1);
+                            CharValue chv2 = (CharValue) objRef.getValue(fsch2);
+
+                            char ch1 = chv1.value();
+                            char ch2 = chv2.value();
+
+                            objRef.setValue(fsch1, chv2);
+                            objRef.setValue(fsch2, chv1);
+
+                            chv1 = (CharValue) objRef.getValue(fsch1);
+                            if (chv1.value() != ch2) {
+                                log3("ERROR: getValue(fsch1) != ch2");
+                                testExitCode = FAILED;
+                            }
+                            chv2 = (CharValue) objRef.getValue(fsch2);
+                            if (chv2.value() != ch1) {
+                                log3("ERROR: getValue(fsch2) != ch1");
+                                testExitCode = FAILED;
+                            }
+                            break;
+
+                    case 3:
+                            log2("      checking up on double");
+
+                            DoubleValue dbv1 = (DoubleValue) objRef.getValue(fsdb1);
+                            DoubleValue dbv2 = (DoubleValue) objRef.getValue(fsdb2);
+
+                            double db1 = dbv1.value();
+                            double db2 = dbv2.value();
+
+                            objRef.setValue(fsdb1, dbv2);
+                            objRef.setValue(fsdb2, dbv1);
+
+                            dbv1 = (DoubleValue) objRef.getValue(fsdb1);
+                            if (dbv1.value() != db2) {
+                                log3("ERROR: getValue(fsdb1) != db2");
+                                testExitCode = FAILED;
+                            }
+                            dbv2 = (DoubleValue) objRef.getValue(fsdb2);
+                            if (dbv2.value() != db1) {
+                                log3("ERROR: getValue(fsdb2) != db1");
+                                testExitCode = FAILED;
+                            }
+                            break;
+
+                    case 4:
+                            log2("      checking up on float");
+
+                            FloatValue flv1 = (FloatValue) objRef.getValue(fsfl1);
+                            FloatValue flv2 = (FloatValue) objRef.getValue(fsfl2);
+
+                            float fl1 = flv1.value();
+                            float fl2 = flv2.value();
+
+                            objRef.setValue(fsfl1, flv2);
+                            objRef.setValue(fsfl2, flv1);
+
+                            flv1 = (FloatValue) objRef.getValue(fsfl1);
+                            if (flv1.value() != fl2) {
+                                log3("ERROR: getValue(fsfl1) != fl2");
+                                testExitCode = FAILED;
+                            }
+                            flv2 = (FloatValue) objRef.getValue(fsfl2);
+                            if (flv2.value() != fl1) {
+                                log3("ERROR: getValue(fsfl2) != fl1");
+                                testExitCode = FAILED;
+                            }
+                            break;
+
+                    case 5:
+                            log2("      checking up on int");
+
+                            IntegerValue inv1 = (IntegerValue) objRef.getValue(fsin1);
+                            IntegerValue inv2 = (IntegerValue) objRef.getValue(fsin2);
+
+                            int in1 = inv1.value();
+                            int in2 = inv2.value();
+
+                            objRef.setValue(fsin1, inv2);
+                            objRef.setValue(fsin2, inv1);
+
+                            inv1 = (IntegerValue) objRef.getValue(fsin1);
+                            if (inv1.value() != in2) {
+                                log3("ERROR: getValue(fsin1) != in2");
+                                testExitCode = FAILED;
+                            }
+                            inv2 = (IntegerValue) objRef.getValue(fsin2);
+                            if (inv2.value() != in1) {
+                                log3("ERROR: getValue(fsin2) != in1");
+                                testExitCode = FAILED;
+                            }
+                            break;
+
+                    case 6:
+                            log2("      checking up on long");
+
+                            LongValue lnv1 = (LongValue) objRef.getValue(fsln1);
+                            LongValue lnv2 = (LongValue) objRef.getValue(fsln2);
+
+                            long ln1 = lnv1.value();
+                            long ln2 = lnv2.value();
+
+                            objRef.setValue(fsln1, lnv2);
+                            objRef.setValue(fsln2, lnv1);
+
+                            lnv1 = (LongValue) objRef.getValue(fsln1);
+                            if (lnv1.value() != ln2) {
+                                log3("ERROR: getValue(fsln1) != ln2");
+                                testExitCode = FAILED;
+                            }
+                            lnv2 = (LongValue) objRef.getValue(fsln2);
+                            if (lnv2.value() != ln1) {
+                                log3("ERROR: getValue(fsln2) != ln1");
+                                testExitCode = FAILED;
+                            }
+                            break;
+
+                    case 7:
+                            log2("      checking up on short");
+
+                            ShortValue shv1 = (ShortValue) objRef.getValue(fssh1);
+                            ShortValue shv2 = (ShortValue) objRef.getValue(fssh2);
+
+                            short sh1 = shv1.value();
+                            short sh2 = shv2.value();
+
+                            objRef.setValue(fssh1, shv2);
+                            objRef.setValue(fssh2, shv1);
+
+                            shv1 = (ShortValue) objRef.getValue(fssh1);
+                            if (shv1.value() != sh2) {
+                                log3("ERROR: getValue(fssh1) != sh2");
+                                testExitCode = FAILED;
+                            }
+                            shv2 = (ShortValue) objRef.getValue(fssh2);
+                            if (shv2.value() != sh1) {
+                                log3("ERROR: getValue(fssh2) != sh1");
+                                testExitCode = FAILED;
+                            }
+                            break;
+
+
+                  default : log3("ERROR: TEST ERROR:  case: default:");
+                            testExitCode = FAILED;
+                            break;
+
+                    }  // end of switch
+
+                } catch ( Exception e ) {
+                    log3("ERROR:  unexpected exception:  " + e);
+                    testExitCode = FAILED;
+                } // end of try
+
+            } // end of for
+
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
