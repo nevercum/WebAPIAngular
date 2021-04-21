@@ -147,4 +147,145 @@ public class ReproducibleJar {
                 .toLocalDateTime();
         System.out.format("Checking jar entries local date time for --date %s, is %s%n",
                 sourceDate, expectedLdt);
-        long sourceDateEpochMillis = TimeUnit.MILLISECONDS
+        long sourceDateEpochMillis = TimeUnit.MILLISECONDS.convert(
+                expectedLdt.toEpochSecond(ZoneId.systemDefault().getRules()
+                        .getOffset(expectedLdt)), TimeUnit.SECONDS);
+        checkFileTime(DIR_OUTER.lastModified(), sourceDateEpochMillis);
+        checkFileTime(DIR_INNER.lastModified(), sourceDateEpochMillis);
+        checkFileTime(FILE_INNER.lastModified(), sourceDateEpochMillis);
+    }
+
+    /**
+     * Test jar tool with various invalid --date <timestamps>
+     */
+    @Test(dataProvider = "invalidSourceDates")
+    public void testInvalidSourceDate(String sourceDate) {
+        // Negative Tests --date out of range or wrong format source date
+        Assert.assertNotEquals(JAR_TOOL.run(System.out, System.err,
+                "--create",
+                "--file", JAR_FILE_SOURCE_DATE1.getName(),
+                "--date", sourceDate,
+                DIR_OUTER.getName()), 0);
+    }
+
+    /**
+     * Test jar produces deterministic reproducible output
+     */
+    @Test(dataProvider = "validSourceDates")
+    public void testJarsReproducible(String sourceDate) throws IOException {
+        // Test jars are reproducible across timezones
+        TimeZone tzAsia = TimeZone.getTimeZone("Asia/Shanghai");
+        TimeZone tzLA = TimeZone.getTimeZone("America/Los_Angeles");
+        TimeZone.setDefault(tzAsia);
+        Assert.assertEquals(JAR_TOOL.run(System.out, System.err,
+                "--create",
+                "--file", JAR_FILE_SOURCE_DATE1.getName(),
+                "--date", sourceDate,
+                DIR_OUTER.getName()), 0);
+        Assert.assertTrue(JAR_FILE_SOURCE_DATE1.exists());
+
+        try {
+            // Sleep 5 seconds to ensure jar timestamps might be different if they could be
+            Thread.sleep(5000);
+        } catch (InterruptedException ex) {
+        }
+
+        TimeZone.setDefault(tzLA);
+        Assert.assertEquals(JAR_TOOL.run(System.out, System.err,
+                "--create",
+                "--file", JAR_FILE_SOURCE_DATE2.getName(),
+                "--date", sourceDate,
+                DIR_OUTER.getName()), 0);
+        Assert.assertTrue(JAR_FILE_SOURCE_DATE2.exists());
+
+        // Check jars are identical
+        Assert.assertEquals(Files.readAllBytes(JAR_FILE_SOURCE_DATE1.toPath()),
+                Files.readAllBytes(JAR_FILE_SOURCE_DATE2.toPath()));
+    }
+
+    /**
+     * Create the standard directory structure used by the test:
+     * outer/
+     * inner/
+     * foo.txt
+     */
+    static void createOuterInnerDirs() throws IOException {
+        Assert.assertTrue(DIR_OUTER.mkdir());
+        Assert.assertTrue(DIR_INNER.mkdir());
+        try (PrintWriter pw = new PrintWriter(FILE_INNER)) {
+            pw.println("hello, world");
+        }
+        Assert.assertTrue(DIR_OUTER.exists());
+        Assert.assertTrue(DIR_INNER.exists());
+        Assert.assertTrue(FILE_INNER.exists());
+    }
+
+    /**
+     * Check the extracted and original millis since Epoch file times are
+     * within the zip precision time period.
+     */
+    static void checkFileTime(long now, long original) {
+        if (isTimeSettingChanged()) {
+            return;
+        }
+
+        if (Math.abs(now - original) > PRECISION) {
+            // If original time is after UNIX 2038 32bit rollover
+            // and the now time is exactly the rollover time, then assume
+            // running on a file system that only supports to 2038 (e.g.XFS) and pass test
+            if (FileTime.fromMillis(original).toInstant().isAfter(UNIX_2038_ROLLOVER) &&
+                    FileTime.fromMillis(now).toInstant().equals(UNIX_2038_ROLLOVER)) {
+                System.out.println("Checking file time after Unix 2038 rollover," +
+                        " and extracted file time is " + UNIX_2038_ROLLOVER_TIME + ", " +
+                        " Assuming restricted file system, pass file time check.");
+            } else {
+                throw new AssertionError("checkFileTime failed," +
+                        " extracted to " + FileTime.fromMillis(now) +
+                        ", expected to be close to " + FileTime.fromMillis(original));
+            }
+        }
+    }
+
+    /**
+     * Has the timezone or DST changed during the test?
+     */
+    private static boolean isTimeSettingChanged() {
+        TimeZone currentTZ = TimeZone.getDefault();
+        boolean currentDST = currentTZ.inDaylightTime(new Date());
+        if (!currentTZ.equals(TZ) || currentDST != DST) {
+            System.out.println("Timezone or DST has changed during " +
+                    "ReproducibleJar testcase execution. Test skipped");
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Is the Zone currently within the transition change period?
+     */
+    private static boolean isInTransition() {
+        var inTransition = false;
+        var date = new Date();
+        var defZone = ZoneId.systemDefault();
+        if (defZone.getRules().getTransition(
+                date.toInstant().atZone(defZone).toLocalDateTime()) != null) {
+            System.out.println("ReproducibleJar testcase being run during Zone offset transition.  Test skipped.");
+            inTransition = true;
+        }
+        return inTransition;
+    }
+
+    /**
+     * Remove the directory and its contents
+     */
+    static void cleanup(File dir) {
+        File[] x = dir.listFiles();
+        if (x != null) {
+            for (File f : x) {
+                f.delete();
+            }
+        }
+        dir.delete();
+    }
+}
