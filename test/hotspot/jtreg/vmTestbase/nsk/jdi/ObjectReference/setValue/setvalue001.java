@@ -430,4 +430,29 @@ public class setvalue001 {
             } // end of for
 
             //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
+        }
+        log1("      TESTING ENDS");
+
+    //--------------------------------------------------   test summary section
+    //-------------------------------------------------    standard end section
+
+        pipe.println("quit");
+        log2("waiting for the debuggee to finish ...");
+        debuggee.waitFor();
+
+        int status = debuggee.getStatus();
+        if (status != PASSED + PASS_BASE) {
+            log3("debuggee returned UNEXPECTED exit status: " +
+                    status + " != PASS_BASE");
+            testExitCode = FAILED;
+        } else {
+            log2("debuggee returned expected exit status: " +
+                    status + " == PASS_BASE");
+        }
+
+        if (testExitCode != PASSED) {
+            logHandler.complain("TEST FAILED");
+        }
+        return testExitCode;
+    }
+}
