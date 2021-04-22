@@ -145,4 +145,8 @@ public class Test7177917 {
         m_exp(warmup_values);
       }
 
-      // test
+      // test pow perf again
+      System.out.println("==> EXP " + m_exp(values));
+    }
+  }
+}
