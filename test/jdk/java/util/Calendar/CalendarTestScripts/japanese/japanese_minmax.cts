@@ -185,4 +185,152 @@ test Actual max WEEK_OF_MONTH
 	clear all
 	set date Taisho 15 Dec 1
 	check actualmax week_of_month 5
-	set
+	set date Showa 1 Dec 25
+	check actualmax week_of_month 5
+
+	clear all
+	set date Showa 64 Jan 1
+	check actualmax week_of_month 5
+	set date Heisei 1 Jan 8
+	check actualmax week_of_month 5
+
+	clear all
+	set date Heisei 31 Apr 30
+	check actualmax week_of_month 5
+	set date Reiwa 1 May 1
+	check actualmax week_of_month 5
+
+    use tokyocal
+	set date Reiwa $maxyear Jan 1
+	# the last date of Reiwa is R292276976.08.17T16:12:55.807+0900 (Sunday)	
+	# The year is equivalent to 2003 (Gregorian).
+	check actualmax week_of_month 4
+	
+test Actual max DAY_OF_WEEK_IN_MONTH
+    use jcal
+	clear all
+	set date Meiji 45 Jul 1
+	check actualmax week_of_month 5
+	set date Taisho 1 Jul 31
+	check actualmax week_of_month 5
+
+	clear all
+	set date Taisho 15 Dec 1
+	check actualmax week_of_month 5
+	set date Showa 1 Dec 25
+	check actualmax week_of_month 5
+
+	clear all
+	set date Showa 64 Jan 1
+	check actualmax week_of_month 5
+	set date Heisei 1 Jan 8
+	check actualmax week_of_month 5
+
+	clear all
+	set date Heisei 31 Apr 30
+	check actualmax week_of_month 5
+	set date Reiwa 1 May 1
+	check actualmax week_of_month 5
+
+    use tokyocal
+	clear all
+	set date Reiwa $maxyear Jan 1
+	# the last date of Reiwa is R292276976.08.17T16:12:55.807+0900 (Sunday)	
+	# The year is equivalent to 2003 (Gregorian).
+	check actualmax week_of_month 4
+
+test Actual max YEAR
+    use jcal
+	clear all
+	set date BeforeMeiji 1 Jan 1
+	check actualmax year 1867
+
+	set date Meiji 1 Jan 1
+	check actualmax year 45
+
+	set date Meiji 1 Jul 30
+	check actualmax year 44
+
+	set date Taisho 1 Jul 30
+	check actualmax year 15
+
+	set date Taisho 1 Dec 25
+	check actualmax year 14
+
+	set date Showa 2 Jan 1
+	check actualmax year 64
+
+	set date Showa 1 Dec 25
+	check actualmax year 63
+
+	set date Heisei 1 Jan 7
+	check actualmax year 64 
+
+	set date Heisei 1 Aug 18
+	check actualmax year 30
+
+	set date Reiwa 1 Apr 30
+	check actualmax year 31
+
+	# Date/time beyond the last date in the max year.
+	set date Reiwa 1 Aug 18
+	check actualmax year 292276975
+	
+test Least max YEAR
+	set date Heisei 17 Mar 1
+	# Taisho is the shortest era, 14 years.
+	# (See above actual max YEAR case.)
+	check leastmax year 14
+
+test Acutual min YEAR
+	# Get minimum values for comparison
+	clear all
+	set era BeforeMeiji
+	get min year
+	assign $result $minyear
+	set date $minyear Dec 31
+	eval $minyear + 1
+	assign $result $minyear_plus_one
+
+	# BeforeMeiji 1 Dec 31 should exist in the minimum year which
+	# should be the same value as the getMinimum() value.
+	set date BeforeMeiji 1 Dec 31
+	check actualmin year $minyear
+
+	# Jan 1 shouldn't exist in the same year. So the actual minimum is
+	# $minyear + 1.
+	set date 1 Jan 1
+	check actualmin year $minyear_plus_one
+
+	# 1 should be returned if it's on a date of the last
+	# year which also exists in the first year of each era.
+	clear all
+	set date Meiji 45 Jan 1
+	check actualmin year 1
+
+	clear all
+	set date Taisho 14 Jul 30
+	check actualmin year 1
+
+	clear all
+	set date Showa 60 Dec 25
+	check actualmin year 1
+
+	clear all
+	set date Heisei 17 Jan 8
+	check actualmin year 1
+
+	# 2 should be returned if it's on a date of the last year which
+	# doesn't exist in the first year of each era. (Meiji is an
+	# exception.)
+	clear all
+	set date Taisho 14 Jul 29
+	check actualmin year 2
+
+	clear all
+	set date Showa 60 Dec 23
+	check actualmin year 2
+
+	clear all
+	set date Heisei 17 Jan 7
+	check actualmin year 2
