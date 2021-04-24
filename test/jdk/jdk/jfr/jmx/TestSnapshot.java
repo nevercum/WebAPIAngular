@@ -50,4 +50,24 @@ public class TestSnapshot {
         try (Recording r = new Recording()) {
             r.enable(SimpleEvent.class);
             r.start();
-            SimpleEvent se = new SimpleEvent()
+            SimpleEvent se = new SimpleEvent();
+            se.commit();
+            r.stop();
+
+            try (Recording snapshot = FlightRecorder.getFlightRecorder().takeSnapshot()) {
+                r.close();
+                FlightRecorderMXBean mxBean = JmxHelper.getFlighteRecorderMXBean();
+                List<RecordingInfo> recs = mxBean.getRecordings();
+                JmxHelper.verifyEquals(recs.get(0), snapshot);
+            }
+        }
+    }
+
+    private static void testEmpty() throws IOException {
+        try (Recording snapshot = FlightRecorder.getFlightRecorder().takeSnapshot()) {
+            FlightRecorderMXBean mxBean = JmxHelper.getFlighteRecorderMXBean();
+            List<RecordingInfo> recs = mxBean.getRecordings();
+            JmxHelper.verifyEquals(recs.get(0), snapshot);
+        }
+    }
+}
