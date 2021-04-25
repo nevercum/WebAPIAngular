@@ -19,4 +19,12 @@ import jdk.internal.org.jline.reader.Completer;
  * @author <a href="mailto:jason@planet57.com">Jason Dillon</a>
  * @since 2.3
  */
-public class EnumCompleter extends StringsCompl
+public class EnumCompleter extends StringsCompleter
+{
+    public EnumCompleter(Class<? extends Enum<?>> source) {
+        Objects.requireNonNull(source);
+        for (Enum<?> n : source.getEnumConstants()) {
+            candidates.add(new Candidate(n.name().toLowerCase()));
+        }
+    }
+}
