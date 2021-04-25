@@ -239,4 +239,7 @@ public class Person {
         attrs.put(new BasicAttribute("userPassword", value));
     }
 
-  
+    public void setX121Address(String value) {
+        attrs.put(new BasicAttribute("x121Address", value));
+    }
+}
