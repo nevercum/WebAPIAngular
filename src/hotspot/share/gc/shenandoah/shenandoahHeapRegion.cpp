@@ -549,4 +549,140 @@ size_t ShenandoahHeapRegion::setup_sizes(size_t max_heap_size) {
 
   // Make sure region size and heap size are page aligned.
   // If large pages are used, we ensure that region size is aligned to large page size if
-  // heap size is
+  // heap size is large enough to accommodate minimal number of regions. Otherwise, we align
+  // region size to regular page size.
+
+  // Figure out page size to use, and aligns up heap to page size
+  size_t page_size = os::vm_page_size();
+  if (UseLargePages) {
+    size_t large_page_size = os::large_page_size();
+    max_heap_size = align_up(max_heap_size, large_page_size);
+    if ((max_heap_size / align_up(region_size, large_page_size)) >= MIN_NUM_REGIONS) {
+      page_size = large_page_size;
+    } else {
+      // Should have been checked during argument initialization
+      assert(!ShenandoahUncommit, "Uncommit requires region size aligns to large page size");
+    }
+  } else {
+    max_heap_size = align_up(max_heap_size, page_size);
+  }
+
+  // Align region size to page size
+  region_size = align_up(region_size, page_size);
+
+  int region_size_log = log2i(region_size);
+  // Recalculate the region size to make sure it's a power of
+  // 2. This means that region_size is the largest power of 2 that's
+  // <= what we've calculated so far.
+  region_size = size_t(1) << region_size_log;
+
+  // Now, set up the globals.
+  guarantee(RegionSizeBytesShift == 0, "we should only set it once");
+  RegionSizeBytesShift = (size_t)region_size_log;
+
+  guarantee(RegionSizeWordsShift == 0, "we should only set it once");
+  RegionSizeWordsShift = RegionSizeBytesShift - LogHeapWordSize;
+
+  guarantee(RegionSizeBytes == 0, "we should only set it once");
+  RegionSizeBytes = region_size;
+  RegionSizeWords = RegionSizeBytes >> LogHeapWordSize;
+  assert (RegionSizeWords*HeapWordSize == RegionSizeBytes, "sanity");
+
+  guarantee(RegionSizeWordsMask == 0, "we should only set it once");
+  RegionSizeWordsMask = RegionSizeWords - 1;
+
+  guarantee(RegionSizeBytesMask == 0, "we should only set it once");
+  RegionSizeBytesMask = RegionSizeBytes - 1;
+
+  guarantee(RegionCount == 0, "we should only set it once");
+  RegionCount = align_up(max_heap_size, RegionSizeBytes) / RegionSizeBytes;
+  guarantee(RegionCount >= MIN_NUM_REGIONS, "Should have at least minimum regions");
+
+  guarantee(HumongousThresholdWords == 0, "we should only set it once");
+  HumongousThresholdWords = RegionSizeWords * ShenandoahHumongousThreshold / 100;
+  HumongousThresholdWords = align_down(HumongousThresholdWords, MinObjAlignment);
+  assert (HumongousThresholdWords <= RegionSizeWords, "sanity");
+
+  guarantee(HumongousThresholdBytes == 0, "we should only set it once");
+  HumongousThresholdBytes = HumongousThresholdWords * HeapWordSize;
+  assert (HumongousThresholdBytes <= RegionSizeBytes, "sanity");
+
+  // The rationale for trimming the TLAB sizes has to do with the raciness in
+  // TLAB allocation machinery. It may happen that TLAB sizing policy polls Shenandoah
+  // about next free size, gets the answer for region #N, goes away for a while, then
+  // tries to allocate in region #N, and fail because some other thread have claimed part
+  // of the region #N, and then the freeset allocation code has to retire the region #N,
+  // before moving the allocation to region #N+1.
+  //
+  // The worst case realizes when "answer" is "region size", which means it could
+  // prematurely retire an entire region. Having smaller TLABs does not fix that
+  // completely, but reduces the probability of too wasteful region retirement.
+  // With current divisor, we will waste no more than 1/8 of region size in the worst
+  // case. This also has a secondary effect on collection set selection: even under
+  // the race, the regions would be at least 7/8 used, which allows relying on
+  // "used" - "live" for cset selection. Otherwise, we can get the fragmented region
+  // below the garbage threshold that would never be considered for collection.
+  //
+  // The whole thing is mitigated if Elastic TLABs are enabled.
+  //
+  guarantee(MaxTLABSizeWords == 0, "we should only set it once");
+  MaxTLABSizeWords = MIN2(ShenandoahElasticTLAB ? RegionSizeWords : (RegionSizeWords / 8), HumongousThresholdWords);
+  MaxTLABSizeWords = align_down(MaxTLABSizeWords, MinObjAlignment);
+
+  guarantee(MaxTLABSizeBytes == 0, "we should only set it once");
+  MaxTLABSizeBytes = MaxTLABSizeWords * HeapWordSize;
+  assert (MaxTLABSizeBytes > MinTLABSize, "should be larger");
+
+  return max_heap_size;
+}
+
+void ShenandoahHeapRegion::do_commit() {
+  ShenandoahHeap* heap = ShenandoahHeap::heap();
+  if (!heap->is_heap_region_special() && !os::commit_memory((char *) bottom(), RegionSizeBytes, false)) {
+    report_java_out_of_memory("Unable to commit region");
+  }
+  if (!heap->commit_bitmap_slice(this)) {
+    report_java_out_of_memory("Unable to commit bitmaps for region");
+  }
+  if (AlwaysPreTouch) {
+    os::pretouch_memory(bottom(), end(), heap->pretouch_heap_page_size());
+  }
+  heap->increase_committed(ShenandoahHeapRegion::region_size_bytes());
+}
+
+void ShenandoahHeapRegion::do_uncommit() {
+  ShenandoahHeap* heap = ShenandoahHeap::heap();
+  if (!heap->is_heap_region_special() && !os::uncommit_memory((char *) bottom(), RegionSizeBytes)) {
+    report_java_out_of_memory("Unable to uncommit region");
+  }
+  if (!heap->uncommit_bitmap_slice(this)) {
+    report_java_out_of_memory("Unable to uncommit bitmaps for region");
+  }
+  heap->decrease_committed(ShenandoahHeapRegion::region_size_bytes());
+}
+
+void ShenandoahHeapRegion::set_state(RegionState to) {
+  EventShenandoahHeapRegionStateChange evt;
+  if (evt.should_commit()){
+    evt.set_index((unsigned) index());
+    evt.set_start((uintptr_t)bottom());
+    evt.set_used(used());
+    evt.set_from(_state);
+    evt.set_to(to);
+    evt.commit();
+  }
+  _state = to;
+}
+
+void ShenandoahHeapRegion::record_pin() {
+  Atomic::add(&_critical_pins, (size_t)1);
+}
+
+void ShenandoahHeapRegion::record_unpin() {
+  assert(pin_count() > 0, "Region " SIZE_FORMAT " should have non-zero pins", index());
+  Atomic::sub(&_critical_pins, (size_t)1);
+}
+
+size_t ShenandoahHeapRegion::pin_count() const {
+  return Atomic::load(&_critical_pins);
+}
