@@ -391,4 +391,162 @@ void ShenandoahHeapRegion::oop_iterate(OopIterateClosure* blk) {
   }
 }
 
-void ShenandoahHeapRegion::
+void ShenandoahHeapRegion::oop_iterate_objects(OopIterateClosure* blk) {
+  assert(! is_humongous(), "no humongous region here");
+  HeapWord* obj_addr = bottom();
+  HeapWord* t = top();
+  // Could call objects iterate, but this is easier.
+  while (obj_addr < t) {
+    oop obj = cast_to_oop(obj_addr);
+    obj_addr += obj->oop_iterate_size(blk);
+  }
+}
+
+void ShenandoahHeapRegion::oop_iterate_humongous(OopIterateClosure* blk) {
+  assert(is_humongous(), "only humongous region here");
+  // Find head.
+  ShenandoahHeapRegion* r = humongous_start_region();
+  assert(r->is_humongous_start(), "need humongous head here");
+  oop obj = cast_to_oop(r->bottom());
+  obj->oop_iterate(blk, MemRegion(bottom(), top()));
+}
+
+ShenandoahHeapRegion* ShenandoahHeapRegion::humongous_start_region() const {
+  ShenandoahHeap* heap = ShenandoahHeap::heap();
+  assert(is_humongous(), "Must be a part of the humongous region");
+  size_t i = index();
+  ShenandoahHeapRegion* r = const_cast<ShenandoahHeapRegion*>(this);
+  while (!r->is_humongous_start()) {
+    assert(i > 0, "Sanity");
+    i--;
+    r = heap->get_region(i);
+    assert(r->is_humongous(), "Must be a part of the humongous region");
+  }
+  assert(r->is_humongous_start(), "Must be");
+  return r;
+}
+
+void ShenandoahHeapRegion::recycle() {
+  set_top(bottom());
+  clear_live_data();
+
+  reset_alloc_metadata();
+
+  ShenandoahHeap::heap()->marking_context()->reset_top_at_mark_start(this);
+  set_update_watermark(bottom());
+
+  make_empty();
+
+  if (ZapUnusedHeapArea) {
+    SpaceMangler::mangle_region(MemRegion(bottom(), end()));
+  }
+}
+
+HeapWord* ShenandoahHeapRegion::block_start(const void* p) const {
+  assert(MemRegion(bottom(), end()).contains(p),
+         "p (" PTR_FORMAT ") not in space [" PTR_FORMAT ", " PTR_FORMAT ")",
+         p2i(p), p2i(bottom()), p2i(end()));
+  if (p >= top()) {
+    return top();
+  } else {
+    HeapWord* last = bottom();
+    HeapWord* cur = last;
+    while (cur <= p) {
+      last = cur;
+      cur += cast_to_oop(cur)->size();
+    }
+    shenandoah_assert_correct(nullptr, cast_to_oop(last));
+    return last;
+  }
+}
+
+size_t ShenandoahHeapRegion::block_size(const HeapWord* p) const {
+  assert(MemRegion(bottom(), end()).contains(p),
+         "p (" PTR_FORMAT ") not in space [" PTR_FORMAT ", " PTR_FORMAT ")",
+         p2i(p), p2i(bottom()), p2i(end()));
+  if (p < top()) {
+    return cast_to_oop(p)->size();
+  } else {
+    assert(p == top(), "just checking");
+    return pointer_delta(end(), (HeapWord*) p);
+  }
+}
+
+size_t ShenandoahHeapRegion::setup_sizes(size_t max_heap_size) {
+  // Absolute minimums we should not ever break.
+  static const size_t MIN_REGION_SIZE = 256*K;
+
+  if (FLAG_IS_DEFAULT(ShenandoahMinRegionSize)) {
+    FLAG_SET_DEFAULT(ShenandoahMinRegionSize, MIN_REGION_SIZE);
+  }
+
+  size_t region_size;
+  if (FLAG_IS_DEFAULT(ShenandoahRegionSize)) {
+    if (ShenandoahMinRegionSize > max_heap_size / MIN_NUM_REGIONS) {
+      err_msg message("Max heap size (" SIZE_FORMAT "%s) is too low to afford the minimum number "
+                      "of regions (" SIZE_FORMAT ") of minimum region size (" SIZE_FORMAT "%s).",
+                      byte_size_in_proper_unit(max_heap_size), proper_unit_for_byte_size(max_heap_size),
+                      MIN_NUM_REGIONS,
+                      byte_size_in_proper_unit(ShenandoahMinRegionSize), proper_unit_for_byte_size(ShenandoahMinRegionSize));
+      vm_exit_during_initialization("Invalid -XX:ShenandoahMinRegionSize option", message);
+    }
+    if (ShenandoahMinRegionSize < MIN_REGION_SIZE) {
+      err_msg message("" SIZE_FORMAT "%s should not be lower than minimum region size (" SIZE_FORMAT "%s).",
+                      byte_size_in_proper_unit(ShenandoahMinRegionSize), proper_unit_for_byte_size(ShenandoahMinRegionSize),
+                      byte_size_in_proper_unit(MIN_REGION_SIZE),         proper_unit_for_byte_size(MIN_REGION_SIZE));
+      vm_exit_during_initialization("Invalid -XX:ShenandoahMinRegionSize option", message);
+    }
+    if (ShenandoahMinRegionSize < MinTLABSize) {
+      err_msg message("" SIZE_FORMAT "%s should not be lower than TLAB size size (" SIZE_FORMAT "%s).",
+                      byte_size_in_proper_unit(ShenandoahMinRegionSize), proper_unit_for_byte_size(ShenandoahMinRegionSize),
+                      byte_size_in_proper_unit(MinTLABSize),             proper_unit_for_byte_size(MinTLABSize));
+      vm_exit_during_initialization("Invalid -XX:ShenandoahMinRegionSize option", message);
+    }
+    if (ShenandoahMaxRegionSize < MIN_REGION_SIZE) {
+      err_msg message("" SIZE_FORMAT "%s should not be lower than min region size (" SIZE_FORMAT "%s).",
+                      byte_size_in_proper_unit(ShenandoahMaxRegionSize), proper_unit_for_byte_size(ShenandoahMaxRegionSize),
+                      byte_size_in_proper_unit(MIN_REGION_SIZE),         proper_unit_for_byte_size(MIN_REGION_SIZE));
+      vm_exit_during_initialization("Invalid -XX:ShenandoahMaxRegionSize option", message);
+    }
+    if (ShenandoahMinRegionSize > ShenandoahMaxRegionSize) {
+      err_msg message("Minimum (" SIZE_FORMAT "%s) should be larger than maximum (" SIZE_FORMAT "%s).",
+                      byte_size_in_proper_unit(ShenandoahMinRegionSize), proper_unit_for_byte_size(ShenandoahMinRegionSize),
+                      byte_size_in_proper_unit(ShenandoahMaxRegionSize), proper_unit_for_byte_size(ShenandoahMaxRegionSize));
+      vm_exit_during_initialization("Invalid -XX:ShenandoahMinRegionSize or -XX:ShenandoahMaxRegionSize", message);
+    }
+
+    // We rapidly expand to max_heap_size in most scenarios, so that is the measure
+    // for usual heap sizes. Do not depend on initial_heap_size here.
+    region_size = max_heap_size / ShenandoahTargetNumRegions;
+
+    // Now make sure that we don't go over or under our limits.
+    region_size = MAX2(ShenandoahMinRegionSize, region_size);
+    region_size = MIN2(ShenandoahMaxRegionSize, region_size);
+
+  } else {
+    if (ShenandoahRegionSize > max_heap_size / MIN_NUM_REGIONS) {
+      err_msg message("Max heap size (" SIZE_FORMAT "%s) is too low to afford the minimum number "
+                              "of regions (" SIZE_FORMAT ") of requested size (" SIZE_FORMAT "%s).",
+                      byte_size_in_proper_unit(max_heap_size), proper_unit_for_byte_size(max_heap_size),
+                      MIN_NUM_REGIONS,
+                      byte_size_in_proper_unit(ShenandoahRegionSize), proper_unit_for_byte_size(ShenandoahRegionSize));
+      vm_exit_during_initialization("Invalid -XX:ShenandoahRegionSize option", message);
+    }
+    if (ShenandoahRegionSize < ShenandoahMinRegionSize) {
+      err_msg message("Heap region size (" SIZE_FORMAT "%s) should be larger than min region size (" SIZE_FORMAT "%s).",
+                      byte_size_in_proper_unit(ShenandoahRegionSize), proper_unit_for_byte_size(ShenandoahRegionSize),
+                      byte_size_in_proper_unit(ShenandoahMinRegionSize),  proper_unit_for_byte_size(ShenandoahMinRegionSize));
+      vm_exit_during_initialization("Invalid -XX:ShenandoahRegionSize option", message);
+    }
+    if (ShenandoahRegionSize > ShenandoahMaxRegionSize) {
+      err_msg message("Heap region size (" SIZE_FORMAT "%s) should be lower than max region size (" SIZE_FORMAT "%s).",
+                      byte_size_in_proper_unit(ShenandoahRegionSize), proper_unit_for_byte_size(ShenandoahRegionSize),
+                      byte_size_in_proper_unit(ShenandoahMaxRegionSize),  proper_unit_for_byte_size(ShenandoahMaxRegionSize));
+      vm_exit_during_initialization("Invalid -XX:ShenandoahRegionSize option", message);
+    }
+    region_size = ShenandoahRegionSize;
+  }
+
+  // Make sure region size and heap size are page aligned.
+  // If large pages are used, we ensure that region size is aligned to large page size if
+  // heap size is
