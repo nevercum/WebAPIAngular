@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,28 +21,26 @@
  * questions.
  */
 
-package jdk.jfr.event.gc.collection;
-import jdk.test.lib.jfr.GCHelper;
 
-/**
+/*
  * @test
- * @key jfr
- * @requires vm.hasJFR
+ * @key randomness
  *
- * @requires vm.gc == "G1" | vm.gc == null
- * @requires vm.opt.ExplicitGCInvokesConcurrent != false
- * @library /test/lib /test/jdk
+ * @summary converted from VM Testbase nsk/monitoring/ThreadMXBean/GetThreadAllocatedBytes/illegalArgumentsTest_server_default.
+ * VM Testbase keywords: [quick, monitoring, feature_memory_alloc]
+ * VM Testbase readme:
+ * DESCRIPTION
+ *     This test executes IllegalArgumentsTest
+ *     For more info please refer to IllegalArgumentsTest.README
+ *     Test configuration:
+ *     Access to management metrics via default MBean server
+ * COMMENTS
  *
- * @run driver jdk.jfr.event.gc.collection.TestGCCauseWithG1ConcurrentMark
+ * @library /vmTestbase
+ *          /test/lib
+ * @run main/othervm
+ *      nsk.monitoring.ThreadMXBean.GetThreadAllocatedBytes.IllegalArgumentsTest
+ *      -testMode=server
+ *      -MBeanServer=default
  */
-public class TestGCCauseWithG1ConcurrentMark {
-    public static void main(String[] args) throws Exception {
-        String testID = "G1ConcurrentMark";
-        String[] vmFlags = {"-XX:+UseG1GC", "-XX:+ExplicitGCInvokesConcurrent"};
-        String[] gcNames = {GCHelper.gcG1New, GCHelper.gcG1Old, GCHelper.gcG1Full};
-        String[] gcCauses = {"Metadata GC Threshold", "GCLocker Initiated GC", "G1 Evacuation Pause", "G1 Preventive Collection",
-                             "G1 Compaction Pause", "System.gc()"};
-        GCGarbageCollectionUtil.test(testID, vmFlags, gcNames, gcCauses);
-    }
-}
 
