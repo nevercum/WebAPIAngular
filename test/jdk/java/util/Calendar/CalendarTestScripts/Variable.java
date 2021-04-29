@@ -52,4 +52,25 @@ public class Variable {
     }
 
     public void setValue(int v) { value = v; }
-    public 
+    public void setValue(long v) { value = v; }
+
+    // static methods
+
+    public static Variable newVar(String name, long value) {
+        if (name.charAt(0) != '$') {
+            throw new RuntimeException("wrong var name: " + name);
+        }
+        String s = name.toLowerCase(Locale.ROOT);
+        Variable v = new Variable(name, value);
+        put(name, v);
+        return v;
+    }
+
+    static void put(String s, Variable var) {
+        vars.put(s, var);
+    }
+
+    public static Variable get(String name) {
+        return vars.get(name);
+    }
+}
