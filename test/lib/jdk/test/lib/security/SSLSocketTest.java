@@ -751,4 +751,139 @@ public abstract class SSLSocketTest {
     private static final boolean separateServerThread = false;
 
     /*
-     * Boot up the testing, used to drive remai
+     * Boot up the testing, used to drive remainder of the test.
+     */
+    private void bootup() throws Exception {
+        Exception startException = null;
+        try {
+            if (separateServerThread) {
+                startServer(true);
+                startClient(false);
+            } else {
+                startClient(true);
+                startServer(false);
+            }
+        } catch (Exception e) {
+            startException = e;
+        }
+
+        /*
+         * Wait for other side to close down.
+         */
+        if (separateServerThread) {
+            if (serverThread != null) {
+                serverThread.join();
+            }
+        } else {
+            if (clientThread != null) {
+                clientThread.join();
+            }
+        }
+
+        /*
+         * When we get here, the test is pretty much over.
+         * Which side threw the error?
+         */
+        Exception local;
+        Exception remote;
+
+        if (separateServerThread) {
+            remote = serverException;
+            local = clientException;
+        } else {
+            remote = clientException;
+            local = serverException;
+        }
+
+        Exception exception = null;
+
+        /*
+         * Check various exception conditions.
+         */
+        if ((local != null) && (remote != null)) {
+            // If both failed, return the curthread's exception.
+            local.initCause(remote);
+            exception = local;
+        } else if (local != null) {
+            exception = local;
+        } else if (remote != null) {
+            exception = remote;
+        } else if (startException != null) {
+            exception = startException;
+        }
+
+        /*
+         * If there was an exception *AND* a startException,
+         * output it.
+         */
+        if (exception != null) {
+            if (exception != startException && startException != null) {
+                exception.addSuppressed(startException);
+            }
+            throw exception;
+        }
+
+        // Fall-through: no exception to throw!
+    }
+
+    private void startServer(boolean newThread) throws Exception {
+        if (newThread) {
+            serverThread = new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        doServerSide();
+                    } catch (Exception e) {
+                        /*
+                         * Our server thread just died.
+                         *
+                         * Release the client, if not active already...
+                         */
+                        logException("Server died", e);
+                        serverException = e;
+                    }
+                }
+            };
+            serverThread.start();
+        } else {
+            try {
+                doServerSide();
+            } catch (Exception e) {
+                logException("Server failed", e);
+                serverException = e;
+            }
+        }
+    }
+
+    private void startClient(boolean newThread) throws Exception {
+        if (newThread) {
+            clientThread = new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        doClientSide();
+                    } catch (Exception e) {
+                        /*
+                         * Our client thread just died.
+                         */
+                        logException("Client died", e);
+                        clientException = e;
+                    }
+                }
+            };
+            clientThread.start();
+        } else {
+            try {
+                doClientSide();
+            } catch (Exception e) {
+                logException("Client failed", e);
+                clientException = e;
+            }
+        }
+    }
+
+    private synchronized void logException(String prefix, Throwable cause) {
+        System.out.println(prefix + ": " + cause);
+        cause.printStackTrace(System.out);
+    }
+}
