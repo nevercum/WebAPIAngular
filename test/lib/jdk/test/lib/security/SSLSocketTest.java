@@ -574,4 +574,181 @@ public abstract class SSLSocketTest {
         "cOC0oqGfabvaE3nr8aQ8oaSC4/k1FLWphhX8QWR3JAw5XwnUzsdqJxJ+3g4vp4qN\n" +
         "OuCj3f6QeT62/QNzpylUGdqVfdOisbxAjoFwePVdB3vygCUAL7+MXilzSbCLS6fj\n" +
         "2R0r2BF9AgMBAAECggEASIkPkMCuw4WdTT44IwERus3IOIYOs2IP3BgEDyyvm4B6\n" +
-        "JP/iihDWKfA4zE
+        "JP/iihDWKfA4zEl1Gqcni1RXMHswSglXra682J4kui02Ov+vzEeJIY37Ibn2YnP5\n" +
+        "ZjRT2s9GtI/S2o4hl8A/mQb2IMViFC+xKehTukhV4j5d6NPKk0XzLR7gcMjnYxwn\n" +
+        "l21fS6D2oM1xRG/di7sL+uLF8EXLRzfiWDNi12uQv4nwtxPKvuKhH6yzHt7YqMH0\n" +
+        "46pmDKDaxV4w1JdycjCb6NrCJOYZygoQobuZqOQ30UZoZsPJrtovkncFr1e+lNcO\n" +
+        "+aWDfOLCtTH046dEQh5oCShyXMybNlry/QHsOtHOwQKBgQDh2iIjs+FPpQy7Z3EX\n" +
+        "DGEvHYqPjrYO9an2KSRr1m9gzRlWYxKY46WmPKwjMerYtra0GP+TBHrgxsfO8tD2\n" +
+        "wUAII6sd1qup0a/Sutgf2JxVilLykd0+Ge4/Cs51tCdJ8EqDV2B6WhTewOY2EGvg\n" +
+        "JiKYkeNwgRX/9M9CFSAMAk0hUQKBgQDLJAartL3DoGUPjYtpJnfgGM23yAGl6G5r\n" +
+        "NSXDn80BiYIC1p0bG3N0xm3yAjqOtJAUj9jZbvDNbCe3GJfLARMr23legX4tRrgZ\n" +
+        "nEdKnAFKAKL01oM+A5/lHdkwaZI9yyv+hgSVdYzUjB8rDmzeVQzo1BT7vXypt2yV\n" +
+        "6O1OnUpCbQKBgA/0rzDChopv6KRcvHqaX0tK1P0rYeVQqb9ATNhpf9jg5Idb3HZ8\n" +
+        "rrk91BNwdVz2G5ZBpdynFl9G69rNAMJOCM4KZw5mmh4XOEq09Ivba8AHU7DbaTv3\n" +
+        "7QL7KnbaUWRB26HHzIMYVh0el6T+KADf8NXCiMTr+bfpfbL3dxoiF3zhAoGAbCJD\n" +
+        "Qse1dBs/cKYCHfkSOsI5T6kx52Tw0jS6Y4X/FOBjyqr/elyEexbdk8PH9Ar931Qr\n" +
+        "NKMvn8oA4iA/PRrXX7M2yi3YQrWwbkGYWYjtzrzEAdzmg+5eARKAeJrZ8/bg9l3U\n" +
+        "ttKaItJsDPlizn8rngy3FsJpR9aSAMK6/+wOiYkCgYEA1tZkI1rD1W9NYZtbI9BE\n" +
+        "qlJVFi2PBOJMKNuWdouPX3HLQ72GJSQff2BFzLTELjweVVJ0SvY4IipzpQOHQOBy\n" +
+        "5qh/p6izXJZh3IHtvwVBjHoEVplg1b2+I5e3jDCfqnwcQw82dW5SxOJMg1h/BD0I\n" +
+        "qAL3go42DYeYhu/WnECMeis=",
+
+        //
+        // EC private key related to cert endEntityCertStrs[2].
+        //
+        "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgGVc7hICpmp91jbYe\n" +
+        "nrr8nYHD37RZP3VENY+szuA7WjuhRANCAATn0wRE1OVVnV56mzxnc657lmSBB0+0\n" +
+        "P5YgTq2Pc9sgqnEY8PG980/3n0DJCMQr96FZBWsIyY2gSQjNj4ggGAHT",
+
+        //
+        // DSA private key related to cert endEntityCertStrs[3].
+        //
+        "MIICZQIBADCCAjoGByqGSM44BAEwggItAoIBAQCaVq+CgmsxyOpZFVwMTZ2ZYA9E\n" +
+        "SCfNC+d4QN5/rxymsPONLC86zlB4XLHvmJtp2jV7qM7+tbWmsIZYcMPWgD9Ofg+T\n" +
+        "e+7SdTHO+XWoBNz5olulRTk6nRu+notsKxBCyVX0V5GHsRvts/qClz+QcIHMSALV\n" +
+        "UIrumtxxdbL63pIw4ds0PeH5RtyR9JpS5pWxUk1MPUPoYSV9GPg2bPUEY99Ji8qi\n" +
+        "vA1kRTeBfAWC0OgBwbHu1zIKUukMd+pF/D/vKKovJ6I/sPiGXmUw2i4lYOUB0wWn\n" +
+        "QUyBLez1UMWKchyvpW0FYxMbv7j5zMcAH7d++vCWo3OEGfe4Uet6Q3/Dx83HAiEA\n" +
+        "mjtJp7XNrsgxbRDqETkHhv6zYH8Voo+gDgSO1m7XcH0CggEBAI5moswp++plZSBP\n" +
+        "Q9DdCNHt0AV13Toj1jf5M5DNmTX6P6/D/oRfi8Ui1fiCKFv+7lD0J2anCFUaLtu+\n" +
+        "j7v78gp5OChDp/n49K6DtKtZZRDmw/Bpm6LNdknmdN5kO5wVzbIXHTCCeNs/CJTF\n" +
+        "mSU5PvEaI4y3M5NraSgLPkq4gEv7/A8orGbKmj1Whj3F9t1Tosxdm/+WkPldMz2t\n" +
+        "gev+9RM2S6S9XoembRgwRaFVkpQmKoKpOoZcdqV47FLDq5BYH/5POeJ9wLuAHjxQ\n" +
+        "5CMKo4p/lW7BCd4kuGWFT+OFFXfG2v6EtlqFbXBiFWLxyMsOtkUqWARCqEHhyucl\n" +
+        "TSYlj60EIgIgLfA75+8KcKxdN8mr6gzGjQe7jPFGG42Ejhd7Q2F4wuw="
+        };
+
+    // Private key algorithm of endEntityPrivateKeys.
+    private final static String[] endEntityPrivateKeyAlgs = {
+        "EC",
+        "RSA",
+        "EC",
+        "DSA",
+        };
+
+    // Private key names of endEntityPrivateKeys.
+    private final static String[] endEntityPrivateKeyNames = {
+        "ecdsa",
+        "rsa",
+        "ec-rsa",
+        "dsa",
+        };
+
+    /*
+     * Create an instance of SSLContext with the specified trust/key materials.
+     */
+    private SSLContext createSSLContext(
+            String[] trustedMaterials,
+            String[] keyMaterialCerts,
+            String[] keyMaterialKeys,
+            String[] keyMaterialKeyAlgs,
+            String[] keyMaterialKeyNames,
+            ContextParameters params) throws Exception {
+
+        KeyStore ts = null;     // trust store
+        KeyStore ks = null;     // key store
+        char passphrase[] = "passphrase".toCharArray();
+
+        // Generate certificate from cert string.
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+
+        // Import the trused certs.
+        ByteArrayInputStream is;
+        if (trustedMaterials != null && trustedMaterials.length != 0) {
+            ts = KeyStore.getInstance("JKS");
+            ts.load(null, null);
+
+            Certificate[] trustedCert =
+                    new Certificate[trustedMaterials.length];
+            for (int i = 0; i < trustedMaterials.length; i++) {
+                String trustedCertStr = trustedMaterials[i];
+
+                is = new ByteArrayInputStream(trustedCertStr.getBytes());
+                try {
+                    trustedCert[i] = cf.generateCertificate(is);
+                } finally {
+                    is.close();
+                }
+
+                ts.setCertificateEntry("trusted-cert-" + i, trustedCert[i]);
+            }
+        }
+
+        // Import the key materials.
+        //
+        // Note that certification pathes bigger than one are not supported yet.
+        boolean hasKeyMaterials =
+            (keyMaterialCerts != null) && (keyMaterialCerts.length != 0) &&
+            (keyMaterialKeys != null) && (keyMaterialKeys.length != 0) &&
+            (keyMaterialKeyAlgs != null) && (keyMaterialKeyAlgs.length != 0) &&
+            (keyMaterialCerts.length == keyMaterialKeys.length) &&
+            (keyMaterialCerts.length == keyMaterialKeyAlgs.length);
+        if (hasKeyMaterials) {
+            ks = KeyStore.getInstance("JKS");
+            ks.load(null, null);
+
+            for (int i = 0; i < keyMaterialCerts.length; i++) {
+                String keyCertStr = keyMaterialCerts[i];
+
+                // generate the private key.
+                PKCS8EncodedKeySpec priKeySpec = new PKCS8EncodedKeySpec(
+                    Base64.getMimeDecoder().decode(keyMaterialKeys[i]));
+                KeyFactory kf =
+                    KeyFactory.getInstance(keyMaterialKeyAlgs[i]);
+                PrivateKey priKey = kf.generatePrivate(priKeySpec);
+
+                // generate certificate chain
+                is = new ByteArrayInputStream(keyCertStr.getBytes());
+                Certificate keyCert = null;
+                try {
+                    keyCert = cf.generateCertificate(is);
+                } finally {
+                    is.close();
+                }
+
+                Certificate[] chain = new Certificate[] { keyCert };
+
+                // import the key entry.
+                ks.setKeyEntry("cert-" + keyMaterialKeyNames[i],
+                        priKey, passphrase, chain);
+            }
+        }
+
+        // Create an SSLContext object.
+        TrustManagerFactory tmf =
+                TrustManagerFactory.getInstance(params.tmAlgorithm);
+        tmf.init(ts);
+
+        SSLContext context = SSLContext.getInstance(params.contextProtocol);
+        if (hasKeyMaterials && ks != null) {
+            KeyManagerFactory kmf =
+                    KeyManagerFactory.getInstance(params.kmAlgorithm);
+            kmf.init(ks, passphrase);
+
+            context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+        } else {
+            context.init(null, tmf.getTrustManagers(), null);
+        }
+
+        return context;
+    }
+
+    /*
+     * =================================================
+     * Stuffs to boot up the client-server mode testing.
+     */
+    private Thread clientThread = null;
+    private Thread serverThread = null;
+    private volatile Exception serverException = null;
+    private volatile Exception clientException = null;
+
+    /*
+     * Should we run the client or server in a separate thread?
+     * Both sides can throw exceptions, but do you have a preference
+     * as to which side should be the main thread.
+     */
+    private static final boolean separateServerThread = false;
+
+    /*
+     * Boot up the testing, used to drive remai
