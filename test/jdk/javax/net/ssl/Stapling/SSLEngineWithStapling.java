@@ -363,4 +363,192 @@ public class SSLEngineWithStapling {
          * size, so that unwrap()s following a successful data transfer
          * won't generate BUFFER_OVERFLOWS.
          *
-         * We'll use a mix of direct and i
+         * We'll use a mix of direct and indirect ByteBuffers for
+         * tutorial purposes only.  In reality, only use direct
+         * ByteBuffers when they give a clear performance enhancement.
+         */
+        clientIn = ByteBuffer.allocate(appBufferMax + 50);
+        serverIn = ByteBuffer.allocate(appBufferMax + 50);
+
+        cTOs = ByteBuffer.allocateDirect(netBufferMax);
+        sTOc = ByteBuffer.allocateDirect(netBufferMax);
+
+        clientOut = ByteBuffer.wrap("Hi Server, I'm Client".getBytes());
+        serverOut = ByteBuffer.wrap("Hello Client, I'm Server".getBytes());
+    }
+
+    /*
+     * If the result indicates that we have outstanding tasks to do,
+     * go ahead and run them in this thread.
+     */
+    private static void runDelegatedTasks(SSLEngineResult result,
+            SSLEngine engine) throws Exception {
+
+        if (result.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
+            Runnable runnable;
+            while ((runnable = engine.getDelegatedTask()) != null) {
+                log("\trunning delegated task...");
+                runnable.run();
+            }
+            HandshakeStatus hsStatus = engine.getHandshakeStatus();
+            if (hsStatus == HandshakeStatus.NEED_TASK) {
+                throw new Exception(
+                    "handshake shouldn't need additional tasks");
+            }
+            log("\tnew HandshakeStatus: " + hsStatus);
+        }
+    }
+
+    private static boolean isEngineClosed(SSLEngine engine) {
+        return (engine.isOutboundDone() && engine.isInboundDone());
+    }
+
+    /*
+     * Simple check to make sure everything came across as expected.
+     */
+    private static void checkTransfer(ByteBuffer a, ByteBuffer b)
+            throws Exception {
+        a.flip();
+        b.flip();
+
+        if (!a.equals(b)) {
+            throw new Exception("Data didn't transfer cleanly");
+        } else {
+            log("\tData transferred cleanly");
+        }
+
+        a.position(a.limit());
+        b.position(b.limit());
+        a.limit(a.capacity());
+        b.limit(b.capacity());
+    }
+
+    /*
+     * Logging code
+     */
+    private static boolean resultOnce = true;
+
+    private static void log(String str, SSLEngineResult result) {
+        if (!logging) {
+            return;
+        }
+        if (resultOnce) {
+            resultOnce = false;
+            System.out.println("The format of the SSLEngineResult is: \n" +
+                "\t\"getStatus() / getHandshakeStatus()\" +\n" +
+                "\t\"bytesConsumed() / bytesProduced()\"\n");
+        }
+        HandshakeStatus hsStatus = result.getHandshakeStatus();
+        log(str +
+            result.getStatus() + "/" + hsStatus + ", " +
+            result.bytesConsumed() + "/" + result.bytesProduced() +
+            " bytes");
+        if (hsStatus == HandshakeStatus.FINISHED) {
+            log("\t...ready for application data");
+        }
+    }
+
+    private static void log(String str) {
+        if (logging) {
+            System.out.println(str);
+        }
+    }
+
+        /**
+     * Creates the PKI components necessary for this test, including
+     * Root CA, Intermediate CA and SSL server certificates, the keystores
+     * for each entity, a client trust store, and starts the OCSP responders.
+     */
+    private static void createPKI() throws Exception {
+        CertificateBuilder cbld = new CertificateBuilder();
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(2048);
+        KeyStore.Builder keyStoreBuilder =
+                KeyStore.Builder.newInstance("PKCS12", null,
+                        new KeyStore.PasswordProtection(passwd.toCharArray()));
+
+        // Generate Root, IntCA, EE keys
+        KeyPair rootCaKP = keyGen.genKeyPair();
+        log("Generated Root CA KeyPair");
+        KeyPair intCaKP = keyGen.genKeyPair();
+        log("Generated Intermediate CA KeyPair");
+        KeyPair sslKP = keyGen.genKeyPair();
+        log("Generated SSL Cert KeyPair");
+
+        // Set up the Root CA Cert
+        cbld.setSubjectName("CN=Root CA Cert, O=SomeCompany");
+        cbld.setPublicKey(rootCaKP.getPublic());
+        cbld.setSerialNumber(new BigInteger("1"));
+        // Make a 3 year validity starting from 60 days ago
+        long start = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(60);
+        long end = start + TimeUnit.DAYS.toMillis(1085);
+        cbld.setValidity(new Date(start), new Date(end));
+        addCommonExts(cbld, rootCaKP.getPublic(), rootCaKP.getPublic());
+        addCommonCAExts(cbld);
+        // Make our Root CA Cert!
+        X509Certificate rootCert = cbld.build(null, rootCaKP.getPrivate(),
+                "SHA256withRSA");
+        log("Root CA Created:\n" + certInfo(rootCert));
+
+        // Now build a keystore and add the keys and cert
+        rootKeystore = keyStoreBuilder.getKeyStore();
+        java.security.cert.Certificate[] rootChain = {rootCert};
+        rootKeystore.setKeyEntry(ROOT_ALIAS, rootCaKP.getPrivate(),
+                passwd.toCharArray(), rootChain);
+
+        // Now fire up the OCSP responder
+        rootOcsp = new SimpleOCSPServer(rootKeystore, passwd, ROOT_ALIAS, null);
+        rootOcsp.enableLog(logging);
+        rootOcsp.setNextUpdateInterval(3600);
+        rootOcsp.start();
+
+        // Wait 5 seconds for server ready
+        boolean readyStatus = rootOcsp.awaitServerReady(5, TimeUnit.SECONDS);
+        if (!readyStatus) {
+            throw new RuntimeException("Server not ready");
+        }
+
+        rootOcspPort = rootOcsp.getPort();
+        String rootRespURI = "http://localhost:" + rootOcspPort;
+        log("Root OCSP Responder URI is " + rootRespURI);
+
+        // Now that we have the root keystore and OCSP responder we can
+        // create our intermediate CA.
+        cbld.reset();
+        cbld.setSubjectName("CN=Intermediate CA Cert, O=SomeCompany");
+        cbld.setPublicKey(intCaKP.getPublic());
+        cbld.setSerialNumber(new BigInteger("100"));
+        // Make a 2 year validity starting from 30 days ago
+        start = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30);
+        end = start + TimeUnit.DAYS.toMillis(730);
+        cbld.setValidity(new Date(start), new Date(end));
+        addCommonExts(cbld, intCaKP.getPublic(), rootCaKP.getPublic());
+        addCommonCAExts(cbld);
+        cbld.addAIAExt(Collections.singletonList(rootRespURI));
+        // Make our Intermediate CA Cert!
+        X509Certificate intCaCert = cbld.build(rootCert, rootCaKP.getPrivate(),
+                "SHA256withRSA");
+        log("Intermediate CA Created:\n" + certInfo(intCaCert));
+
+        // Provide intermediate CA cert revocation info to the Root CA
+        // OCSP responder.
+        Map<BigInteger, SimpleOCSPServer.CertStatusInfo> revInfo =
+            new HashMap<>();
+        revInfo.put(intCaCert.getSerialNumber(),
+                new SimpleOCSPServer.CertStatusInfo(
+                        SimpleOCSPServer.CertStatus.CERT_STATUS_GOOD));
+        rootOcsp.updateStatusDb(revInfo);
+
+        // Now build a keystore and add the keys, chain and root cert as a TA
+        intKeystore = keyStoreBuilder.getKeyStore();
+        java.security.cert.Certificate[] intChain = {intCaCert, rootCert};
+        intKeystore.setKeyEntry(INT_ALIAS, intCaKP.getPrivate(),
+                passwd.toCharArray(), intChain);
+        intKeystore.setCertificateEntry(ROOT_ALIAS, rootCert);
+
+        // Now fire up the Intermediate CA OCSP responder
+        intOcsp = new SimpleOCSPServer(intKeystore, passwd,
+                INT_ALIAS, null);
+        intOcsp.enableLog(logging);
+        intOcsp.setNextUpdateInterval(3600);
+        intOcsp.s
