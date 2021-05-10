@@ -418,4 +418,15 @@ final class KeyProtector {
 
 final class CipherForKeyProtector extends javax.crypto.Cipher {
     /**
-     * Creates a
+     * Creates a Cipher object.
+     *
+     * @param cipherSpi the delegate
+     * @param provider the provider
+     * @param transformation the transformation
+     */
+    protected CipherForKeyProtector(CipherSpi cipherSpi,
+                                    Provider provider,
+                                    String transformation) {
+        super(cipherSpi, provider, transformation);
+    }
+}
