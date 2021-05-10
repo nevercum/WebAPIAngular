@@ -222,4 +222,200 @@ final class KeyProtector {
             // later catch of GeneralSecurityException
             throw ex;
         } catch (IOException | GeneralSecurityException e) {
-            throw new UnrecoverableKeyException(e.getMess
+            throw new UnrecoverableKeyException(e.getMessage());
+        } finally {
+            if (plain != null) Arrays.fill(plain, (byte) 0x00);
+            if (sKey != null) {
+                try {
+                    sKey.destroy();
+                } catch (DestroyFailedException e) {
+                    //shouldn't happen
+                }
+            }
+        }
+    }
+
+    /*
+     * Recovers the cleartext version of the given key (in protected format),
+     * using the password provided at construction time. This method implements
+     * the recovery algorithm used by Sun's keystore implementation in
+     * JDK 1.2.
+     */
+    private byte[] recover(byte[] protectedKey)
+        throws UnrecoverableKeyException, NoSuchAlgorithmException
+    {
+        int i, j;
+        byte[] digest;
+        int numRounds;
+        int xorOffset; // offset in xorKey where next digest will be stored
+        int encrKeyLen; // the length of the encrpyted key
+
+        MessageDigest md = MessageDigest.getInstance("SHA");
+
+        // Get the salt associated with this key (the first SALT_LEN bytes of
+        // <code>protectedKey</code>)
+        byte[] salt = new byte[SALT_LEN];
+        System.arraycopy(protectedKey, 0, salt, 0, SALT_LEN);
+
+        // Determine the number of digest rounds
+        encrKeyLen = protectedKey.length - SALT_LEN - DIGEST_LEN;
+        numRounds = encrKeyLen / DIGEST_LEN;
+        if ((encrKeyLen % DIGEST_LEN) != 0)
+            numRounds++;
+
+        // Get the encrypted key portion and store it in "encrKey"
+        byte[] encrKey = new byte[encrKeyLen];
+        System.arraycopy(protectedKey, SALT_LEN, encrKey, 0, encrKeyLen);
+
+        // Set up the byte array which will be XORed with "encrKey"
+        byte[] xorKey = new byte[encrKey.length];
+
+        // Convert password to byte array, so that it can be digested
+        byte[] passwdBytes = new byte[password.length * 2];
+        for (i=0, j=0; i<password.length; i++) {
+            passwdBytes[j++] = (byte)(password[i] >> 8);
+            passwdBytes[j++] = (byte)password[i];
+        }
+
+        // Compute the digests, and store them in "xorKey"
+        for (i = 0, xorOffset = 0, digest = salt;
+             i < numRounds;
+             i++, xorOffset += DIGEST_LEN) {
+            md.update(passwdBytes);
+            md.update(digest);
+            digest = md.digest();
+            md.reset();
+            // Copy the digest into "xorKey"
+            if (i < numRounds - 1) {
+                System.arraycopy(digest, 0, xorKey, xorOffset,
+                                 digest.length);
+            } else {
+                System.arraycopy(digest, 0, xorKey, xorOffset,
+                                 xorKey.length - xorOffset);
+            }
+        }
+
+        // XOR "encrKey" with "xorKey", and store the result in "plainKey"
+        byte[] plainKey = new byte[encrKey.length];
+        for (i = 0; i < plainKey.length; i++) {
+            plainKey[i] = (byte)(encrKey[i] ^ xorKey[i]);
+        }
+
+        // Check the integrity of the recovered key by concatenating it with
+        // the password, digesting the concatenation, and comparing the
+        // result of the digest operation with the digest provided at the end
+        // of <code>protectedKey</code>. If the two digest values are
+        // different, throw an exception.
+        md.update(passwdBytes);
+        Arrays.fill(passwdBytes, (byte)0x00);
+        passwdBytes = null;
+        md.update(plainKey);
+        digest = md.digest();
+        md.reset();
+        for (i = 0; i < digest.length; i++) {
+            if (digest[i] != protectedKey[SALT_LEN + encrKeyLen + i]) {
+                throw new UnrecoverableKeyException("Cannot recover key");
+            }
+        }
+        return plainKey;
+    }
+
+    /**
+     * Seals the given cleartext key, using the password provided at
+     * construction time
+     */
+    SealedObject seal(Key key)
+        throws Exception
+    {
+        // create a random salt (8 bytes)
+        byte[] salt = new byte[8];
+        SunJCE.getRandom().nextBytes(salt);
+
+        // create PBE parameters from salt and iteration count
+        PBEParameterSpec pbeSpec = new PBEParameterSpec(salt, ITERATION_COUNT);
+
+        // create PBE key from password
+        PBEKeySpec pbeKeySpec = new PBEKeySpec(this.password);
+        SecretKey sKey = null;
+        Cipher cipher;
+        try {
+            sKey = new PBEKey(pbeKeySpec, "PBEWithMD5AndTripleDES", false);
+            pbeKeySpec.clearPassword();
+
+            // seal key
+            PBEWithMD5AndTripleDESCipher cipherSpi;
+            cipherSpi = new PBEWithMD5AndTripleDESCipher();
+            cipher = new CipherForKeyProtector(cipherSpi, SunJCE.getInstance(),
+                                               "PBEWithMD5AndTripleDES");
+            cipher.init(Cipher.ENCRYPT_MODE, sKey, pbeSpec);
+        } finally {
+            if (sKey != null) sKey.destroy();
+        }
+        return new SealedObjectForKeyProtector(key, cipher);
+    }
+
+    /**
+     * Unseals the sealed key.
+     *
+     * @param maxLength Maximum possible length of so.
+     *                  If bigger, must be illegal.
+     */
+    Key unseal(SealedObject so, int maxLength)
+        throws NoSuchAlgorithmException, UnrecoverableKeyException {
+        SecretKey sKey = null;
+        try {
+            // create PBE key from password
+            PBEKeySpec pbeKeySpec = new PBEKeySpec(this.password);
+            sKey = new PBEKey(pbeKeySpec,
+                    "PBEWithMD5AndTripleDES", false);
+            pbeKeySpec.clearPassword();
+
+            SealedObjectForKeyProtector soForKeyProtector = null;
+            if (!(so instanceof SealedObjectForKeyProtector)) {
+                soForKeyProtector = new SealedObjectForKeyProtector(so);
+            } else {
+                soForKeyProtector = (SealedObjectForKeyProtector)so;
+            }
+            AlgorithmParameters params = soForKeyProtector.getParameters();
+            if (params == null) {
+                throw new UnrecoverableKeyException("Cannot get " +
+                                                    "algorithm parameters");
+            }
+            PBEParameterSpec pbeSpec;
+            try {
+                pbeSpec = params.getParameterSpec(PBEParameterSpec.class);
+            } catch (InvalidParameterSpecException ipse) {
+                throw new IOException("Invalid PBE algorithm parameters");
+            }
+            if (pbeSpec.getIterationCount() > MAX_ITERATION_COUNT) {
+                throw new IOException("PBE iteration count too large");
+            }
+            PBEWithMD5AndTripleDESCipher cipherSpi;
+            cipherSpi = new PBEWithMD5AndTripleDESCipher();
+            Cipher cipher = new CipherForKeyProtector(cipherSpi,
+                                                      SunJCE.getInstance(),
+                                                      "PBEWithMD5AndTripleDES");
+            cipher.init(Cipher.DECRYPT_MODE, sKey, params);
+            return soForKeyProtector.getKey(cipher, maxLength);
+        } catch (NoSuchAlgorithmException ex) {
+            // Note: this catch needed to be here because of the
+            // later catch of GeneralSecurityException
+            throw ex;
+        } catch (IOException | GeneralSecurityException | ClassNotFoundException e) {
+            throw new UnrecoverableKeyException(e.getMessage());
+        } finally {
+            if (sKey != null) {
+                try {
+                    sKey.destroy();
+                } catch (DestroyFailedException e) {
+                    //shouldn't happen
+                }
+            }
+        }
+    }
+}
+
+
+final class CipherForKeyProtector extends javax.crypto.Cipher {
+    /**
+     * Creates a
