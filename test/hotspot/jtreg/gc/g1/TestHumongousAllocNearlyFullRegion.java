@@ -47,4 +47,27 @@ public class TestHumongousAllocNearlyFullRegion {
     private static final int heapRegionSize                 = 1;   // MB
 
     public static void main(String[] args) throws Exception {
-        ProcessBuilder pb = ProcessToo
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(
+            "-XX:+UseG1GC",
+            "-Xms" + heapSize + "m",
+            "-Xmx" + heapSize + "m",
+            "-XX:G1HeapRegionSize=" + heapRegionSize + "m",
+            "-Xlog:gc",
+            HumongousObjectAllocator.class.getName());
+
+        OutputAnalyzer output = new OutputAnalyzer(pb.start());
+        output.shouldContain("Pause Young (Concurrent Start) (G1 Humongous Allocation)");
+        output.shouldHaveExitValue(0);
+    }
+
+    static class HumongousObjectAllocator {
+        public static void main(String [] args) {
+            for (int i = 0; i < heapSize; i++) {
+                // 131069 is the number of longs it takes to fill a heapRegion except
+                // for 8 bytes on 64 bit.
+                blackHole(new long[131069]);
+            }
+        }
+    }
+}
+
