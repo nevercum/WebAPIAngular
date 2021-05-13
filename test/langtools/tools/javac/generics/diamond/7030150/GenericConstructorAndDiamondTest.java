@@ -198,4 +198,76 @@ public class GenericConstructorAndDiamondTest {
 
     class JavaSource extends SimpleJavaFileObject {
 
-        String template =
+        String template = "class Foo<X #BK> {\n" +
+                              "#CK\n" +
+                          "}\n" +
+                          "class Test {\n" +
+                              "void test() {\n" +
+                                 "Foo#TA1 f = new #TA2 Foo<#TA3>(#A);\n" +
+                              "}\n" +
+                          "}\n";
+
+        String source;
+
+        public JavaSource() {
+            super(URI.create("myfo:/Test.java"), JavaFileObject.Kind.SOURCE);
+            source = template.replace("#BK", boundKind.boundStr).
+                    replace("#CK", constructorKind.constrStr)
+                    .replace("#TA1", declTypeArgumentKind.getArgs(TypeArgArity.ONE))
+                    .replace("#TA2", useTypeArgumentKind.getArgs(useTypeArgArity))
+                    .replace("#TA3", diamondTypeArgumentKind.typeargStr)
+                    .replace("#A", argumentKind.argStr);
+        }
+
+        @Override
+        public CharSequence getCharContent(boolean ignoreEncodingErrors) {
+            return source;
+        }
+    }
+
+    void run(JavaCompiler tool, StandardJavaFileManager fm) throws Exception {
+        JavacTask ct = (JavacTask)tool.getTask(null, fm, diagChecker,
+                null, null, Arrays.asList(source));
+        ct.analyze();
+        check();
+    }
+
+    void check() {
+        boolean badActual = !constructorKind.matches(argumentKind);
+
+        boolean badArity = constructorKind != ConstructorKind.NON_GENERIC &&
+                useTypeArgumentKind != TypeArgumentKind.NONE &&
+                useTypeArgArity != TypeArgArity.ONE;
+
+        boolean badMethodTypeArg = constructorKind != ConstructorKind.NON_GENERIC &&
+                !useTypeArgumentKind.matches(argumentKind);
+
+        boolean badExplicitParams = (useTypeArgumentKind != TypeArgumentKind.NONE &&
+                diamondTypeArgumentKind == TypeArgumentKind.NONE) ||
+                !boundKind.matches(diamondTypeArgumentKind);
+
+        boolean badGenericType = !boundKind.matches(declTypeArgumentKind) ||
+                !diamondTypeArgumentKind.matches(declTypeArgumentKind);
+
+        boolean shouldFail = badActual || badArity ||
+                badMethodTypeArg || badExplicitParams || badGenericType;
+
+        if (shouldFail != diagChecker.errorFound) {
+            throw new Error("invalid diagnostics for source:\n" +
+                source.getCharContent(true) +
+                "\nFound error: " + diagChecker.errorFound +
+                "\nExpected error: " + shouldFail);
+        }
+    }
+
+    static class DiagnosticChecker implements javax.tools.DiagnosticListener<JavaFileObject> {
+
+        boolean errorFound;
+
+        public void report(Diagnostic<? extends JavaFileObject> diagnostic) {
+            if (diagnostic.getKind() == Diagnostic.Kind.ERROR) {
+                errorFound = true;
+            }
+        }
+    }
+}
