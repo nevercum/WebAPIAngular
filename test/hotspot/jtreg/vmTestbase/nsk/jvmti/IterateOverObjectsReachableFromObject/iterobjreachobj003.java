@@ -35,4 +35,34 @@ public class iterobjreachobj003 extends DebugeeClass {
         argv = nsk.share.jvmti.JVMTITest.commonInit(argv);
 
         // JCK-compatible exit
-        System.exit(run(argv, System.out) + Consts.
+        System.exit(run(argv, System.out) + Consts.JCK_STATUS_BASE);
+    }
+
+    /** Run test from JCK-compatible environment. */
+    public static int run(String argv[], PrintStream out) {
+        return new iterobjreachobj003().runIt(argv, out);
+    }
+
+    /** Tested object. */
+    public static iterobjreachobj003 object = new iterobjreachobj003();
+
+    /* =================================================================== */
+
+    /* scaffold objects */
+    ArgumentHandler argHandler = null;
+    Log log = null;
+    long timeout = 0;
+    int status = Consts.TEST_PASSED;
+
+    /** Run debugee code. */
+    public int runIt(String argv[], PrintStream out) {
+        argHandler = new ArgumentHandler(argv);
+        log = new Log(out, argHandler);
+        timeout = argHandler.getWaitTime() * 60 * 1000; // milliseconds
+
+        status = checkStatus(status);
+        return status;
+    }
+}
+
+/* =================================================================== */
