@@ -146,4 +146,200 @@ Node* CMoveNode::Identity(PhaseGVN* phase) {
     Node *cmp = b->in(1);
     if( cmp->is_Cmp() ) {
       Node *id = is_cmove_id( phase, cmp, in(IfTrue), in(IfFalse), b );
-      if( id ) return 
+      if( id ) return id;
+    }
+  }
+
+  return this;
+}
+
+//------------------------------Value------------------------------------------
+// Result is the meet of inputs
+const Type* CMoveNode::Value(PhaseGVN* phase) const {
+  if (phase->type(in(Condition)) == Type::TOP) {
+    return Type::TOP;
+  }
+  if (phase->type(in(IfTrue)) == Type::TOP || phase->type(in(IfFalse)) == Type::TOP) {
+    return Type::TOP;
+  }
+  const Type* t = phase->type(in(IfFalse))->meet_speculative(phase->type(in(IfTrue)));
+  return t->filter(_type);
+}
+
+//------------------------------make-------------------------------------------
+// Make a correctly-flavored CMove.  Since _type is directly determined
+// from the inputs we do not need to specify it here.
+CMoveNode *CMoveNode::make(Node *c, Node *bol, Node *left, Node *right, const Type *t) {
+  switch( t->basic_type() ) {
+    case T_INT:     return new CMoveINode( bol, left, right, t->is_int() );
+    case T_FLOAT:   return new CMoveFNode( bol, left, right, t );
+    case T_DOUBLE:  return new CMoveDNode( bol, left, right, t );
+    case T_LONG:    return new CMoveLNode( bol, left, right, t->is_long() );
+    case T_OBJECT:  return new CMovePNode( c, bol, left, right, t->is_oopptr() );
+    case T_ADDRESS: return new CMovePNode( c, bol, left, right, t->is_ptr() );
+    case T_NARROWOOP: return new CMoveNNode( c, bol, left, right, t );
+    default:
+    ShouldNotReachHere();
+    return NULL;
+  }
+}
+
+//=============================================================================
+//------------------------------Ideal------------------------------------------
+// Return a node which is more "ideal" than the current node.
+// Check for conversions to boolean
+Node *CMoveINode::Ideal(PhaseGVN *phase, bool can_reshape) {
+  // Try generic ideal's first
+  Node *x = CMoveNode::Ideal(phase, can_reshape);
+  if( x ) return x;
+
+  // If zero is on the left (false-case, no-move-case) it must mean another
+  // constant is on the right (otherwise the shared CMove::Ideal code would
+  // have moved the constant to the right). This situation is bad for x86 because
+  // the zero has to be manifested in a register with a XOR which kills flags,
+  // which are live on input to the CMoveI, leading to a situation which causes
+  // excessive spilling. See bug 4677505.
+  if( phase->type(in(IfFalse)) == TypeInt::ZERO && !(phase->type(in(IfTrue)) == TypeInt::ZERO) ) {
+    if( in(Condition)->is_Bool() ) {
+      BoolNode* b  = in(Condition)->as_Bool();
+      BoolNode* b2 = b->negate(phase);
+      return make(in(Control), phase->transform(b2), in(IfTrue), in(IfFalse), _type);
+    }
+  }
+
+  // Now check for booleans
+  int flip = 0;
+
+  // Check for picking from zero/one
+  if( phase->type(in(IfFalse)) == TypeInt::ZERO && phase->type(in(IfTrue)) == TypeInt::ONE ) {
+    flip = 1 - flip;
+  } else if( phase->type(in(IfFalse)) == TypeInt::ONE && phase->type(in(IfTrue)) == TypeInt::ZERO ) {
+  } else return NULL;
+
+  // Check for eq/ne test
+  if( !in(1)->is_Bool() ) return NULL;
+  BoolNode *bol = in(1)->as_Bool();
+  if( bol->_test._test == BoolTest::eq ) {
+  } else if( bol->_test._test == BoolTest::ne ) {
+    flip = 1-flip;
+  } else return NULL;
+
+  // Check for vs 0 or 1
+  if( !bol->in(1)->is_Cmp() ) return NULL;
+  const CmpNode *cmp = bol->in(1)->as_Cmp();
+  if( phase->type(cmp->in(2)) == TypeInt::ZERO ) {
+  } else if( phase->type(cmp->in(2)) == TypeInt::ONE ) {
+    // Allow cmp-vs-1 if the other input is bounded by 0-1
+    if( phase->type(cmp->in(1)) != TypeInt::BOOL )
+    return NULL;
+    flip = 1 - flip;
+  } else return NULL;
+
+  // Convert to a bool (flipped)
+  // Build int->bool conversion
+  if (PrintOpto) { tty->print_cr("CMOV to I2B"); }
+  Node *n = new Conv2BNode( cmp->in(1) );
+  if( flip )
+  n = new XorINode( phase->transform(n), phase->intcon(1) );
+
+  return n;
+}
+
+//=============================================================================
+//------------------------------Ideal------------------------------------------
+// Return a node which is more "ideal" than the current node.
+// Check for absolute value
+Node *CMoveFNode::Ideal(PhaseGVN *phase, bool can_reshape) {
+  // Try generic ideal's first
+  Node *x = CMoveNode::Ideal(phase, can_reshape);
+  if( x ) return x;
+
+  int  cmp_zero_idx = 0;        // Index of compare input where to look for zero
+  int  phi_x_idx = 0;           // Index of phi input where to find naked x
+
+  // Find the Bool
+  if( !in(1)->is_Bool() ) return NULL;
+  BoolNode *bol = in(1)->as_Bool();
+  // Check bool sense
+  switch( bol->_test._test ) {
+    case BoolTest::lt: cmp_zero_idx = 1; phi_x_idx = IfTrue;  break;
+    case BoolTest::le: cmp_zero_idx = 2; phi_x_idx = IfFalse; break;
+    case BoolTest::gt: cmp_zero_idx = 2; phi_x_idx = IfTrue;  break;
+    case BoolTest::ge: cmp_zero_idx = 1; phi_x_idx = IfFalse; break;
+    default:           return NULL;                           break;
+  }
+
+  // Find zero input of CmpF; the other input is being abs'd
+  Node *cmpf = bol->in(1);
+  if( cmpf->Opcode() != Op_CmpF ) return NULL;
+  Node *X = NULL;
+  bool flip = false;
+  if( phase->type(cmpf->in(cmp_zero_idx)) == TypeF::ZERO ) {
+    X = cmpf->in(3 - cmp_zero_idx);
+  } else if (phase->type(cmpf->in(3 - cmp_zero_idx)) == TypeF::ZERO) {
+    // The test is inverted, we should invert the result...
+    X = cmpf->in(cmp_zero_idx);
+    flip = true;
+  } else {
+    return NULL;
+  }
+
+  // If X is found on the appropriate phi input, find the subtract on the other
+  if( X != in(phi_x_idx) ) return NULL;
+  int phi_sub_idx = phi_x_idx == IfTrue ? IfFalse : IfTrue;
+  Node *sub = in(phi_sub_idx);
+
+  // Allow only SubF(0,X) and fail out for all others; NegF is not OK
+  if( sub->Opcode() != Op_SubF ||
+     sub->in(2) != X ||
+     phase->type(sub->in(1)) != TypeF::ZERO ) return NULL;
+
+  Node *abs = new AbsFNode( X );
+  if( flip )
+  abs = new SubFNode(sub->in(1), phase->transform(abs));
+
+  return abs;
+}
+
+//=============================================================================
+//------------------------------Ideal------------------------------------------
+// Return a node which is more "ideal" than the current node.
+// Check for absolute value
+Node *CMoveDNode::Ideal(PhaseGVN *phase, bool can_reshape) {
+  // Try generic ideal's first
+  Node *x = CMoveNode::Ideal(phase, can_reshape);
+  if( x ) return x;
+
+  int  cmp_zero_idx = 0;        // Index of compare input where to look for zero
+  int  phi_x_idx = 0;           // Index of phi input where to find naked x
+
+  // Find the Bool
+  if( !in(1)->is_Bool() ) return NULL;
+  BoolNode *bol = in(1)->as_Bool();
+  // Check bool sense
+  switch( bol->_test._test ) {
+    case BoolTest::lt: cmp_zero_idx = 1; phi_x_idx = IfTrue;  break;
+    case BoolTest::le: cmp_zero_idx = 2; phi_x_idx = IfFalse; break;
+    case BoolTest::gt: cmp_zero_idx = 2; phi_x_idx = IfTrue;  break;
+    case BoolTest::ge: cmp_zero_idx = 1; phi_x_idx = IfFalse; break;
+    default:           return NULL;                           break;
+  }
+
+  // Find zero input of CmpD; the other input is being abs'd
+  Node *cmpd = bol->in(1);
+  if( cmpd->Opcode() != Op_CmpD ) return NULL;
+  Node *X = NULL;
+  bool flip = false;
+  if( phase->type(cmpd->in(cmp_zero_idx)) == TypeD::ZERO ) {
+    X = cmpd->in(3 - cmp_zero_idx);
+  } else if (phase->type(cmpd->in(3 - cmp_zero_idx)) == TypeD::ZERO) {
+    // The test is inverted, we should invert the result...
+    X = cmpd->in(cmp_zero_idx);
+    flip = true;
+  } else {
+    return NULL;
+  }
+
+  // If X is found on the appropriate phi input, find the subtract on the other
+  if( X != in(phi_x_idx) ) return NULL;
+  int phi_sub_idx = phi_x_idx == IfT
