@@ -133,4 +133,264 @@
   {
     /* downcast the object pointer */
     CF2_Outline  outline = (CF2_Outline)callbacks;
-    PS_Builde
+    PS_Builder*  builder;
+
+    (void)params;        /* only used in debug mode */
+
+
+    FT_ASSERT( outline && outline->decoder );
+    FT_ASSERT( params->op == CF2_PathOpMoveTo );
+
+    builder = &outline->decoder->builder;
+
+    /* note: two successive moves simply close the contour twice */
+    ps_builder_close_contour( builder );
+    builder->path_begun = 0;
+  }
+
+
+  static void
+  cf2_builder_lineTo( CF2_OutlineCallbacks      callbacks,
+                      const CF2_CallbackParams  params )
+  {
+    FT_Error  error;
+
+    /* downcast the object pointer */
+    CF2_Outline  outline = (CF2_Outline)callbacks;
+    PS_Builder*  builder;
+
+
+    FT_ASSERT( outline && outline->decoder );
+    FT_ASSERT( params->op == CF2_PathOpLineTo );
+
+    builder = &outline->decoder->builder;
+
+    if ( !builder->path_begun )
+    {
+      /* record the move before the line; also check points and set */
+      /* `path_begun'                                               */
+      error = ps_builder_start_point( builder,
+                                      params->pt0.x,
+                                      params->pt0.y );
+      if ( error )
+      {
+        if ( !*callbacks->error )
+          *callbacks->error =  error;
+        return;
+      }
+    }
+
+    /* `ps_builder_add_point1' includes a check_points call for one point */
+    error = ps_builder_add_point1( builder,
+                                   params->pt1.x,
+                                   params->pt1.y );
+    if ( error )
+    {
+      if ( !*callbacks->error )
+        *callbacks->error =  error;
+      return;
+    }
+  }
+
+
+  static void
+  cf2_builder_cubeTo( CF2_OutlineCallbacks      callbacks,
+                      const CF2_CallbackParams  params )
+  {
+    FT_Error  error;
+
+    /* downcast the object pointer */
+    CF2_Outline  outline = (CF2_Outline)callbacks;
+    PS_Builder*  builder;
+
+
+    FT_ASSERT( outline && outline->decoder );
+    FT_ASSERT( params->op == CF2_PathOpCubeTo );
+
+    builder = &outline->decoder->builder;
+
+    if ( !builder->path_begun )
+    {
+      /* record the move before the line; also check points and set */
+      /* `path_begun'                                               */
+      error = ps_builder_start_point( builder,
+                                      params->pt0.x,
+                                      params->pt0.y );
+      if ( error )
+      {
+        if ( !*callbacks->error )
+          *callbacks->error =  error;
+        return;
+      }
+    }
+
+    /* prepare room for 3 points: 2 off-curve, 1 on-curve */
+    error = ps_builder_check_points( builder, 3 );
+    if ( error )
+    {
+      if ( !*callbacks->error )
+        *callbacks->error =  error;
+      return;
+    }
+
+    ps_builder_add_point( builder,
+                          params->pt1.x,
+                          params->pt1.y, 0 );
+    ps_builder_add_point( builder,
+                          params->pt2.x,
+                          params->pt2.y, 0 );
+    ps_builder_add_point( builder,
+                          params->pt3.x,
+                          params->pt3.y, 1 );
+  }
+
+
+  static void
+  cf2_outline_init( CF2_Outline  outline,
+                    FT_Memory    memory,
+                    FT_Error*    error )
+  {
+    FT_ZERO( outline );
+
+    outline->root.memory = memory;
+    outline->root.error  = error;
+
+    outline->root.moveTo = cf2_builder_moveTo;
+    outline->root.lineTo = cf2_builder_lineTo;
+    outline->root.cubeTo = cf2_builder_cubeTo;
+  }
+
+
+  /* get scaling and hint flag from GlyphSlot */
+  static void
+  cf2_getScaleAndHintFlag( PS_Decoder*  decoder,
+                           CF2_Fixed*   x_scale,
+                           CF2_Fixed*   y_scale,
+                           FT_Bool*     hinted,
+                           FT_Bool*     scaled )
+  {
+    FT_ASSERT( decoder && decoder->builder.glyph );
+
+    /* note: FreeType scale includes a factor of 64 */
+    *hinted = decoder->builder.glyph->hint;
+    *scaled = decoder->builder.glyph->scaled;
+
+    if ( *hinted )
+    {
+      *x_scale = ADD_INT32( decoder->builder.glyph->x_scale, 32 ) / 64;
+      *y_scale = ADD_INT32( decoder->builder.glyph->y_scale, 32 ) / 64;
+    }
+    else
+    {
+      /* for unhinted outlines, `cff_slot_load' does the scaling, */
+      /* thus render at `unity' scale                             */
+
+      *x_scale = 0x0400;   /* 1/64 as 16.16 */
+      *y_scale = 0x0400;
+    }
+  }
+
+
+  /* get units per em from `FT_Face' */
+  /* TODO: should handle font matrix concatenation? */
+  static FT_UShort
+  cf2_getUnitsPerEm( PS_Decoder*  decoder )
+  {
+    FT_ASSERT( decoder && decoder->builder.face );
+    FT_ASSERT( decoder->builder.face->units_per_EM );
+
+    return decoder->builder.face->units_per_EM;
+  }
+
+
+  /* Main entry point: Render one glyph. */
+  FT_LOCAL_DEF( FT_Error )
+  cf2_decoder_parse_charstrings( PS_Decoder*  decoder,
+                                 FT_Byte*     charstring_base,
+                                 FT_ULong     charstring_len )
+  {
+    FT_Memory  memory;
+    FT_Error   error = FT_Err_Ok;
+    CF2_Font   font;
+
+    FT_Bool  is_t1 = decoder->builder.is_t1;
+
+
+    FT_ASSERT( decoder &&
+               ( is_t1 || decoder->cff ) );
+
+    if ( is_t1 && !decoder->current_subfont )
+    {
+      FT_ERROR(( "cf2_decoder_parse_charstrings (Type 1): "
+                 "SubFont missing. Use `t1_make_subfont' first\n" ));
+      return FT_THROW( Invalid_Table );
+    }
+
+    memory = decoder->builder.memory;
+
+    /* CF2 data is saved here across glyphs */
+    font = (CF2_Font)decoder->cf2_instance->data;
+
+    /* on first glyph, allocate instance structure */
+    if ( !decoder->cf2_instance->data )
+    {
+      decoder->cf2_instance->finalizer =
+        (FT_Generic_Finalizer)cf2_free_instance;
+
+      if ( FT_ALLOC( decoder->cf2_instance->data,
+                     sizeof ( CF2_FontRec ) ) )
+        return FT_THROW( Out_Of_Memory );
+
+      font = (CF2_Font)decoder->cf2_instance->data;
+
+      font->memory = memory;
+
+      if ( !is_t1 )
+        font->cffload = (FT_Service_CFFLoad)decoder->cff->cffload;
+
+      /* initialize a client outline, to be shared by each glyph rendered */
+      cf2_outline_init( &font->outline, font->memory, &font->error );
+    }
+
+    /* save decoder; it is a stack variable and will be different on each */
+    /* call                                                               */
+    font->decoder         = decoder;
+    font->outline.decoder = decoder;
+
+    {
+      /* build parameters for Adobe engine */
+
+      PS_Builder*  builder = &decoder->builder;
+      PS_Driver    driver  = (PS_Driver)FT_FACE_DRIVER( builder->face );
+
+      FT_Bool  no_stem_darkening_driver =
+                 driver->no_stem_darkening;
+      FT_Char  no_stem_darkening_font =
+                 builder->face->internal->no_stem_darkening;
+
+      /* local error */
+      FT_Error       error2 = FT_Err_Ok;
+      CF2_BufferRec  buf;
+      CF2_Matrix     transform;
+      CF2_F16Dot16   glyphWidth;
+
+      FT_Bool  hinted;
+      FT_Bool  scaled;
+
+
+      /* FreeType has already looked up the GID; convert to         */
+      /* `RegionBuffer', assuming that the input has been validated */
+      FT_ASSERT( charstring_base + charstring_len >= charstring_base );
+
+      FT_ZERO( &buf );
+      buf.start =
+      buf.ptr   = charstring_base;
+      buf.end   = FT_OFFSET( charstring_base, charstring_len );
+
+      FT_ZERO( &transform );
+
+      cf2_getScaleAndHintFlag( decoder,
+                               &transform.a,
+                               &transform.d,
+                               &hinted,
+                               &scaled 
