@@ -273,4 +273,124 @@ void oopDesc::forward_to(oop p) {
 }
 
 oop oopDesc::forward_to_atomic(oop p, markWord compare, atomic_memory_order order) {
-  
+  verify_forwardee(p);
+  markWord m = markWord::encode_pointer_as_mark(p);
+  assert(m.decode_pointer() == p, "encoding must be reversible");
+  markWord old_mark = cas_set_mark(m, compare, order);
+  if (old_mark == compare) {
+    return nullptr;
+  } else {
+    return cast_to_oop(old_mark.decode_pointer());
+  }
+}
+
+// Note that the forwardee is not the same thing as the displaced_mark.
+// The forwardee is used when copying during scavenge and mark-sweep.
+// It does need to clear the low two locking- and GC-related bits.
+oop oopDesc::forwardee() const {
+  assert(is_forwarded(), "only decode when actually forwarded");
+  return cast_to_oop(mark().decode_pointer());
+}
+
+// The following method needs to be MT safe.
+uint oopDesc::age() const {
+  assert(!mark().is_marked(), "Attempt to read age from forwarded mark");
+  if (has_displaced_mark()) {
+    return displaced_mark().age();
+  } else {
+    return mark().age();
+  }
+}
+
+void oopDesc::incr_age() {
+  assert(!mark().is_marked(), "Attempt to increment age of forwarded mark");
+  if (has_displaced_mark()) {
+    set_displaced_mark(displaced_mark().incr_age());
+  } else {
+    set_mark(mark().incr_age());
+  }
+}
+
+template <typename OopClosureType>
+void oopDesc::oop_iterate(OopClosureType* cl) {
+  OopIteratorClosureDispatch::oop_oop_iterate(cl, this, klass());
+}
+
+template <typename OopClosureType>
+void oopDesc::oop_iterate(OopClosureType* cl, MemRegion mr) {
+  OopIteratorClosureDispatch::oop_oop_iterate(cl, this, klass(), mr);
+}
+
+template <typename OopClosureType>
+size_t oopDesc::oop_iterate_size(OopClosureType* cl) {
+  Klass* k = klass();
+  size_t size = size_given_klass(k);
+  OopIteratorClosureDispatch::oop_oop_iterate(cl, this, k);
+  return size;
+}
+
+template <typename OopClosureType>
+size_t oopDesc::oop_iterate_size(OopClosureType* cl, MemRegion mr) {
+  Klass* k = klass();
+  size_t size = size_given_klass(k);
+  OopIteratorClosureDispatch::oop_oop_iterate(cl, this, k, mr);
+  return size;
+}
+
+template <typename OopClosureType>
+void oopDesc::oop_iterate_backwards(OopClosureType* cl) {
+  oop_iterate_backwards(cl, klass());
+}
+
+template <typename OopClosureType>
+void oopDesc::oop_iterate_backwards(OopClosureType* cl, Klass* k) {
+  assert(k == klass(), "wrong klass");
+  OopIteratorClosureDispatch::oop_oop_iterate_backwards(cl, this, k);
+}
+
+bool oopDesc::is_instanceof_or_null(oop obj, Klass* klass) {
+  return obj == nullptr || obj->klass()->is_subtype_of(klass);
+}
+
+intptr_t oopDesc::identity_hash() {
+  // Fast case; if the object is unlocked and the hash value is set, no locking is needed
+  // Note: The mark must be read into local variable to avoid concurrent updates.
+  markWord mrk = mark();
+  if (mrk.is_unlocked() && !mrk.has_no_hash()) {
+    return mrk.hash();
+  } else if (mrk.is_marked()) {
+    return mrk.hash();
+  } else {
+    return slow_identity_hash();
+  }
+}
+
+// This checks fast simple case of whether the oop has_no_hash,
+// to optimize JVMTI table lookup.
+bool oopDesc::fast_no_hash_check() {
+  markWord mrk = mark_acquire();
+  assert(!mrk.is_marked(), "should never be marked");
+  return mrk.is_unlocked() && mrk.has_no_hash();
+}
+
+bool oopDesc::has_displaced_mark() const {
+  return mark().has_displaced_mark_helper();
+}
+
+markWord oopDesc::displaced_mark() const {
+  return mark().displaced_mark_helper();
+}
+
+void oopDesc::set_displaced_mark(markWord m) {
+  mark().set_displaced_mark_helper(m);
+}
+
+bool oopDesc::mark_must_be_preserved() const {
+  return mark_must_be_preserved(mark());
+}
+
+bool oopDesc::mark_must_be_preserved(markWord m) const {
+  return m.must_be_preserved(this);
+}
+
+#endif // SHARE_OOPS_OOP_INLINE_HPP
