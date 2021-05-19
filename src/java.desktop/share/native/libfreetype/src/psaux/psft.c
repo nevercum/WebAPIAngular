@@ -393,4 +393,261 @@
                                &transform.a,
                                &transform.d,
                                &hinted,
-                               &scaled 
+                               &scaled );
+
+      if ( is_t1 )
+        font->isCFF2 = FALSE;
+      else
+      {
+        /* copy isCFF2 boolean from TT_Face to CF2_Font */
+        font->isCFF2 = ((TT_Face)builder->face)->is_cff2;
+      }
+      font->isT1 = is_t1;
+
+      font->renderingFlags = 0;
+      if ( hinted )
+        font->renderingFlags |= CF2_FlagsHinted;
+      if ( scaled && ( !no_stem_darkening_font        ||
+                       ( no_stem_darkening_font < 0 &&
+                         !no_stem_darkening_driver  ) ) )
+        font->renderingFlags |= CF2_FlagsDarkened;
+
+      font->darkenParams[0] = driver->darken_params[0];
+      font->darkenParams[1] = driver->darken_params[1];
+      font->darkenParams[2] = driver->darken_params[2];
+      font->darkenParams[3] = driver->darken_params[3];
+      font->darkenParams[4] = driver->darken_params[4];
+      font->darkenParams[5] = driver->darken_params[5];
+      font->darkenParams[6] = driver->darken_params[6];
+      font->darkenParams[7] = driver->darken_params[7];
+
+      /* now get an outline for this glyph;      */
+      /* also get units per em to validate scale */
+      font->unitsPerEm = (CF2_Int)cf2_getUnitsPerEm( decoder );
+
+      if ( scaled )
+      {
+        error2 = cf2_checkTransform( &transform, font->unitsPerEm );
+        if ( error2 )
+          return error2;
+      }
+
+      error2 = cf2_getGlyphOutline( font, &buf, &transform, &glyphWidth );
+      if ( error2 )
+        return FT_ERR( Invalid_File_Format );
+
+      cf2_setGlyphWidth( &font->outline, glyphWidth );
+
+      return FT_Err_Ok;
+    }
+  }
+
+
+  /* get pointer to current FreeType subfont (based on current glyphID) */
+  FT_LOCAL_DEF( CFF_SubFont )
+  cf2_getSubfont( PS_Decoder*  decoder )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    return decoder->current_subfont;
+  }
+
+
+  /* get pointer to VStore structure */
+  FT_LOCAL_DEF( CFF_VStore )
+  cf2_getVStore( PS_Decoder*  decoder )
+  {
+    FT_ASSERT( decoder && decoder->cff );
+
+    return &decoder->cff->vstore;
+  }
+
+
+  /* get maxstack value from CFF2 Top DICT */
+  FT_LOCAL_DEF( FT_UInt )
+  cf2_getMaxstack( PS_Decoder*  decoder )
+  {
+    FT_ASSERT( decoder && decoder->cff );
+
+    return decoder->cff->top_font.font_dict.maxstack;
+  }
+
+
+#ifdef TT_CONFIG_OPTION_GX_VAR_SUPPORT
+  /* Get normalized design vector for current render request; */
+  /* return pointer and length.                               */
+  /*                                                          */
+  /* Note: Uses FT_Fixed not CF2_Fixed for the vector.        */
+  FT_LOCAL_DEF( FT_Error )
+  cf2_getNormalizedVector( PS_Decoder*  decoder,
+                           CF2_UInt     *len,
+                           FT_Fixed*    *vec )
+  {
+    TT_Face                  face;
+    FT_Service_MultiMasters  mm;
+
+
+    FT_ASSERT( decoder && decoder->builder.face );
+    FT_ASSERT( vec && len );
+    FT_ASSERT( !decoder->builder.is_t1 );
+
+    face = (TT_Face)decoder->builder.face;
+    mm   = (FT_Service_MultiMasters)face->mm;
+
+    return mm->get_var_blend( FT_FACE( face ), len, NULL, vec, NULL );
+  }
+#endif
+
+
+  /* get `y_ppem' from `CFF_Size' */
+  FT_LOCAL_DEF( CF2_Fixed )
+  cf2_getPpemY( PS_Decoder*  decoder )
+  {
+    FT_ASSERT( decoder                     &&
+               decoder->builder.face       &&
+               decoder->builder.face->size );
+
+    /*
+     * Note that `y_ppem' can be zero if there wasn't a call to
+     * `FT_Set_Char_Size' or something similar.  However, this isn't a
+     * problem since we come to this place in the code only if
+     * FT_LOAD_NO_SCALE is set (the other case gets caught by
+     * `cf2_checkTransform').  The ppem value is needed to compute the stem
+     * darkening, which is disabled for getting the unscaled outline.
+     *
+     */
+    return cf2_intToFixed(
+             decoder->builder.face->size->metrics.y_ppem );
+  }
+
+
+  /* get standard stem widths for the current subfont; */
+  /* FreeType stores these as integer font units       */
+  /* (note: variable names seem swapped)               */
+  FT_LOCAL_DEF( CF2_Fixed )
+  cf2_getStdVW( PS_Decoder*  decoder )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    return cf2_intToFixed(
+             decoder->current_subfont->private_dict.standard_height );
+  }
+
+
+  FT_LOCAL_DEF( CF2_Fixed )
+  cf2_getStdHW( PS_Decoder*  decoder )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    return cf2_intToFixed(
+             decoder->current_subfont->private_dict.standard_width );
+  }
+
+
+  /* note: FreeType stores 1000 times the actual value for `BlueScale' */
+  FT_LOCAL_DEF( void )
+  cf2_getBlueMetrics( PS_Decoder*  decoder,
+                      CF2_Fixed*   blueScale,
+                      CF2_Fixed*   blueShift,
+                      CF2_Fixed*   blueFuzz )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    *blueScale = FT_DivFix(
+                   decoder->current_subfont->private_dict.blue_scale,
+                   cf2_intToFixed( 1000 ) );
+    *blueShift = cf2_intToFixed(
+                   decoder->current_subfont->private_dict.blue_shift );
+    *blueFuzz  = cf2_intToFixed(
+                   decoder->current_subfont->private_dict.blue_fuzz );
+  }
+
+
+  /* get blue values counts and arrays; the FreeType parser has validated */
+  /* the counts and verified that each is an even number                  */
+  FT_LOCAL_DEF( void )
+  cf2_getBlueValues( PS_Decoder*  decoder,
+                     size_t*      count,
+                     FT_Pos*     *data )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    *count = decoder->current_subfont->private_dict.num_blue_values;
+    *data  = (FT_Pos*)
+               &decoder->current_subfont->private_dict.blue_values;
+  }
+
+
+  FT_LOCAL_DEF( void )
+  cf2_getOtherBlues( PS_Decoder*  decoder,
+                     size_t*      count,
+                     FT_Pos*     *data )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    *count = decoder->current_subfont->private_dict.num_other_blues;
+    *data  = (FT_Pos*)
+               &decoder->current_subfont->private_dict.other_blues;
+  }
+
+
+  FT_LOCAL_DEF( void )
+  cf2_getFamilyBlues( PS_Decoder*  decoder,
+                      size_t*      count,
+                      FT_Pos*     *data )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    *count = decoder->current_subfont->private_dict.num_family_blues;
+    *data  = (FT_Pos*)
+               &decoder->current_subfont->private_dict.family_blues;
+  }
+
+
+  FT_LOCAL_DEF( void )
+  cf2_getFamilyOtherBlues( PS_Decoder*  decoder,
+                           size_t*      count,
+                           FT_Pos*     *data )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    *count = decoder->current_subfont->private_dict.num_family_other_blues;
+    *data  = (FT_Pos*)
+               &decoder->current_subfont->private_dict.family_other_blues;
+  }
+
+
+  FT_LOCAL_DEF( CF2_Int )
+  cf2_getLanguageGroup( PS_Decoder*  decoder )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    return decoder->current_subfont->private_dict.language_group;
+  }
+
+
+  /* convert unbiased subroutine index to `CF2_Buffer' and */
+  /* return 0 on success                                   */
+  FT_LOCAL_DEF( CF2_Int )
+  cf2_initGlobalRegionBuffer( PS_Decoder*  decoder,
+                              CF2_Int      subrNum,
+                              CF2_Buffer   buf )
+  {
+    CF2_UInt  idx;
+
+
+    FT_ASSERT( decoder );
+
+    FT_ZERO( buf );
+
+    idx = (CF2_UInt)( subrNum + decoder->globals_bias );
+    if ( idx >= decoder->num_globals )
+      return TRUE;     /* error */
+
+    FT_ASSERT( decoder->globals );
+
+    buf->start =
+    buf->ptr   = decoder->globals[idx];
+    buf->end   = decoder->globals[idx + 1];
+
+    return
