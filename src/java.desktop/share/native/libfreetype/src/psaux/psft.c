@@ -650,4 +650,248 @@
     buf->ptr   = decoder->globals[idx];
     buf->end   = decoder->globals[idx + 1];
 
-    return
+    return FALSE;      /* success */
+  }
+
+
+  /* convert AdobeStandardEncoding code to CF2_Buffer; */
+  /* used for seac component                           */
+  FT_LOCAL_DEF( FT_Error )
+  cf2_getSeacComponent( PS_Decoder*  decoder,
+                        CF2_Int      code,
+                        CF2_Buffer   buf )
+  {
+    CF2_Int   gid;
+    FT_Byte*  charstring;
+    FT_ULong  len;
+    FT_Error  error;
+
+
+    FT_ASSERT( decoder );
+    FT_ASSERT( !decoder->builder.is_t1 );
+
+    FT_ZERO( buf );
+
+#ifdef FT_CONFIG_OPTION_INCREMENTAL
+    /* Incremental fonts don't necessarily have valid charsets.        */
+    /* They use the character code, not the glyph index, in this case. */
+    if ( decoder->builder.face->internal->incremental_interface )
+      gid = code;
+    else
+#endif /* FT_CONFIG_OPTION_INCREMENTAL */
+    {
+      gid = cff_lookup_glyph_by_stdcharcode( decoder->cff, code );
+      if ( gid < 0 )
+        return FT_THROW( Invalid_Glyph_Format );
+    }
+
+    error = decoder->get_glyph_callback( (TT_Face)decoder->builder.face,
+                                         (CF2_UInt)gid,
+                                         &charstring,
+                                         &len );
+    /* TODO: for now, just pass the FreeType error through */
+    if ( error )
+      return error;
+
+    /* assume input has been validated */
+    FT_ASSERT( charstring + len >= charstring );
+
+    buf->start = charstring;
+    buf->end   = FT_OFFSET( charstring, len );
+    buf->ptr   = buf->start;
+
+    return FT_Err_Ok;
+  }
+
+
+  FT_LOCAL_DEF( void )
+  cf2_freeSeacComponent( PS_Decoder*  decoder,
+                         CF2_Buffer   buf )
+  {
+    FT_ASSERT( decoder );
+    FT_ASSERT( !decoder->builder.is_t1 );
+
+    decoder->free_glyph_callback( (TT_Face)decoder->builder.face,
+                                  (FT_Byte**)&buf->start,
+                                  (FT_ULong)( buf->end - buf->start ) );
+  }
+
+
+  FT_LOCAL_DEF( FT_Error )
+  cf2_getT1SeacComponent( PS_Decoder*  decoder,
+                          FT_UInt      glyph_index,
+                          CF2_Buffer   buf )
+  {
+    FT_Data   glyph_data;
+    FT_Error  error = FT_Err_Ok;
+    T1_Face   face  = (T1_Face)decoder->builder.face;
+    T1_Font   type1 = &face->type1;
+
+#ifdef FT_CONFIG_OPTION_INCREMENTAL
+    FT_Incremental_InterfaceRec  *inc =
+      face->root.internal->incremental_interface;
+
+
+    /* For incremental fonts get the character data using the */
+    /* callback function.                                     */
+    if ( inc )
+      error = inc->funcs->get_glyph_data( inc->object,
+                                          glyph_index, &glyph_data );
+    else
+#endif
+    /* For ordinary fonts get the character data stored in the face record. */
+    {
+      glyph_data.pointer = type1->charstrings[glyph_index];
+      glyph_data.length  = type1->charstrings_len[glyph_index];
+    }
+
+    if ( !error )
+    {
+      FT_Byte*  charstring_base = (FT_Byte*)glyph_data.pointer;
+      FT_ULong  charstring_len  = glyph_data.length;
+
+
+      FT_ASSERT( charstring_base + charstring_len >= charstring_base );
+
+      FT_ZERO( buf );
+      buf->start =
+      buf->ptr   = charstring_base;
+      buf->end   = charstring_base + charstring_len;
+    }
+
+    return error;
+  }
+
+
+  FT_LOCAL_DEF( void )
+  cf2_freeT1SeacComponent( PS_Decoder*  decoder,
+                           CF2_Buffer   buf )
+  {
+#ifdef FT_CONFIG_OPTION_INCREMENTAL
+
+    T1_Face  face;
+    FT_Data  data;
+
+
+    FT_ASSERT( decoder );
+
+    face = (T1_Face)decoder->builder.face;
+
+    data.pointer = buf->start;
+    data.length  = (FT_UInt)( buf->end - buf->start );
+
+    if ( face->root.internal->incremental_interface )
+      face->root.internal->incremental_interface->funcs->free_glyph_data(
+        face->root.internal->incremental_interface->object,
+        &data );
+
+#else /* !FT_CONFIG_OPTION_INCREMENTAL */
+
+    FT_UNUSED( decoder );
+    FT_UNUSED( buf );
+
+#endif /* !FT_CONFIG_OPTION_INCREMENTAL */
+  }
+
+
+  FT_LOCAL_DEF( CF2_Int )
+  cf2_initLocalRegionBuffer( PS_Decoder*  decoder,
+                             CF2_Int      subrNum,
+                             CF2_Buffer   buf )
+  {
+    CF2_UInt  idx;
+
+
+    FT_ASSERT( decoder );
+
+    FT_ZERO( buf );
+
+    idx = (CF2_UInt)( subrNum + decoder->locals_bias );
+    if ( idx >= decoder->num_locals )
+      return TRUE;     /* error */
+
+    FT_ASSERT( decoder->locals );
+
+    buf->start = decoder->locals[idx];
+
+    if ( decoder->builder.is_t1 )
+    {
+      /* The Type 1 driver stores subroutines without the seed bytes. */
+      /* The CID driver stores subroutines with seed bytes.  This     */
+      /* case is taken care of when decoder->subrs_len == 0.          */
+      if ( decoder->locals_len )
+        buf->end = FT_OFFSET( buf->start, decoder->locals_len[idx] );
+      else
+      {
+        /* We are using subroutines from a CID font.  We must adjust */
+        /* for the seed bytes.                                       */
+        buf->start += ( decoder->lenIV >= 0 ? decoder->lenIV : 0 );
+        buf->end    = decoder->locals[idx + 1];
+      }
+
+      if ( !buf->start )
+      {
+        FT_ERROR(( "cf2_initLocalRegionBuffer (Type 1 mode):"
+                   " invoking empty subrs\n" ));
+      }
+    }
+    else
+    {
+      buf->end = decoder->locals[idx + 1];
+    }
+
+    buf->ptr = buf->start;
+
+    return FALSE;      /* success */
+  }
+
+
+  FT_LOCAL_DEF( CF2_Fixed )
+  cf2_getDefaultWidthX( PS_Decoder*  decoder )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    return cf2_intToFixed(
+             decoder->current_subfont->private_dict.default_width );
+  }
+
+
+  FT_LOCAL_DEF( CF2_Fixed )
+  cf2_getNominalWidthX( PS_Decoder*  decoder )
+  {
+    FT_ASSERT( decoder && decoder->current_subfont );
+
+    return cf2_intToFixed(
+             decoder->current_subfont->private_dict.nominal_width );
+  }
+
+
+  FT_LOCAL_DEF( void )
+  cf2_outline_reset( CF2_Outline  outline )
+  {
+    PS_Decoder*  decoder = outline->decoder;
+
+
+    FT_ASSERT( decoder );
+
+    outline->root.windingMomentum = 0;
+
+    FT_GlyphLoader_Rewind( decoder->builder.loader );
+  }
+
+
+  FT_LOCAL_DEF( void )
+  cf2_outline_close( CF2_Outline  outline )
+  {
+    PS_Decoder*  decoder = outline->decoder;
+
+
+    FT_ASSERT( decoder );
+
+    ps_builder_close_contour( &decoder->builder );
+
+    FT_GlyphLoader_Add( decoder->builder.loader );
+  }
+
+
+/* END */
