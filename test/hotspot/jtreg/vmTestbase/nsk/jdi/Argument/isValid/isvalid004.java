@@ -96,4 +96,92 @@ public class isvalid004 {
                 int keysetSize = defaultArguments.size();
                 Iterator  keysetIterator = keyset.iterator();
 
-                for (
+                for ( ; ; ) {
+                    try {
+                        String argName = (String) keysetIterator.next();
+
+                        try {
+//
+                            argument = (Connector.IntegerArgument)
+                                       defaultArguments.get(argName);
+                            try {
+                                intArgument = (Connector.IntegerArgument)
+                                             defaultArguments.get(argName);
+                                break ;
+                            } catch ( ClassCastException e) {
+                            }
+                        } catch ( ClassCastException e) {
+                        }
+                    } catch ( NoSuchElementException e) {
+                        break ;
+                    }
+                }
+                if (intArgument != null) {
+                    break ;
+                }
+            } catch ( NoSuchElementException e) {
+                out.println(sErr1 +
+//
+                    "no Connector with IntegerArgument found\n");
+                return exitCode0;
+            }
+        }
+
+        Integer intI = null;
+
+        if (argument.isValid(intArgument.stringValueOf(intArgument.min()))) {
+        } else {
+            exitCode = exitCode2;
+            out.println(sErr2 +
+                     "check: super.isValid(stringValueOf(min()))\n" +
+                     "result: false\n");
+        }
+
+        if (argument.isValid(intArgument.stringValueOf(intArgument.max()))) {
+        } else {
+            exitCode = exitCode2;
+            out.println(sErr2 +
+                     "check: super.isValid(stringValueOf(max()))\n" +
+                     "result: false\n");
+        }
+
+        if (intArgument.min() < intArgument.max()) {
+            if (argument.isValid(
+                intArgument.stringValueOf(intArgument.min() + 1))) {
+            } else {
+                exitCode = exitCode2;
+                out.println(sErr2 +
+                         "check: super.isValid(stringValueOf(min()+1))\n" +
+                         "result: false\n");
+            }
+        }
+
+        if (intArgument.min() > intI.MIN_VALUE) {
+            if (!argument.isValid(
+                 intArgument.stringValueOf(intArgument.min() - 1))) {
+            } else {
+                exitCode = exitCode2;
+                out.println(sErr2 +
+                         "check: super.isValid(stringValueOf(min()-1))\n" +
+                         "result: true\n");
+            }
+        }
+
+        if (intArgument.max() < intI.MAX_VALUE) {
+            if (!argument.isValid(
+                 intArgument.stringValueOf(intArgument.max() + 1))) {
+            } else {
+                exitCode = exitCode2;
+                out.println(sErr2 +
+                         "check: super.isValid(stringValueOf(max()+1))\n" +
+                         "result: true\n");
+            }
+        }
+
+
+        if (exitCode != exitCode0) {
+            out.println("TEST FAILED");
+        }
+        return exitCode;
+    }
+}
