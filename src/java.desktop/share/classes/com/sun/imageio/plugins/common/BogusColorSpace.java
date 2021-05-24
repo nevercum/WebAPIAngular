@@ -132,4 +132,6 @@ public class BogusColorSpace extends ColorSpace {
         System.arraycopy(xyzvalue, 0, colorvalue, 0,
                          Math.min(3, colorvalue.length));
 
-        return xyzval
+        return xyzvalue;
+    }
+}
