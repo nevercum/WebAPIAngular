@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2003, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,29 +22,37 @@
  * questions.
  */
 
-package nsk.jvmti.ClassFileLoadHook;
+/* @test
+   @bug 4143651
+   @summary Test if I/O methods will check if the stream
+            has been closed.
+*/
 
-/** Redefined tested class with new methods implementation. */
-public class classfloadhk009r {
-    static long staticField = 0;
 
-    static {
-        staticField = 2;
+
+import java.io.*;
+
+public class ReadAfterClose {
+    static void testRead(InputStream in) throws Exception {
+        in.close();
+        byte[] buf = new byte[2];
+
+        try {
+            in.read(buf, 0, 1);
+            throw new Exception("Should not allow read on a closed stream");
+        } catch (IOException e) {
+        }
+
+        try {
+            in.read(buf, 0, 0);
+            throw new Exception("Should not allow read on a closed stream");
+        } catch (IOException e) {
+        }
     }
 
-    int intField;
-
-    public classfloadhk009r(int n) {
-        intField = n;
-    }
-
-    public long longMethod(int i) {
-        return (i + intField) * 2;
-    }
-
-    // expected to return 58
-    public static long testedStaticMethod() {
-        classfloadhk009r obj = new classfloadhk009r(10);
-        return obj.longMethod(20) - staticField;
+    public static void main(String argv[]) throws Exception {
+        BufferedInputStream bis = new BufferedInputStream
+            (new ByteArrayInputStream(new byte[32]));
+        testRead(bis);
     }
 }

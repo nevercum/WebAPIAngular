@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2003, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,29 +22,26 @@
  * questions.
  */
 
-package nsk.jvmti.ClassFileLoadHook;
+/*
+ * @test
+ * @library /test/lib
+ * @requires vm.flavor == "minimal"
+ * @requires vm.flagless
+ * @modules java.base/jdk.internal.misc
+ *          java.instrument
+ * @run driver Instrumentation
+ */
 
-/** Redefined tested class with new methods implementation. */
-public class classfloadhk009r {
-    static long staticField = 0;
+import jdk.test.lib.process.OutputAnalyzer;
+import jdk.test.lib.process.ProcessTools;
 
-    static {
-        staticField = 2;
-    }
+public class Instrumentation {
 
-    int intField;
-
-    public classfloadhk009r(int n) {
-        intField = n;
-    }
-
-    public long longMethod(int i) {
-        return (i + intField) * 2;
-    }
-
-    // expected to return 58
-    public static long testedStaticMethod() {
-        classfloadhk009r obj = new classfloadhk009r(10);
-        return obj.longMethod(20) - staticField;
+    public static void main(String[] args) throws Exception {
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder(
+                "-minimal", "-javaagent:redefineagent.jar", "-version");
+        new OutputAnalyzer(pb.start())
+                .shouldContain("Instrumentation agents are not supported in this VM")
+                .shouldHaveExitValue(1);
     }
 }

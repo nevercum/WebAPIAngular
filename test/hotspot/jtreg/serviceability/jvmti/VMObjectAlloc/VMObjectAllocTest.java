@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,29 +21,33 @@
  * questions.
  */
 
-package nsk.jvmti.ClassFileLoadHook;
+/**
+ * @test
+ * @summary Verifies that a VMObjectAlloc event is generated for object created using MethodHandle
+ * @requires vm.jvmti
+ * @run main/othervm/native -agentlib:VMObjectAlloc VMObjectAllocTest
+ */
 
-/** Redefined tested class with new methods implementation. */
-public class classfloadhk009r {
-    static long staticField = 0;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 
-    static {
-        staticField = 2;
+public class VMObjectAllocTest {
+
+    private static native int getNumberOfAllocation();
+
+    public VMObjectAllocTest(String str) {
     }
 
-    int intField;
+    public static void main(String[] args) throws Throwable {
 
-    public classfloadhk009r(int n) {
-        intField = n;
-    }
+        MethodHandles.Lookup publicLookup = MethodHandles.publicLookup();
+        MethodType mt = MethodType.methodType(void.class, String.class);
+        MethodHandle mh = publicLookup.findConstructor(VMObjectAllocTest.class, mt);
+        mh.invoke("str");
 
-    public long longMethod(int i) {
-        return (i + intField) * 2;
-    }
-
-    // expected to return 58
-    public static long testedStaticMethod() {
-        classfloadhk009r obj = new classfloadhk009r(10);
-        return obj.longMethod(20) - staticField;
+        if (getNumberOfAllocation() != 1) {
+            throw new Exception("Number of allocation != 1");
+        }
     }
 }
