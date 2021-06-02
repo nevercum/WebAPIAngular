@@ -121,4 +121,199 @@ public final class FileServerHandler implements HttpHandler {
             }
             if (indexFile(path) != null) {
                 serveFile(exchange, indexFile(path), writeBody);
-            } e
+            } else {
+                listFiles(exchange, path, writeBody);
+            }
+        } else {
+            serveFile(exchange, path, writeBody);
+        }
+    }
+
+    private void handleMovedPermanently(HttpExchange exchange) throws IOException {
+        exchange.getResponseHeaders().set("Location", getRedirectURI(exchange.getRequestURI()));
+        exchange.sendResponseHeaders(301, -1);
+    }
+
+    private void handleForbidden(HttpExchange exchange) throws IOException {
+        exchange.sendResponseHeaders(403, -1);
+    }
+
+    private void handleNotFound(HttpExchange exchange) throws IOException {
+        String fileNotFound = ResourceBundleHelper.getMessage("html.not.found");
+        var bytes = (openHTML
+                + "<h1>" + fileNotFound + "</h1>\n"
+                + "<p>" + sanitize.apply(exchange.getRequestURI().getPath()) + "</p>\n"
+                + closeHTML).getBytes(UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
+
+        if (exchange.getRequestMethod().equals("HEAD")) {
+            exchange.getResponseHeaders().set("Content-Length", Integer.toString(bytes.length));
+            exchange.sendResponseHeaders(404, -1);
+        } else {
+            exchange.sendResponseHeaders(404, bytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
+        }
+    }
+
+    private static void discardRequestBody(HttpExchange exchange) throws IOException {
+        try (InputStream is = exchange.getRequestBody()) {
+            is.readAllBytes();
+        }
+    }
+
+    private String getRedirectURI(URI uri) {
+        String query = uri.getRawQuery();
+        String redirectPath = uri.getRawPath() + "/";
+        return query == null ? redirectPath : redirectPath + "?" + query;
+    }
+
+    private static boolean missingSlash(HttpExchange exchange) {
+        return !exchange.getRequestURI().getPath().endsWith("/");
+    }
+
+    private static String contextPath(HttpExchange exchange) {
+        String context = exchange.getHttpContext().getPath();
+        if (!context.startsWith("/")) {
+            throw new IllegalArgumentException("Context path invalid: " + context);
+        }
+        return context;
+    }
+
+    private static String requestPath(HttpExchange exchange) {
+        String request = exchange.getRequestURI().getPath();
+        if (!request.startsWith("/")) {
+            throw new IllegalArgumentException("Request path invalid: " + request);
+        }
+        return request;
+    }
+
+    // Checks that the request does not escape context.
+    private static void checkRequestWithinContext(String requestPath,
+                                                  String contextPath) {
+        if (requestPath.equals(contextPath)) {
+            return;  // context path requested, e.g. context /foo, request /foo
+        }
+        String contextPathWithTrailingSlash = contextPath.endsWith("/")
+                ? contextPath : contextPath + "/";
+        if (!requestPath.startsWith(contextPathWithTrailingSlash)) {
+            throw new IllegalArgumentException("Request not in context: " + contextPath);
+        }
+    }
+
+    // Checks that path is, or is within, the root.
+    private static Path checkPathWithinRoot(Path path, Path root) {
+        if (!path.startsWith(root)) {
+            throw new IllegalArgumentException("Request not in root");
+        }
+        return path;
+    }
+
+    // Returns the request URI path relative to the context.
+    private static String relativeRequestPath(HttpExchange exchange) {
+        String context = contextPath(exchange);
+        String request = requestPath(exchange);
+        checkRequestWithinContext(request, context);
+        return request.substring(context.length());
+    }
+
+    private Path mapToPath(HttpExchange exchange, Path root) {
+        try {
+            assert root.isAbsolute() && Files.isDirectory(root);  // checked during creation
+            String uriPath = relativeRequestPath(exchange);
+            String[] pathSegment = uriPath.split("/");
+
+            // resolve each path segment against the root
+            Path path = root;
+            for (var segment : pathSegment) {
+                if (!URIPathSegment.isSupported(segment)) {
+                    return null;  // stop resolution, null results in 404 response
+                }
+                path = path.resolve(segment);
+                if (!Files.isReadable(path) || isHiddenOrSymLink(path)) {
+                    return null;  // stop resolution
+                }
+            }
+            path = path.normalize();
+            return checkPathWithinRoot(path, root);
+        } catch (Exception e) {
+            logger.log(System.Logger.Level.TRACE,
+                    "FileServerHandler: request URI path resolution failed", e);
+            return null;  // could not resolve request URI path
+        }
+    }
+
+    private static Path indexFile(Path path) {
+        Path html = path.resolve("index.html");
+        Path htm = path.resolve("index.htm");
+        return Files.exists(html) ? html : Files.exists(htm) ? htm : null;
+    }
+
+    private void serveFile(HttpExchange exchange, Path path, boolean writeBody)
+        throws IOException
+    {
+        var respHdrs = exchange.getResponseHeaders();
+        respHdrs.set("Content-Type", mediaType(path.toString()));
+        respHdrs.set("Last-Modified", getLastModified(path));
+        if (writeBody) {
+            exchange.sendResponseHeaders(200, Files.size(path));
+            try (InputStream fis = Files.newInputStream(path);
+                 OutputStream os = exchange.getResponseBody()) {
+                fis.transferTo(os);
+            }
+        } else {
+            respHdrs.set("Content-Length", Long.toString(Files.size(path)));
+            exchange.sendResponseHeaders(200, -1);
+        }
+    }
+
+    private void listFiles(HttpExchange exchange, Path path, boolean writeBody)
+        throws IOException
+    {
+        var respHdrs = exchange.getResponseHeaders();
+        respHdrs.set("Content-Type", "text/html; charset=UTF-8");
+        respHdrs.set("Last-Modified", getLastModified(path));
+        var bodyBytes = dirListing(exchange, path).getBytes(UTF_8);
+        if (writeBody) {
+            exchange.sendResponseHeaders(200, bodyBytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bodyBytes);
+            }
+        } else {
+            respHdrs.set("Content-Length", Integer.toString(bodyBytes.length));
+            exchange.sendResponseHeaders(200, -1);
+        }
+    }
+
+    private static final String openHTML = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="utf-8"/>
+            </head>
+            <body>
+            """;
+
+    private static final String closeHTML = """
+            </body>
+            </html>
+            """;
+
+    private static final String hrefListItemTemplate = """
+            <li><a href="%s">%s</a></li>
+            """;
+
+    private static String hrefListItemFor(URI uri) {
+        return hrefListItemTemplate.formatted(uri.toASCIIString(), sanitize.apply(uri.getPath()));
+    }
+
+    private static String dirListing(HttpExchange exchange, Path path) throws IOException {
+        String dirListing = ResourceBundleHelper.getMessage("html.dir.list");
+        var sb = new StringBuilder(openHTML
+                + "<h1>" + dirListing + " "
+                + sanitize.apply(exchange.getRequestURI().getPath())
+                + "</h1>\n"
+                + "<ul>\n");
+        try (var paths = Files.list(path)) {
+            paths.filter(p -> Files.isReadable(p) && !isHiddenOrSymLink(p)
