@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2003, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -19,46 +19,24 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
- *
  */
 
-package sun.jvm.hotspot.oops;
 
-import sun.jvm.hotspot.*;
-import sun.jvm.hotspot.types.*;
-import java.io.*;
+/*
+ * @test
+ *
+ * @summary converted from VM Testbase nsk/jvmti/IsMethodNative/isnative001.
+ * VM Testbase keywords: [quick, jpda, jvmti, noras]
+ * VM Testbase readme:
+ * DESCRIPTION
+ *     The test exercises JVMTI function IsMethodNative.
+ *     The function is called to get "is native" flag for
+ *     the various methods.
+ * COMMENTS
+ *     Ported from JVMDI.
+ *
+ * @library /vmTestbase
+ *          /test/lib
+ * @run main/othervm/native -agentlib:isnative001 nsk.jvmti.IsMethodNative.isnative001
+ */
 
-// An IndexableFieldIdentifier describes a field in an Oop accessed by an index
-
-public class IndexableFieldIdentifier extends FieldIdentifier {
-
-  public IndexableFieldIdentifier(int index) {
-    this.index = index;
-  }
-
-  private int index;
-
-  public int getIndex() { return index; }
-
-  public String getName() { return Integer.toString(getIndex()); }
-
-  public void printOn(PrintStream tty) {
-    tty.print(" - " + getIndex() + ":\t");
-  }
-
-  public boolean equals(Object obj) {
-    if (obj == null) {
-      return false;
-    }
-
-    if (!(obj instanceof IndexableFieldIdentifier)) {
-      return false;
-    }
-
-    return (((IndexableFieldIdentifier) obj).getIndex() == index);
-  }
-
-  public int hashCode() {
-    return index;
-  }
-};
