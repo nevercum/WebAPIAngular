@@ -316,4 +316,75 @@ public final class FileServerHandler implements HttpHandler {
                 + "</h1>\n"
                 + "<ul>\n");
         try (var paths = Files.list(path)) {
-            paths.filter(p -> Files.isReadable(p) && !isHiddenOrSymLink(p)
+            paths.filter(p -> Files.isReadable(p) && !isHiddenOrSymLink(p))
+                 .map(p -> path.toUri().relativize(p.toUri()))
+                 .forEach(uri -> sb.append(hrefListItemFor(uri)));
+        }
+        sb.append("</ul>\n");
+        sb.append(closeHTML);
+
+        return sb.toString();
+    }
+
+    private static String getLastModified(Path path) throws IOException {
+        var fileTime = Files.getLastModifiedTime(path);
+        return fileTime.toInstant().atZone(ZoneId.of("GMT"))
+                .format(DateTimeFormatter.RFC_1123_DATE_TIME);
+    }
+
+    private static boolean isHiddenOrSymLink(Path path) {
+        try {
+            return Files.isHidden(path) || Files.isSymbolicLink(path);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    // Default for unknown content types, as per RFC 2046
+    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
+
+    private String mediaType(String file) {
+        String type = mimeTable.apply(file);
+        return type != null ? type : DEFAULT_CONTENT_TYPE;
+    }
+
+    // A non-exhaustive map of reserved-HTML and special characters to their
+    // equivalent entity.
+    private static final Map<Integer,String> RESERVED_CHARS = Map.of(
+            (int) '&'  , "&amp;"   ,
+            (int) '<'  , "&lt;"    ,
+            (int) '>'  , "&gt;"    ,
+            (int) '"'  , "&quot;"  ,
+            (int) '\'' , "&#x27;"  ,
+            (int) '/'  , "&#x2F;"  );
+
+    // A function that takes a string and returns a sanitized version of that
+    // string with the reserved-HTML and special characters replaced with their
+    // equivalent entity.
+    private static final UnaryOperator<String> sanitize =
+            file -> file.chars().collect(StringBuilder::new,
+                    (sb, c) -> sb.append(RESERVED_CHARS.getOrDefault(c, Character.toString(c))),
+                    StringBuilder::append).toString();
+
+    @Override
+    public void handle(HttpExchange exchange) throws IOException {
+        assert List.of("GET", "HEAD").contains(exchange.getRequestMethod());
+        try (exchange) {
+            discardRequestBody(exchange);
+            Path path = mapToPath(exchange, root);
+            if (path != null) {
+                exchange.setAttribute("request-path", path.toString());  // store for OutputFilter
+                if (!Files.exists(path) || !Files.isReadable(path) || isHiddenOrSymLink(path)) {
+                    handleNotFound(exchange);
+                } else if (exchange.getRequestMethod().equals("HEAD")) {
+                    handleHEAD(exchange, path);
+                } else {
+                    handleGET(exchange, path);
+                }
+            } else {
+                exchange.setAttribute("request-path", "could not resolve request URI path");
+                handleNotFound(exchange);
+            }
+        }
+    }
+}
