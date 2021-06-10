@@ -120,4 +120,70 @@ public class FormatData_mt extends ParallelListResourceBundle {
             },
             { "DayNarrows",
                 new String[] {
-                    
+                    "\u0126",
+                    "T",
+                    "T",
+                    "E",
+                    "\u0126",
+                    "\u0120",
+                    "S",
+                }
+            },
+            { "AmPmMarkers",
+                new String[] {
+                    "QN",
+                    "WN",
+                }
+            },
+            { "Eras",
+                new String[] {
+                    "QK",
+                    "WK",
+                }
+            },
+            { "NumberPatterns",
+                new String[] {
+                    "#,##0.###",
+                    "\u00a4 #,##0.00",
+                    "#,##0%",
+                }
+            },
+            { "NumberElements",
+                new String[] {
+                    ".",
+                    ",",
+                    ";",
+                    "%",
+                    "0",
+                    "#",
+                    "-",
+                    "E",
+                    "\u2030",
+                    "\u221e",
+                    "NaN",
+                }
+            },
+            { "TimePatterns",
+                new String[] {
+                    "HH:mm:ss z",
+                    "HH:mm:ss z",
+                    "HH:mm:ss",
+                    "HH:mm",
+                }
+            },
+            { "DatePatterns",
+                new String[] {
+                    "EEEE, d 'ta\u2019' MMMM yyyy",
+                    "d 'ta\u2019' MMMM yyyy",
+                    "dd MMM yyyy",
+                    "dd/MM/yyyy",
+                }
+            },
+            { "DateTimePatterns",
+                new String[] {
+                    "{1} {0}",
+                }
+            },
+        };
+    }
+}
