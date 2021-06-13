@@ -232,4 +232,111 @@ Java_nsk_jvmti_RawMonitorWait_rawmnwait005_check(JNIEnv *env,
     // get exclusive ownership of 'wait_lock' monitor before
     //  starting 'test_thread' to avoid following race condition:
     //   'test_thread'     |   current thread
-    //   -------
+    //   -------------------------------------
+    //                     | RunAgentThread(..., test_thread, ...)
+    //    wait_lock.enter  |
+    //    wait_lock.notify |
+    //                     | wait_lock.enter
+    //                     | wait_lock.wait(0)
+    //    ...              |
+    //                     |  ... will wait forever ...
+    //
+    // See also 6399368 test bug.
+    //
+    err = jvmti->RawMonitorEnter(wait_lock);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(RawMonitorEnter#wait) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return STATUS_FAILED;
+    }
+    if (printdump == JNI_TRUE) {
+        printf(">>> [%s] acquired lock for 'wait_lock' ... \n", thread_name);
+    }
+
+    if (printdump == JNI_TRUE) {
+        printf(">>> [%s] starting test thread ...\n", thread_name);
+    }
+
+    // This starts a daemon thread, so we need to synchronize with it
+    // before we terminate - else the test will end before it checks
+    // it was interrupted!
+
+    err = jvmti->RunAgentThread(thr, test_thread, NULL,
+                                JVMTI_THREAD_NORM_PRIORITY);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(RunDebugThread) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return STATUS_FAILED;
+    }
+
+    if (printdump == JNI_TRUE) {
+        printf(">>> [%s] waiting for test thread to run (do wait_lock.wait)...\n", thread_name);
+    }
+    err = jvmti->RawMonitorWait(wait_lock, (jlong)0);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(RawMonitorWait#wait) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return STATUS_FAILED;
+    }
+    if (printdump == JNI_TRUE) {
+        printf(">>> [%s] got notification from test thread ...\n", thread_name);
+    }
+
+    // Keep the wait_lock so we can wait again at the end.
+
+    err = jvmti->RawMonitorEnter(monitor);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(RawMonitorEnter#test) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return STATUS_FAILED;
+    }
+    if (printdump == JNI_TRUE) {
+        printf(">>> [%s] acquired lock for 'monitor' ... \n", thread_name);
+    }
+
+    if (printdump == JNI_TRUE) {
+        printf(">>> [%s] interrupting test thread ...\n", thread_name);
+    }
+
+    err = jvmti->InterruptThread(thr);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(InterruptThread) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        result = STATUS_FAILED;
+    }
+
+    err = jvmti->RawMonitorExit(monitor);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(RawMonitorExit#test) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        result = STATUS_FAILED;
+    }
+
+    if (printdump == JNI_TRUE) {
+        printf(">>> [%s] waiting for test thread to complete its wait and notify us ...\n", thread_name);
+    }
+    err = jvmti->RawMonitorWait(wait_lock, (jlong)0);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(RawMonitorWait#wait) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return STATUS_FAILED;
+    }
+    if (printdump == JNI_TRUE) {
+        printf(">>> [%s] got final notification from test thread ...\n", thread_name);
+    }
+
+    err = jvmti->RawMonitorExit(wait_lock);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(RawMonitorExit#wait) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return STATUS_FAILED;
+    }
+
+    if (printdump == JNI_TRUE) {
+        printf(">>> [%s] all done\n", thread_name);
+    }
+
+    return result;
+}
+
+}
