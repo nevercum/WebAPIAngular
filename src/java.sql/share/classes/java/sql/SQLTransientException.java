@@ -97,4 +97,75 @@ public class SQLTransientException extends java.sql.SQLException {
          * @param vendorCode a database vendor specific exception code
          * @since 1.6
          */
-        
+        public SQLTransientException(String reason, String SQLState, int vendorCode) {
+                super(reason,SQLState,vendorCode);
+        }
+
+    /**
+     * Constructs a {@code SQLTransientException} object
+     * with a given  {@code cause}.
+     * The {@code SQLState} is initialized
+     * to {@code null} and the vendor code is initialized to 0.
+     * The {@code reason}  is initialized to {@code null} if
+     * {@code cause==null} or to {@code cause.toString()} if
+     * {@code cause!=null}.
+     *
+     * @param cause the underlying reason for this {@code SQLException} (which is saved for later retrieval by the {@code getCause()} method); may be null indicating
+     *     the cause is non-existent or unknown.
+     * @since 1.6
+     */
+    public SQLTransientException(Throwable cause) {
+        super(cause);
+    }
+
+    /**
+     * Constructs a {@code SQLTransientException} object
+     * with a given
+     * {@code reason} and  {@code cause}.
+     * The {@code SQLState} is  initialized to {@code null}
+     * and the vendor code is initialized to 0.
+     *
+     * @param reason a description of the exception.
+     * @param cause the underlying reason for this {@code SQLException} (which is saved for later retrieval by the {@code getCause()} method); may be null indicating
+     *     the cause is non-existent or unknown.
+     * @since 1.6
+     */
+    public SQLTransientException(String reason, Throwable cause) {
+        super(reason,cause);
+    }
+
+    /**
+     * Constructs a {@code SQLTransientException} object
+     * with a given
+     * {@code reason}, {@code SQLState} and  {@code cause}.
+     * The vendor code is initialized to 0.
+     *
+     * @param reason a description of the exception.
+     * @param SQLState an XOPEN or SQL:2003 code identifying the exception
+     * @param cause the underlying reason for this {@code SQLException} (which is saved for later retrieval by the {@code getCause()} method); may be null indicating
+     *     the cause is non-existent or unknown.
+     * @since 1.6
+     */
+    public SQLTransientException(String reason, String SQLState, Throwable cause) {
+        super(reason,SQLState,cause);
+    }
+
+    /**
+     *  Constructs a {@code SQLTransientException} object
+     * with a given
+     * {@code reason}, {@code SQLState}, {@code vendorCode}
+     * and  {@code cause}.
+     *
+     * @param reason a description of the exception
+     * @param SQLState an XOPEN or SQL:2003 code identifying the exception
+     * @param vendorCode a database vendor-specific exception code
+     * @param cause the underlying reason for this {@code SQLException} (which is saved for later retrieval by the {@code getCause()} method); may be null indicating
+     *     the cause is non-existent or unknown.
+     * @since 1.6
+     */
+    public SQLTransientException(String reason, String SQLState, int vendorCode, Throwable cause) {
+        super(reason,SQLState,vendorCode,cause);
+    }
+
+    private static final long serialVersionUID = -9042733978262274539L;
+}
