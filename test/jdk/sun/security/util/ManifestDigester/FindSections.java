@@ -105,4 +105,52 @@ public class FindSections {
 
     @Test
     public void testNameContinuedLf() throws Exception {
-        test(DEFAULT_MANIFEST + "Name: FooBa
+        test(DEFAULT_MANIFEST + "Name: FooBar\n \r\n", "FooBar");
+    }
+
+    @Test
+    public void testNameContinuedCrLf() throws Exception {
+        test(DEFAULT_MANIFEST + "Name: FooBar\r\n \r\n", "FooBar");
+    }
+
+    @Test
+    public void testNameContinuedCrIgnoreNextChar() throws Exception {
+        test(DEFAULT_MANIFEST + "Name: Foo\r: Bar\r\n", "Foo");
+    }
+
+    @Test
+    public void testNameContinuedCrIgnoreNextCharSpace() throws Exception {
+        test(DEFAULT_MANIFEST + "Name: Foo\r  Bar\r\n", "Foo Bar");
+    }
+
+    @Test
+    public void testNameContinuedContinuedCr() throws Exception {
+        test(DEFAULT_MANIFEST + "Name: Fo\r\n oB\r ar\r\n", "FooBar");
+    }
+
+    @Test
+    public void testNameContinuedContinuedLf() throws Exception {
+        test(DEFAULT_MANIFEST + "Name: Fo\r\n oB\n ar\r\n", "FooBar");
+    }
+
+    @Test
+    public void testNameContinuedContinuedCrLf() throws Exception {
+        test(DEFAULT_MANIFEST + "Name: Fo\r\n oB\r\n ar\r\n", "FooBar");
+    }
+
+    @Test
+    public void testNameContinuedEndCr() throws Exception {
+        test(DEFAULT_MANIFEST + "Name: Foo\r\n Bar\r", "FooBar");
+    }
+
+    @Test
+    public void testNameContinuedEndLf() throws Exception {
+        test(DEFAULT_MANIFEST + "Name: Foo\r\n Bar\n", "FooBar");
+    }
+
+    @Test
+    public void testNameContinuedEndCrLf() throws Exception {
+        test(DEFAULT_MANIFEST + "Name: Foo\r\n Bar\r\n", "FooBar");
+    }
+
+}
