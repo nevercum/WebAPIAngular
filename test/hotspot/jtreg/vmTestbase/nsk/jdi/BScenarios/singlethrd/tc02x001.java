@@ -118,4 +118,121 @@ public class tc02x001 {
 
         debugeeClass = (ClassType)debugee.classByName(debugeeName);
 
-        displa
+        display("\nTEST BEGINS");
+        display("===========");
+
+        display("Tested class\t:" + debugeeClass.name());
+
+        EventSet eventSet = null;
+        EventIterator eventIterator = null;
+        Event event;
+        long totalTime = waitTime;
+        long tmp, begin = System.currentTimeMillis(),
+             delta = 0;
+        boolean exit = false;
+        EventRequestManager evm = debugee.getEventRequestManager();
+        StepRequest step = null;
+
+        debugee.setBreakpoint(debugeeClass,
+                                tc02x001a.brkpMethodName,
+                                tc02x001a.brkpLineNumber);
+        debugee.resume();
+        debugee.sendSignal(SGL_PERFORM);
+
+        while (totalTime > 0 && !exit) {
+            if (eventIterator == null || !eventIterator.hasNext()) {
+                try {
+                    eventSet = debugee.VM().eventQueue().remove(totalTime);
+                } catch (InterruptedException e) {
+                    new Failure(e);
+                }
+                if (eventSet != null) {
+                    eventIterator = eventSet.eventIterator();
+                } else {
+                    eventIterator = null;
+                }
+            }
+            if (eventIterator != null) {
+                while (eventIterator.hasNext()) {
+                    event = eventIterator.nextEvent();
+//                    display(" event ===>>> " + event);
+
+                    if (event instanceof BreakpointEvent) {
+                        display(" event ===>>> " + event);
+                        hitBreakpoint((BreakpointEvent )event);
+                        step = evm.createStepRequest(((BreakpointEvent )event).thread(),
+                                                        StepRequest.STEP_LINE,
+                                                        StepRequest.STEP_OVER);
+                        step.enable();
+                        debugee.resume();
+
+                    } else if (event instanceof StepEvent) {
+                        display(" event ===>>> " + event);
+                        hitStepOver((StepEvent )event);
+                        if (stepEventCount >= expectedStepEventCount) {
+                            evm.deleteEventRequest(step);
+                        }
+                        debugee.resume();
+
+                    } else if (event instanceof VMDeathEvent) {
+                        exit = true;
+                        break;
+                    } else if (event instanceof VMDisconnectEvent) {
+                        exit = true;
+                        break;
+                    } // if
+                } // while
+            } // if
+            exit = exit || (stepEventCount == expectedStepEventCount);
+            tmp = System.currentTimeMillis();
+            delta = tmp - begin;
+            totalTime -= delta;
+                begin = tmp;
+        }
+
+        if (stepEventCount < expectedStepEventCount) {
+            if (totalTime <= 0) {
+                complain("out of wait time...");
+            }
+            complain("expecting " + expectedStepEventCount
+                        + " step events, but "
+                        + stepEventCount + " events arrived.");
+            exitStatus = Consts.TEST_FAILED;
+        }
+
+        display("=============");
+        display("TEST FINISHES\n");
+    }
+
+    private void hitBreakpoint(BreakpointEvent event) {
+        display("BreakpointEvent arrived. Location - "
+                    + event.location().lineNumber() + " line");
+        display("");
+    }
+
+    private void hitStepOver(StepEvent event) {
+        stepEventCount++;
+
+        display("event info:");
+        display("\tthread\t- " + event.thread().name());
+        try {
+            display("\tsource\t- " + event.location().sourceName());
+        } catch (AbsentInformationException e) {
+        }
+        display("\tmethod\t- " + event.location().method().name());
+        display("\tline\t- " + event.location().lineNumber());
+
+        if (stepEventCount == expectedStepEventCount) {
+            if (event.location().lineNumber() != tc02x001a.checkLastLine) {
+                complain("StepEvent steps to line " + event.location().lineNumber()
+                            + ", expected line number is "
+                            + tc02x001a.checkLastLine);
+                exitStatus = Consts.TEST_FAILED;
+            } else {
+                display("StepEvent steps to the expected line "
+                            + event.location().lineNumber());
+            }
+        }
+        display("");
+    }
+}
