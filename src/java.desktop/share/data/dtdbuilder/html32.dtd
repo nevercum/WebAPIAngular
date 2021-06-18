@@ -112,4 +112,256 @@
 
 <!ENTITY % heading "H1|H2|H3|H4|H5|H6">
 
-<!ENTITY % list "UL | OL |  DIR | ME
+<!ENTITY % list "UL | OL |  DIR | MENU">
+
+<![ %HTML.Deprecated [
+    <!ENTITY % preformatted "PRE | XMP | LISTING | PLAINTEXT">
+]]>
+
+<!ENTITY % preformatted "PRE">
+
+<!--================ Character mnemonic entities ==========================-->
+
+<!ENTITY % HTMLlat1 PUBLIC
+       "-//W3C//ENTITIES Latin 1//EN//HTML">
+%HTMLlat1;
+
+<!ENTITY % HTMLsymbol PUBLIC
+       "-//W3C//ENTITIES Symbols//EN//HTML">
+%HTMLsymbol;
+
+<!ENTITY % HTMLspecial PUBLIC
+       "-//W3C//ENTITIES Special//EN//HTML">
+%HTMLspecial;
+
+
+<!--=================== Text Markup =======================================-->
+
+<!ENTITY % font "TT | I | B  | U | STRIKE | S | BIG | SMALL | SUB | SUP">
+
+<!ENTITY % phrase "EM | STRONG | DFN | CODE | SAMP | KBD | VAR | CITE">
+
+<![ %HTML.HotJava [
+    <!ENTITY % special "A | IMG | APPLET | OBJECT | FONT | BASEFONT | BR | SCRIPT | MAP
+                        | NOBR | WBR | BLINK | SPAN">
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ENTITY % special "A | IMG | APPLET | FONT | BASEFONT | BR | SCRIPT | MAP">
+]]>
+
+<!ENTITY % form "INPUT | SELECT | TEXTAREA">
+
+<!ENTITY % text "#PCDATA | %font | %phrase | %special | %form">
+
+<![ %HTML.HotJava [
+    <!ELEMENT (%font|%phrase) - - (%text | CENTER | P | DL | UL | OL)*>
+]]>
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT (%font|%phrase) - - (%text)*>
+]]>
+
+
+<!-- there are also 16 widely known color names although
+  the resulting colors are implementation dependent:
+
+   aqua, black, blue, fuchsia, gray, green, lime, maroon,
+   navy, olive, purple, red, silver, teal, white, and yellow
+
+ These colors were originally picked as being the standard
+ 16 colors supported with the Windows VGA palette.
+ -->
+
+<![ %HTML.HotJava [
+    <!ELEMENT FONT - - (%text | CENTER | P | DL | UL | OL)*     -- local change to font -->
+]]>
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT FONT - - (%text)*     -- local change to font -->
+]]>
+<!ATTLIST FONT
+    size    CDATA   #IMPLIED    -- [+]nn e.g. size="+1", size=4 --
+    color   CDATA   #IMPLIED    -- #RRGGBB in hex, e.g. red: color="#FF0000" --
+    >
+
+<!ELEMENT BASEFONT - O EMPTY    -- base font size (1 to 7)-->
+<!ATTLIST BASEFONT
+    size    CDATA   #IMPLIED    -- e.g. size=3 --
+    >
+
+<!ELEMENT BR    - O EMPTY    -- forced line break -->
+<!ATTLIST BR
+        clear (left|all|right|none) none -- control of text flow --
+        >
+
+
+<!--================== HTML content models ================================-->
+<!--
+    HTML has three basic content models:
+
+        %text       character level elements and text strings
+        %flow       block-like elements e.g. paragraphs and lists
+        %bodytext   as (b) plus headers and ADDRESS
+-->
+
+<!ENTITY % block
+     "P | %list | %preformatted | DL | DIV | CENTER | NOSCRIPT |
+      BLOCKQUOTE | FORM | ISINDEX | HR | TABLE | OBJECT">
+
+<!-- %flow is used for DD and LI -->
+
+<!ENTITY % flow "(%block | %text)*">
+
+<!--=================== Document Body =====================================-->
+
+
+<![ %HTML.HotJava [
+    <!ENTITY % body.content "(%heading | %block | %text | ADDRESS | FRAMESET |
+                             NOFRAMES | NOHOTJAVA | ANIMATE)*">
+
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ENTITY % body.content "(%heading | %text | %block | ADDRESS)*">
+]]>
+
+<!ENTITY % color "CDATA" -- a color specification: #HHHHHH @@ details? -->
+
+<!ENTITY % body-color-attrs "
+        bgcolor %color #IMPLIED
+        text %color #IMPLIED
+        link %color #IMPLIED
+        vlink %color #IMPLIED
+        alink %color #IMPLIED
+        ">
+
+<!ELEMENT BODY O O  %body.content>
+<![ %HTML.HotJava [
+    <!ATTLIST BODY
+	    background %URL #IMPLIED  -- texture tile for document background --
+	    %body-color-attrs;  -- bgcolor, text, link, vlink, alink --
+	    width NUTOKEN #IMPLIED
+	    height NUTOKEN #IMPLIED
+	    >
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ATTLIST BODY
+            background %URL #IMPLIED  -- texture tile for document background --
+            %body-color-attrs;  -- bgcolor, text, link, vlink, alink --
+	    >
+]]>
+
+
+<!ENTITY % address.content "((%text;) | P)*">
+
+<!ELEMENT ADDRESS - - %address.content>
+
+<!ELEMENT DIV - - %body.content>
+<![ %HTML.HotJava [
+    <!ATTLIST DIV
+            align   (left|center|right) left -- alignment of following text --
+            >
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ATTLIST DIV
+            align   (left|center|right) #IMPLIED -- alignment of following text --
+	    >
+]]>
+
+<!-- CENTER is a shorthand for DIV with ALIGN=CENTER -->
+<!ELEMENT center - - %body.content>
+
+<!--================== The Anchor Element =================================-->
+
+<!ENTITY % SHAPE "(rect|circle|poly|default)">
+<!ENTITY % COORDS "CDATA" -- comma separated list of numbers -->
+
+<![ %HTML.HotJava [
+    <!ELEMENT A - - (%text|%heading|PRE)* -(A)>
+    <!ATTLIST A
+	    name    CDATA   #IMPLIED    -- named link end --
+	    href    %URL    #IMPLIED    -- URL for linked resource --
+	    rel     CDATA   #IMPLIED    -- forward link types --
+	    rev     CDATA   #IMPLIED    -- reverse link types --
+	    title   CDATA   #IMPLIED    -- advisory title string --
+	    target  CDATA   #IMPLIED
+       	    shape   %SHAPE  #IMPLIED    -- (OBJECT tag specific) -- 
+	    coords  %COORDS #IMPLIED    -- always needed except for shape=default (OBJECT tag specific)--
+            ismap   (ismap) #IMPLIED    -- (OBJECT tag specific) --
+	    >
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT A - - (%text)* -(A)>
+    <!ATTLIST A
+	    name    CDATA   #IMPLIED    -- named link end --
+	    href    %URL    #IMPLIED    -- URL for linked resource --
+	    rel     CDATA   #IMPLIED    -- forward link types --
+	    rev     CDATA   #IMPLIED    -- reverse link types --
+	    title   CDATA   #IMPLIED    -- advisory title string --
+	    >
+]]>
+
+<!--================== Client-side image maps ============================-->
+
+<!-- These can be placed in the same document or grouped in a
+     separate document although this isn't yet widely supported -->
+
+
+<![ %HTML.HotJava [
+<!ELEMENT MAP - - (BASE|AREA)*>
+]]>
+
+<![ %HTML.3.2.Conflict [
+<!ELEMENT MAP - - (AREA)*>
+]]>
+
+<!ATTLIST MAP
+    name    CDATA   #IMPLIED
+    >
+
+<!ELEMENT AREA - O EMPTY>
+
+<![ %HTML.HotJava [
+    <!ATTLIST AREA
+	shape   %SHAPE  rect
+	coords  %COORDS #IMPLIED  -- always needed except for shape=default --
+	href    %URL    #IMPLIED  -- this region acts as hypertext link --
+	nohref (nohref) #IMPLIED  -- this region has no action --
+	alt     CDATA   #IMPLIED  -- make HotJava more forgiving --
+	target  CDATA   #IMPLIED
+	>
+]]>
+
+
+<![ %HTML.3.2.Conflict [
+    <!ATTLIST AREA
+        shape   %SHAPE  rect
+        coords  %COORDS #IMPLIED  -- always needed except for shape=default --
+        href    %URL    #IMPLIED  -- this region acts as hypertext link --
+        nohref (nohref) #IMPLIED  -- this region has no action --
+        alt     CDATA   #REQUIRED
+        >
+]]>
+
+<!--================== The LINK Element ==================================-->
+
+<!ENTITY % Types "CDATA"
+        -- See Internet Draft: draft-ietf-html-relrev-00.txt
+           LINK has been part of HTML since the early days
+           although few browsers as yet take advantage of it.
+
+           Relationship values can be used in principle:
+
+                a) for document specific toolbars/menus when used
+                   with the LINK element in document head:
+                b) to link to a separate style sheet (rel=stylesheet)
+                c) to make a link to a script (rel=script)
+                d) by stylesheets to control how collections of
+                   html nodes are rendered into printed documents
+                e) to make a link to a printable version of this document
+                   e.g. a postscript or pdf version (rel=print)
+-->
+
+<!ELEMENT LINK - O EMPTY
