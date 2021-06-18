@@ -252,4 +252,12 @@ public class PropertyTest {
             };
             testng.setMethodInterceptor(intercept);
         }
-      
+        testng.run();
+        tla.getPassedTests()
+                .stream().forEach(t -> System.out.printf("Passed: %s%s%n", t.getName(),
+                List.of(t.getParameters())));
+        tla.getFailedTests()
+                .stream().forEach(t -> System.out.printf("Failed: %s%s%n", t.getName(),
+                List.of(t.getParameters())));
+    }
+}
