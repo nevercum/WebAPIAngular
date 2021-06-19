@@ -791,4 +791,250 @@ Here is an example:
 
 <![ %HTML.3.2.Conflict [
      <!ATTLIST INPUT
-        type %In
+        type %InputType TEXT     -- what kind of widget is needed --
+        name  CDATA #IMPLIED     -- required for all but submit and reset --
+        value  CDATA #IMPLIED     -- required for radio and checkboxes --
+        checked	  (checked) #IMPLIED -- for radio buttons and check boxes --
+        size CDATA  #IMPLIED     -- specific to each type of field --
+        maxlength NUMBER #IMPLIED
+        src   %URL  #IMPLIED     -- for fields with background images --
+        align  (top|middle|bottom|left|right) top -- image alignment --
+        >
+]]>
+
+
+<!ELEMENT SELECT - - (OPTION+)>
+<!ATTLIST SELECT
+        name CDATA #REQUIRED
+        size NUMBER #IMPLIED
+        multiple (multiple) #IMPLIED
+        >
+
+<!ELEMENT OPTION - O (#PCDATA)*>
+<!ATTLIST OPTION
+        selected (selected) #IMPLIED
+        value  CDATA  #IMPLIED -- defaults to element content --
+        >
+
+<!-- Multi-line text input field. -->
+
+<!ELEMENT TEXTAREA - - (#PCDATA)*>
+<!ATTLIST TEXTAREA
+        name CDATA #REQUIRED
+        rows NUMBER #REQUIRED
+        cols NUMBER #REQUIRED
+        >
+
+<!--======================= Tables ========================================-->
+
+<!-- Widely deployed subset of the full table standard, see RFC 1942
+     e.g. at http://www.ics.uci.edu/pub/ietf/html/rfc1942.txt -->
+
+<!-- horizontal placement of table relative to window -->
+<!ENTITY % Where "(left|center|right)">
+
+<!-- horizontal alignment attributes for cell contents -->
+<!ENTITY % cell.halign
+        "align  (left|center|right) #IMPLIED"
+        >
+
+<!-- vertical alignment attributes for cell contents -->
+<!ENTITY % cell.valign
+        "valign  (top|middle|bottom|baseline)  #IMPLIED"
+        >
+
+<![ %HTML.HotJava [
+    <!ELEMENT table - - (tr|caption)*     -- a little more forgiving -->
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT table - - (caption?, tr+)>
+]]>
+
+<!-- added to enable some pages like the nbc and apple pages to display correctly -->
+<![ %HTML.HotJava [
+    <!ELEMENT tr - O (td|th|SCRIPT|MAP)*>
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT tr - O (td|th)*>
+]]>
+
+<!ELEMENT (th|td) - O %body.content>
+
+
+<![ %HTML.HotJava [
+
+    <!ATTLIST table                       -- table element --
+	    align     %Where;   #IMPLIED  -- table position relative to window --
+	    width     %Length   #IMPLIED  -- table width relative to window --
+	    border    %Pixels   #IMPLIED  -- controls frame width around table --
+	    cellspacing %Pixels #IMPLIED  -- spacing between cells --
+	    cellpadding %Pixels #IMPLIED  -- spacing within cells --
+	    bgcolor   %color	#IMPLIED  -- def background color of all cells --
+	    >
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ATTLIST table                       -- table element --
+	    align     %Where;   #IMPLIED  -- table position relative to window --
+	    width     %Length   #IMPLIED  -- table width relative to window --
+	    border    %Pixels   #IMPLIED  -- controls frame width around table --
+	    cellspacing %Pixels #IMPLIED  -- spacing between cells --
+	    cellpadding %Pixels #IMPLIED  -- spacing within cells --
+	    >
+]]>
+
+<![ %HTML.HotJava [
+    <!ELEMENT CAPTION - - %body.content -- table or figure caption -->
+]]>
+
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT CAPTION - - (%text;)* -- table or figure caption -->
+]]>
+
+<![ %HTML.HotJava [
+    <!ATTLIST CAPTION
+	    align (top|bottom) top
+	    >
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ATTLIST CAPTION
+	    align (top|bottom) #IMPLIED
+	    >
+]]>
+
+<![ %HTML.HotJava [
+    <!ATTLIST tr                       -- table row --
+	    %cell.halign;              -- horizontal alignment in cells --
+	    %cell.valign;              -- vertical alignment in cells --
+	    bgcolor %color  #IMPLIED   -- def bkg color for cells in row --
+	    >
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ATTLIST tr                       -- table row --
+	    %cell.halign;              -- horizontal alignment in cells --
+	    %cell.valign;              -- vertical alignment in cells --
+	    >
+]]>
+
+<![ %HTML.HotJava [
+
+    <!ATTLIST (th|td)                  -- header or data cell --
+	    nowrap (nowrap)  #IMPLIED  -- suppress word wrap --
+	    bgcolor %color   #IMPLIED  -- cell background color --
+	    rowspan NUMBER   1         -- number of rows spanned by cell --
+	    colspan NUMBER   1         -- number of cols spanned by cell --
+	    %cell.halign;              -- horizontal alignment in cell --
+	    %cell.valign;              -- vertical alignment in cell --
+	    width   %Length  #IMPLIED  -- suggested width for cell --
+	    height  %Length  #IMPLIED  -- suggested height for cell --
+	    >
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ATTLIST (th|td)                  -- header or data cell --
+            nowrap (nowrap)  #IMPLIED  -- suppress word wrap --
+            rowspan NUMBER   1         -- number of rows spanned by cell --
+            colspan NUMBER   1         -- number of cols spanned by cell --
+            %cell.halign;              -- horizontal alignment in cell --
+            %cell.valign;              -- vertical alignment in cell --
+            width   %Pixels  #IMPLIED  -- suggested width for cell --
+            height  %Pixels  #IMPLIED  -- suggested height for cell --
+            >
+]]>
+
+
+
+<!--================ Document Head ========================================-->
+
+<!-- %head.misc defined earlier on as "SCRIPT|STYLE|META|LINK" -->
+
+<![ %HTML.HotJava [
+    <!ENTITY % head.content "TITLE? & ISINDEX? & BASE? & NEXTID?">
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ENTITY % head.content "TITLE & ISINDEX? & BASE?">
+]]>
+
+<!ELEMENT HEAD O O  (%head.content) +(%head.misc)>
+
+<!ELEMENT TITLE - -  (#PCDATA)* -(%head.misc)
+          -- The TITLE element is not considered part of the flow of text.
+             It should be displayed, for example as the page header or
+             window title.
+          -->
+
+<!ELEMENT ISINDEX - O EMPTY>
+<!ATTLIST ISINDEX
+        prompt CDATA #IMPLIED -- prompt message -->
+
+
+
+<!--
+    The BASE element gives an absolute URL for dereferencing relative
+    URLs, e.g.
+
+         <BASE href="http://foo.com/index.html">
+         ...
+         <IMG SRC="images/bar.gif">
+
+    The image is deferenced to
+
+         http://foo.com/images/bar.gif
+
+   In the absence of a BASE element the document URL should be used.
+   Note that this is not necessarily the same as the URL used to
+   request the document, as the base URL may be overridden by an HTTP
+   header accompanying the document.
+-->
+
+<!ELEMENT BASE - O EMPTY>
+
+<![ %HTML.3.2.Conflict [
+    <!ATTLIST BASE href %URL  #REQUIRED>
+]]>
+
+<![ %HTML.HotJava [
+    <!ATTLIST BASE
+         href   %URL  #IMPLIED
+         target CDATA #IMPLIED
+    >
+]]>
+
+<!ELEMENT META - O EMPTY -- Generic Metainformation -->
+<!ATTLIST META
+        http-equiv  NAME    #IMPLIED  -- HTTP response header name  --
+        name        NAME    #IMPLIED  -- metainformation name       --
+        content     CDATA   #REQUIRED -- associated information     --
+        >
+
+<!-- SCRIPT/STYLE are place holders for transition to next version of HTML -->
+
+<!ELEMENT STYLE  - - (#PCDATA)*  -(%head.misc) -- style info -->
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT SCRIPT - - (#PCDATA)*  -(%head.misc) -- script statements -->
+]]>
+
+<!-- this definition of script for hotjava is done so that all html tags
+     that occur within the script tags can be ignored - given that
+     currently hotjava does not support javascript.  -->
+     
+<![ %HTML.HotJava [
+    <!ELEMENT SCRIPT - - %body.content  -(%head.misc) -- script statements -->
+]]>
+
+<![ %HTML.HotJava [
+    <!ATTLIST SCRIPT
+	    language    CDATA   #IMPLIED
+	    >
+]]>
+
+<!--================ Document Structure ===================================-->
+
+<!ENTIT
