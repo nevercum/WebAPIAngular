@@ -364,4 +364,176 @@
                    e.g. a postscript or pdf version (rel=print)
 -->
 
-<!ELEMENT LINK - O EMPTY
+<!ELEMENT LINK - O EMPTY>
+<!ATTLIST LINK
+        id      ID      #IMPLIED    -- SGML ID attribute --
+        href    %URL    #IMPLIED    -- URL for linked resource --
+        rel     %Types  #IMPLIED    -- forward link types --
+        rev     %Types  #IMPLIED    -- reverse link types --
+        title   CDATA   #IMPLIED    -- advisory title string --
+        >
+
+<!--=================== Images ============================================-->
+
+<!ENTITY % Length "CDATA" -- nn for pixels or nn% for percentage length -->
+<!ENTITY % Pixels "CDATA" -- integer representing length in pixels -->
+
+<!-- Suggested widths are used for negotiating image size
+     with the module responsible for painting the image.
+     align=left or right cause image to float to margin
+     and for subsequent text to wrap around image -->
+
+<![ %HTML.HotJava [
+    <!ENTITY % IAlign "top|middle|bottom|left|right
+			|texttop|absmiddle|baseline|absbottom">
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ENTITY % IAlign "top|middle|bottom|left|right">
+]]>
+
+<!ENTITY % ImgAlign "( %IAlign | center)">
+
+<!ELEMENT IMG    - O EMPTY --  Embedded image -->
+<![ %HTML.HotJava [
+    <!ATTLIST IMG
+	    src     %URL         #REQUIRED  -- URL of image to embed --
+	    alt     CDATA        #IMPLIED   -- for display in place of image --
+	    align   %ImgAlign  	 baseline   -- vertical or horizontal alignment --
+	    height  %Pixels      #IMPLIED   -- suggested height in pixels --
+	    width   %Pixels      #IMPLIED   -- suggested width in pixels --
+	    border  %Pixels      #IMPLIED   -- suggested link border width --
+	    hspace  %Pixels      #IMPLIED   -- suggested horizontal gutter --
+	    vspace  %Pixels      #IMPLIED   -- suggested vertical gutter --
+	    usemap  %URL         #IMPLIED   -- use client-side image map --
+	    ismap   (ismap)      #IMPLIED   -- use server image map --
+	    lowsrc  %URL         #IMPLIED
+	    >
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ATTLIST IMG
+	    src     %URL      #REQUIRED  -- URL of image to embed --
+	    alt     CDATA     #IMPLIED   -- for display in place of image --
+	    align   (%IAlign) #IMPLIED   -- vertical or horizontal alignment --
+	    height  %Pixels   #IMPLIED   -- suggested height in pixels --
+	    width   %Pixels   #IMPLIED   -- suggested width in pixels --
+	    border  %Pixels   #IMPLIED   -- suggested link border width --
+	    hspace  %Pixels   #IMPLIED   -- suggested horizontal gutter --
+	    vspace  %Pixels   #IMPLIED   -- suggested vertical gutter --
+	    usemap  %URL      #IMPLIED   -- use client-side image map --
+	    ismap   (ismap)   #IMPLIED   -- use server image map --
+	    >
+]]>
+
+<!-- USEMAP points to a MAP element which may be in this document
+  or an external document, although the latter is not widely supported -->
+
+<!--=================== Java APPLET tag ===================================-->
+<!--
+  This tag is supported by all java enabled browsers. Applet resources
+  (including their classes) are normally loaded relative to the document
+  URL (or <BASE> element if it is defined). The CODEBASE attribute is used
+  to change this default behavior. If the CODEBASE attribute is defined then
+  it specifies a different location to find applet resources. The value
+  can be an absolute URL or a relative URL. The absolute URL is used as is
+  without modification and is not effected by the documents <BASE> element.
+  When the codebase attribute is relative, then it is relative to the
+  document URL (or <BASE> tag if defined).
+-->
+<![ %HTML.HotJava [
+    <!ELEMENT APPLET - - (%flow|%heading|%form|TR|TD)* +(PARAM)>
+    <!ATTLIST APPLET
+	    codebase %URL      #IMPLIED   -- code base --
+	    code     CDATA     #IMPLIED  -- class file --
+	    alt      CDATA     #IMPLIED   -- for display in place of applet --
+	    name     CDATA     #IMPLIED   -- applet name --
+	    archive  CDATA     #IMPLIED   -- archive attribute for jar files --
+	    width    %Pixels   #REQUIRED  -- suggested width in pixels --
+	    height   %Pixels   #REQUIRED  -- suggested height in pixels --
+	    align    (%IAlign) baseline   -- vertical or horizontal alignment --
+	    hspace   %Pixels   #IMPLIED   -- suggested horizontal gutter --
+	    vspace   %Pixels   #IMPLIED   -- suggested vertical gutter --
+	    >
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT APPLET - - (%text)* +(PARAM)>
+    <!ATTLIST APPLET
+	    codebase %URL      #IMPLIED   -- code base --
+	    code     CDATA     #REQUIRED  -- class file --
+	    alt      CDATA     #IMPLIED   -- for display in place of applet --
+	    name     CDATA     #IMPLIED   -- applet name --
+	    width    %Pixels   #REQUIRED  -- suggested width in pixels --
+	    height   %Pixels   #REQUIRED  -- suggested height in pixels --
+	    align    (%IAlign) #IMPLIED   -- vertical or horizontal alignment --
+	    hspace   %Pixels   #IMPLIED   -- suggested horizontal gutter --
+	    vspace   %Pixels   #IMPLIED   -- suggested vertical gutter --
+	    >
+]]>
+
+
+<!-- This tag is used by both the APPLET tag and the OBJECT tag. -->
+<!ELEMENT PARAM - O EMPTY>
+<!ATTLIST PARAM
+        name        NAME               #REQUIRED  -- The name of the parameter --
+        value       CDATA              #IMPLIED   -- The value of the parameter --
+        valuetype   (DATA|REF|OBJECT)  DATA       -- How to interpret value (OBJECT tag specific) --
+        type        CDATA              #IMPLIED   -- Internet media type (OBJECT tag specific) --
+        >
+
+<!--
+Here is an example:
+
+    <applet codebase="applets/NervousText"
+        code=NervousText.class
+        width=300
+        height=50>
+    <param name=text value="Java is Cool!">
+    <img src=sorry.gif alt="This looks better with Java support">
+    </applet>
+-->
+<!--=================== Object Tag ===================================-->
+
+<!--
+  The OBJECT element is used to insert an object into an HTML document.
+  It requires both start and end tags. The OBJECT element has the same
+  content model as the HTML BODY element, except that one or more optional
+  PARAM elements can be placed immediately after the OBJECT start tag and
+  used to initialize the inserted object. The content of the OBJECT
+  element is rendered if the object specified by the CLASSID, CODEBASE and
+  DATA attributes can't be rendered (user agents may choose to display the
+  content of the OBJECT element if displaying the actual element will take
+  a long time to render). This provides for backwards compatibility with
+  existing browsers, and allows authors to specify alternative media via
+  nested OBJECT elements. 
+-->
+
+<!-- This is identical to the HMTL3.2 body.content entity.
+     It differs from the HotJava body.content in that it doesn't
+     have FRAMESET and NOFRAMES elements.
+-->
+<!ENTITY % bodytext "(%heading | %flow | ADDRESS)*">
+
+<!-- OBJECT is a character-like element for inserting objects -->
+
+<![ %HTML.3.2.Conflict [
+<!ELEMENT OBJECT - - (param | %bodytext)*>
+]]>
+
+<![ %HTML.HotJava [
+<!ELEMENT OBJECT - - (param | %bodytext | %form)*>
+]]>
+
+
+<!ATTLIST OBJECT
+        id       ID        #IMPLIED   -- document wide unique id --
+        class    CDATA     #IMPLIED   -- comma list of class values --
+        style    CDATA     #IMPLIED   -- associated style info --
+        lang     NAME      #IMPLIED   -- RFC 1766 language value --
+        dir      (ltr|rtl) #IMPLIED   -- default directionality --
+        declare  (declare) #IMPLIED   -- declare but don't instantiate flag --
+        classid  %URL      #IMPLIED   -- identifies an implementation --
+        codebase %URL      #IMPLIED   -- some systems need an additional URL --
+        data     %URL      #IMPLIED   -- reference to object's data --
+       
