@@ -536,4 +536,259 @@ Here is an example:
         classid  %URL      #IMPLIED   -- identifies an implementation --
         codebase %URL      #IMPLIED   -- some systems need an additional URL --
         data     %URL      #IMPLIED   -- reference to object's data --
-       
+        type     CDATA     #IMPLIED   -- Internet media type for data --
+        codetype CDATA     #IMPLIED   -- Internet media type for code --
+        standby  CDATA     #IMPLIED   -- message to show while loading --
+        align    (%IAlign) #IMPLIED   -- positioning inside document --
+        height   %Length   #IMPLIED   -- suggested height --
+        width    %Length   #IMPLIED   -- suggested width --
+        border   %Length   #IMPLIED   -- suggested link border width --
+        hspace   %Length   #IMPLIED   -- suggested horizontal gutter --
+        vspace   %Length   #IMPLIED   -- suggested vertical gutter --
+        usemap   %URL      #IMPLIED   -- reference to image map --
+        shapes   (shapes)  #IMPLIED   -- object has shaped hypertext links --
+        name     %URL      #IMPLIED   -- submit as part of form --
+        >
+
+                         
+<!--=================== Horizontal Rule ===================================-->
+
+<!ELEMENT HR    - O EMPTY>
+<!ATTLIST HR
+        align (left|right|center) #IMPLIED
+        noshade (noshade) #IMPLIED
+        size  %Pixels #IMPLIED
+        width %Length #IMPLIED
+        >
+<!--=================== Paragraphs=========================================-->
+
+<!ELEMENT P     - O (%text)*>
+<!ATTLIST P
+        align  (left|center|right) #IMPLIED
+        >
+
+<!--=================== Headings ==========================================-->
+
+<!--
+  There are six levels of headers from H1 (the most important)
+  to H6 (the least important).
+-->
+
+<![ %HTML.HotJava [
+    <!ELEMENT ( %heading )  - -  (IMG|br|hr|center|%text;)*>
+]]>
+
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT ( %heading )  - -  (%text;)*>
+]]>
+
+<!ATTLIST ( %heading )
+        align  (left|center|right) #IMPLIED
+        >
+
+<!--=================== Preformatted Text =================================-->
+
+<!-- excludes images and changes in font size -->
+
+<![ %HTML.HotJava [
+    <!ENTITY % pre.exclusions "BIG|SMALL|SUB|SUP">
+]]>
+
+<![ %HTML.3.2.Conflict [
+     <!ENTITY % pre.exclusions "IMG|BIG|SMALL|SUB|SUP|FONT">
+]]>
+
+<![ %HTML.HotJava [
+    <!ELEMENT PRE - - (%text)* +(HR|P)>
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT PRE - - (%text)* -(%pre.exclusion)>
+]]>
+
+<!ATTLIST PRE
+        width NUMBER #implied -- is this widely supported? --
+        >
+
+<![ %HTML.Deprecated [
+
+<!ENTITY % literal "CDATA"
+        -- historical, non-conforming parsing mode where
+           the only markup signal is the end tag
+           in full
+        -->
+
+<!ELEMENT (XMP|LISTING) - -  %literal>
+<!ELEMENT PLAINTEXT - O %literal>
+
+]]>
+
+<!--=================== Block-like Quotes =================================-->
+
+<!ELEMENT BLOCKQUOTE - - %body.content>
+
+<!--=================== Lists =============================================-->
+
+<!--
+    HTML 3.2 allows you to control the sequence number for ordered lists.
+    You can set the sequence number with the START and VALUE attributes.
+    The TYPE attribute may be used to specify the rendering of ordered
+    and unordered lists.
+-->
+
+<!-- definition lists - DT for term, DD for its definition -->
+
+
+<!-- 
+      Changed to enable hotjava to read netscape bookmarks.
+-->
+<![ %HTML.HotJava [
+    <!ELEMENT DL    - -  (P|DL|DT|DD)*>
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT DL    - -  (DT|DD)*>
+]]>
+
+<!ATTLIST DL
+        compact (compact) #IMPLIED -- more compact style --
+        >
+<!-- 
+      Changed to enable hotjava to read netscape bookmarks.
+      Also hotjava's hotlist uses the same format to save its
+      bookmarks.
+-->
+<![ %HTML.HotJava [
+    <!ELEMENT DT - O  (%heading|%text)*>
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT DT - O  (%text)*>
+]]>
+
+<!ELEMENT DD - O  %flow;>
+
+<!-- Ordered lists OL, and unordered lists UL -->
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT (OL|UL) - -  (LI)*>
+]]>
+
+<!-- Ordered lists OL, and unordered lists UL -->
+<![ %HTML.HotJava [
+    <!ELEMENT (OL|UL) - -  (P|BR|%text|OL|UL|LI)*>
+]]>
+
+<!--
+       Numbering style
+    1   arablic numbers     1, 2, 3, ...
+    a   lower alpha         a, b, c, ...
+    A   upper alpha         A, B, C, ...
+    i   lower roman         i, ii, iii, ...
+    I   upper roman         I, II, III, ...
+
+    The style is applied to the sequence number which by default
+    is reset to 1 for the first list item in an ordered list.
+
+    This can't be expressed directly in SGML due to case folding.
+-->
+
+<!ENTITY % OLStyle "CDATA" -- constrained to: [1|a|A|i|I] -->
+
+<![ %HTML.HotJava [
+    <!ATTLIST OL -- ordered lists --
+	    type      %OLStyle   "1"   -- numbering style --
+	    start     NUMBER     #IMPLIED   -- starting sequence number --
+	    compact  (compact)   #IMPLIED   -- reduced interitem spacing --
+	    >
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ATTLIST OL -- ordered lists --
+	    type      %OLStyle   #IMPLIED   -- numbering style --
+	    start     NUMBER     #IMPLIED   -- starting sequence number --
+	    compact  (compact)   #IMPLIED   -- reduced interitem spacing --
+	    >
+]]>
+
+<!-- bullet styles -->
+
+<!ENTITY % ULStyle "disc|square|circle">
+
+<!ATTLIST UL -- unordered lists --
+        type    (%ULStyle)   #IMPLIED   -- bullet style --
+        compact (compact)    #IMPLIED   -- reduced interitem spacing --
+        >
+
+<![ %HTML.HotJava [
+     <!ELEMENT (DIR|MENU) - -  (%list|%text|LI)* -(%preformatted | DL | DIV | CENTER |
+           BLOCKQUOTE | FORM | ISINDEX | HR | TABLE | OBJECT) +(P)>
+]]>
+
+<![ %HTML.3.2.Conflict [
+     <!ELEMENT (DIR|MENU) - -  (LI)* -(%block)>
+]]>
+
+<!ATTLIST DIR
+        compact (compact) #IMPLIED
+        >
+<!ATTLIST MENU
+        compact (compact) #IMPLIED
+        >
+
+<!-- <DIR>              Directory list                  -->
+<!-- <DIR COMPACT>      Compact list style              -->
+<!-- <MENU>             Menu list                       -->
+<!-- <MENU COMPACT>     Compact list style              -->
+
+<!-- The type attribute can be used to change the bullet style
+     in unordered lists and the numbering style in ordered lists -->
+
+<!ENTITY % LIStyle "CDATA" -- constrained to: "(%ULStyle|%OLStyle)" -->
+
+<![ %HTML.HotJava [
+    <!ELEMENT LI - O (%flow|%heading)* -- list item -->
+]]>
+
+<![ %HTML.3.2.Conflict [
+    <!ELEMENT LI - O %flow -- list item -->
+]]>
+
+<!ATTLIST LI
+        type    %LIStyle     #IMPLIED   -- list item style --
+        value    NUMBER      #IMPLIED   -- reset sequence number --
+        >
+
+<!--================ Forms ===============================================-->
+
+<!ELEMENT FORM - - %body.content -(FORM)>
+<!ATTLIST FORM
+        action %URL #IMPLIED  -- server-side form handler --
+        method (%HTTP-Method) GET -- see HTTP specification --
+        enctype %Content-Type; "application/x-www-form-urlencoded"
+        >
+
+<!ENTITY % InputType
+        "(TEXT | PASSWORD | CHECKBOX | RADIO | SUBMIT
+            | RESET | FILE | HIDDEN | IMAGE)">
+
+<!ELEMENT INPUT - O EMPTY>
+
+<![ %HTML.HotJava [
+     <!ATTLIST INPUT
+        type %InputType TEXT     -- what kind of widget is needed --
+        name  CDATA #IMPLIED     -- required for all but submit and reset --
+        value  CDATA #IMPLIED     -- required for radio and checkboxes --
+	border   %Pixels      #IMPLIED   -- suggested image border width --
+        checked	  (checked) #IMPLIED -- for radio buttons and check boxes --
+        size CDATA  #IMPLIED     -- specific to each type of field --
+        maxlength NUMBER #IMPLIED
+        src   %URL  #IMPLIED     -- for fields with background images --
+        align  (top|middle|bottom|left|right) top -- image alignment --
+        >
+]]>
+
+
+<![ %HTML.3.2.Conflict [
+     <!ATTLIST INPUT
+        type %In
