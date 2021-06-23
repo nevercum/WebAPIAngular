@@ -1037,4 +1037,56 @@ Here is an example:
 
 <!--================ Document Structure ===================================-->
 
-<!ENTIT
+<!ENTITY % version.attr "VERSION CDATA #FIXED '%HTML.Version;'">
+
+<![ %HTML.Deprecated [
+    <!ENTITY % html.content "HEAD, BODY, PLAINTEXT?">
+]]>
+<!ENTITY % html.content "HEAD, BODY">
+
+<!ELEMENT HTML O O  (%html.content)>
+<!ATTLIST HTML
+        %version.attr;
+        >
+
+<!--================ HotJava Specials =====================================-->
+
+<!ELEMENT THEAD    - O (TR)+>
+<!ELEMENT TFOOT    - O (TR)+>
+<!ELEMENT TBODY    O O (TR)+>
+
+<!ELEMENT SPAN - - (%text)*>
+
+<!ELEMENT BLINK - - ANY>
+
+<!ELEMENT NOBR - - (%text)+>
+<!ELEMENT WBR  - O EMPTY>
+
+<!ELEMENT NEXTID - O EMPTY>
+<!ATTLIST NEXTID
+        n CDATA #REQUIRED>
+
+<!ELEMENT FRAMESET - O (FRAMESET|FRAME|NOFRAMES)*>
+<!ATTLIST FRAMESET
+	rows CDATA #IMPLIED
+	cols CDATA #IMPLIED
+>
+
+<!ELEMENT FRAME - O EMPTY>
+<!ATTLIST FRAME
+	src	    CDATA	#IMPLIED
+	name	    CDATA	#IMPLIED
+	frameborder NUMBER	1  -- the DTD says (1|0) --
+	marginwidth NUMBER	#IMPLIED
+	marginheight NUMBER	#IMPLIED
+	scrolling (yes|no|auto) AUTO
+	noresize    (noresize)  #IMPLIED
+>
+
+<!ELEMENT NOFRAMES - - CDATA>
+
+<!ELEMENT NOHOTJAVA - - CDATA>
+
+<!ELEMENT ANIMATE - - CDATA>
+
+<!ELEMENT NOSCRIPT - - (%block)+>
