@@ -192,4 +192,14 @@ class FieldsTest {
     }
 
     void checkPrimitiveType(WhiteBox wb, Field f, Class t) {
-        Class c = f.getType()
+        Class c = f.getType();
+        if (!(c.isPrimitive() && c == t)) {
+            throw new RuntimeException("FAILED. " + c + " is not primitive type " + t);
+        }
+        if (wb.isShared(c)) {
+            System.out.println(c + " is cached, expected");
+        } else {
+            throw new RuntimeException("FAILED. " + c + " is not cached.");
+        }
+    }
+}
