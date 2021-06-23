@@ -3406,3 +3406,951 @@ public class JoinRowSetImpl extends WebRowSetImpl implements JoinRowSet {
      * Moves the cursor for this <code>JoinRowSetImpl</code> object to
      * the current row.  The current row is the row the cursor was on
      * when the method <code>moveToInsertRow</code> was called.
+     * <P>
+     * Calling this method has no effect unless it is called while the
+     * cursor is on the insert row.
+     *
+     * @throws SQLException if an error occurs
+     */
+    public void moveToCurrentRow() throws SQLException {
+        crsInternal.moveToCurrentRow();
+    }
+
+    /**
+     * Returns <code>null</code>.
+     *
+     * @return <code>null</code>
+     * @throws SQLException if an error occurs
+     */
+    public Statement getStatement() throws SQLException {
+        return crsInternal.getStatement();
+    }
+
+    /**
+     * Retrieves the value of the designated column in this
+     * <code>JoinRowSetImpl</code> object as a <code>Ref</code> object
+     * in the Java programming language.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in this rowset
+     * @return a <code>Ref</code> object representing an SQL<code> REF</code> value
+     * @throws SQLException if (1) the given column index is out of bounds,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) the designated column does not store an
+     *            SQL <code>REF</code> value
+     */
+    public Ref getRef(int columnIndex) throws SQLException {
+        return crsInternal.getRef(columnIndex);
+    }
+
+    /**
+     * Retrieves the value of the designated column in this
+     * <code>JoinRowSetImpl</code> object as a <code>Blob</code> object
+     * in the Java programming language.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in this rowset
+     * @return a <code>Blob</code> object representing an SQL <code>BLOB</code> value
+     * @throws SQLException if (1) the given column index is out of bounds,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) the designated column does not store an
+     *            SQL <code>BLOB</code> value
+     */
+    public Blob getBlob(int columnIndex) throws SQLException {
+        return crsInternal.getBlob(columnIndex);
+    }
+
+    /**
+     * Retrieves the value of the designated column in this
+     * <code>JoinRowSetImpl</code> object as a <code>Clob</code> object
+     * in the Java programming language.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in this rowset
+     * @return a <code>Clob</code> object representing an SQL <code>CLOB</code> value
+     * @throws SQLException if (1) the given column index is out of bounds,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) the designated column does not store an
+     *            SQL <code>CLOB</code> value
+     */
+    public Clob getClob(int columnIndex) throws SQLException {
+        return crsInternal.getClob(columnIndex);
+    }
+
+    /**
+     * Retrieves the value of the designated column in this
+     * <code>JoinRowSetImpl</code> object as an <code>Array</code> object
+     * in the Java programming language.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in this rowset
+     * @return an <code>Array</code> object representing an SQL
+     *         <code>ARRAY</code> value
+     * @throws SQLException if (1) the given column index is out of bounds,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) the designated column does not store an
+     *            SQL <code>ARRAY</code> value
+     */
+     public Array getArray(int columnIndex) throws SQLException {
+        return crsInternal.getArray(columnIndex);
+    }
+
+    // ColumnName
+
+    /**
+     * Retrieves the value of the designated column in this
+     * <code>JoinRowSetImpl</code> object as a <code>Ref</code> object
+     * in the Java programming language.
+     *
+     * @param columnName a <code>String</code> object that must match the
+     *        SQL name of a column in this rowset, ignoring case
+     * @return a <code>Ref</code> object representing an SQL<code> REF</code> value
+     * @throws SQLException  if (1) the given column name is not the name
+     *         of a column in this rowset, (2) the cursor is not on one of
+     *         this rowset's rows or its insert row, or (3) the column value
+     *         is not an SQL <code>REF</code> value
+     */
+    public Ref getRef(String columnName) throws SQLException {
+        return crsInternal.getRef(columnName);
+    }
+
+    /**
+     * Retrieves the value of the designated column in this
+     * <code>JoinRowSetImpl</code> object as a <code>Blob</code> object
+     * in the Java programming language.
+     *
+     * @param columnName a <code>String</code> object that must match the
+     *        SQL name of a column in this rowset, ignoring case
+     * @return a <code>Blob</code> object representing an SQL
+     *        <code>BLOB</code> value
+     * @throws SQLException if (1) the given column name is not the name of
+     *        a column in this rowset, (2) the cursor is not on one of
+     *        this rowset's rows or its insert row, or (3) the designated
+     *        column does not store an SQL <code>BLOB</code> value
+     */
+    public Blob getBlob(String columnName) throws SQLException {
+        return crsInternal.getBlob(columnName);
+    }
+
+    /**
+     * Retrieves the value of the designated column in this
+     * <code>JoinRowSetImpl</code> object as a <code>Clob</code> object
+     * in the Java programming language.
+     *
+     * @param columnName a <code>String</code> object that must match the
+     *        SQL name of a column in this rowset, ignoring case
+     * @return a <code>Clob</code> object representing an SQL
+     *         <code>CLOB</code> value
+     * @throws SQLException if (1) the given column name is not the name of
+     *            a column in this rowset, (2) the cursor is not on one of
+     *            this rowset's rows or its insert row, or (3) the designated
+     *            column does not store an SQL <code>CLOB</code> value
+     */
+    public Clob getClob(String columnName) throws SQLException {
+        return crsInternal.getClob(columnName);
+    }
+
+    /**
+     * Retrieves the value of the designated column in this
+     * <code>JoinRowSetImpl</code> object as an <code>Array</code> object
+     * in the Java programming language.
+     *
+     * @param columnName a <code>String</code> object that must match the
+     *        SQL name of a column in this rowset, ignoring case
+     * @return an <code>Array</code> object representing an SQL
+     *        <code>ARRAY</code> value
+     * @throws SQLException if (1) the given column name is not the name of
+     *        a column in this rowset, (2) the cursor is not on one of
+     *        this rowset's rows or its insert row, or (3) the designated
+     *        column does not store an SQL <code>ARRAY</code> value
+     */
+    public Array getArray(String columnName) throws SQLException {
+        return crsInternal.getArray(columnName);
+    }
+
+    /**
+     * Retrieves the value of the designated column in the current row
+     * of this <code>JoinRowSetImpl</code> object as a <code>java.sql.Date</code>
+     * object, using the given <code>Calendar</code> object to construct an
+     * appropriate millisecond value for the date.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in the rowset
+     * @param cal the <code>java.util.Calendar</code> object to use in
+     *            constructing the date
+     * @return the column value; if the value is SQL <code>NULL</code>,
+     *         the result is <code>null</code>
+     * @throws SQLException if (1) the given column name is not the name of
+     *            a column in this rowset, (2) the cursor is not on one of
+     *            this rowset's rows or its insert row, or (3) the designated
+     *            column does not store an SQL <code>DATE</code> or
+     *            <code>TIMESTAMP</code> value
+     */
+    public java.sql.Date getDate(int columnIndex, Calendar cal) throws SQLException {
+        return crsInternal.getDate(columnIndex, cal);
+    }
+
+    /**
+     * Retrieves the value of the designated column in the current row
+     * of this <code>JoinRowSetImpl</code> object as a <code>java.sql.Date</code>
+     * object, using the given <code>Calendar</code> object to construct an
+     * appropriate millisecond value for the date.
+     *
+     * @param columnName a <code>String</code> object that must match the
+     *        SQL name of a column in this rowset, ignoring case
+     * @param cal the <code>java.util.Calendar</code> object to use in
+     *            constructing the date
+     * @return the column value; if the value is SQL <code>NULL</code>,
+     *         the result is <code>null</code>
+     * @throws SQLException if (1) the given column name is not the name of
+     *            a column in this rowset, (2) the cursor is not on one of
+     *            this rowset's rows or its insert row, or (3) the designated
+     *            column does not store an SQL <code>DATE</code> or
+     *            <code>TIMESTAMP</code> value
+     */
+    public java.sql.Date getDate(String columnName, Calendar cal) throws SQLException {
+        return crsInternal.getDate(columnName, cal);
+    }
+
+    /**
+     * Retrieves the value of the designated column in the current row
+     * of this <code>JoinRowSetImpl</code> object as a <code>java.sql.Time</code>
+     * object, using the given <code>Calendar</code> object to construct an
+     * appropriate millisecond value for the date.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in the rowset
+     * @param cal the <code>java.util.Calendar</code> object to use in
+     *            constructing the date
+     * @return the column value; if the value is SQL <code>NULL</code>,
+     *         the result is <code>null</code>
+     * @throws SQLException if (1) the given column name is not the name of
+     *            a column in this rowset, (2) the cursor is not on one of
+     *            this rowset's rows or its insert row, or (3) the designated
+     *            column does not store an SQL <code>TIME</code> or
+     *            <code>TIMESTAMP</code> value
+     */
+    public java.sql.Time getTime(int columnIndex, Calendar cal) throws SQLException {
+        return crsInternal.getTime(columnIndex, cal);
+    }
+
+    /**
+     * Retrieves the value of the designated column in the current row
+     * of this <code>JoinRowSetImpl</code> object as a <code>java.sql.Time</code>
+     * object, using the given <code>Calendar</code> object to construct an
+     * appropriate millisecond value for the date.
+     *
+     * @param columnName a <code>String</code> object that must match the
+     *        SQL name of a column in this rowset, ignoring case
+     * @param cal the <code>java.util.Calendar</code> object to use in
+     *            constructing the date
+     * @return the column value; if the value is SQL <code>NULL</code>,
+     *         the result is <code>null</code>
+     * @throws SQLException if (1) the given column name is not the name of
+     *            a column in this rowset, (2) the cursor is not on one of
+     *            this rowset's rows or its insert row, or (3) the designated
+     *            column does not store an SQL <code>TIME</code> or
+     *            <code>TIMESTAMP</code> value
+     */
+    public java.sql.Time getTime(String columnName, Calendar cal) throws SQLException {
+        return crsInternal.getTime(columnName, cal);
+    }
+
+    /**
+     * Retrieves the value of the designated column in the current row
+     * of this <code>JoinRowSetImpl</code> object as a <code>java.sql.Timestamp</code>
+     * object, using the given <code>Calendar</code> object to construct an
+     * appropriate millisecond value for the date.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in the rowset
+     * @param cal the <code>java.util.Calendar</code> object to use in
+     *            constructing the date
+     * @return the column value; if the value is SQL <code>NULL</code>,
+     *         the result is <code>null</code>
+     * @throws SQLException if (1) the given column name is not the name of
+     *            a column in this rowset, (2) the cursor is not on one of
+     *            this rowset's rows or its insert row, or (3) the designated
+     *            column does not store an SQL <code>TIME</code> or
+     *            <code>TIMESTAMP</code> value
+     */
+    public java.sql.Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
+        return crsInternal.getTimestamp(columnIndex, cal);
+    }
+
+    /**
+     * Retrieves the value of the designated column in the current row
+     * of this <code>JoinRowSetImpl</code> object as a
+     * <code>java.sql.Timestamp</code> object, using the given
+     * <code>Calendar</code> object to construct an appropriate
+     * millisecond value for the date.
+     *
+     * @param columnName a <code>String</code> object that must match the
+     *        SQL name of a column in this rowset, ignoring case
+     * @param cal the <code>java.util.Calendar</code> object to use in
+     *            constructing the date
+     * @return the column value; if the value is SQL <code>NULL</code>,
+     *         the result is <code>null</code>
+     * @throws SQLException if (1) the given column name is not the name of
+     *            a column in this rowset, (2) the cursor is not on one of
+     *            this rowset's rows or its insert row, or (3) the designated
+     *            column does not store an SQL <code>DATE</code>,
+     *            <code>TIME</code>, or <code>TIMESTAMP</code> value
+     */
+    public java.sql.Timestamp getTimestamp(String columnName, Calendar cal) throws SQLException {
+        return crsInternal.getTimestamp(columnName, cal);
+    }
+
+   /**
+    * Sets the metadata for this <code>JoinRowSetImpl</code> object
+    * with the given <code>RowSetMetaData</code> object.
+    *
+    * @param md a <code>RowSetMetaData</code> object instance containing
+    *            metadata about the columns in the rowset
+    * @throws SQLException if invalid meta data is supplied to the
+    *            rowset
+    */
+    public void setMetaData(RowSetMetaData md) throws SQLException {
+        crsInternal.setMetaData(md);
+    }
+
+    public ResultSet getOriginal() throws SQLException {
+        return crsInternal.getOriginal();
+    }
+
+   /**
+    * Returns a result set containing the original value of the rowset.
+    * The cursor is positioned before the first row in the result set.
+    * Only rows contained in the result set returned by getOriginal()
+    * are said to have an original value.
+    *
+    * @return the original result set of the rowset
+    * @throws SQLException if an error occurs produce the
+    *           <code>ResultSet</code> object
+    */
+    public ResultSet getOriginalRow() throws SQLException {
+        return crsInternal.getOriginalRow();
+    }
+
+   /**
+    * Returns a result set containing the original value of the current
+    * row only.
+    *
+    * @throws SQLException if there is no current row
+    * @see #setOriginalRow
+    */
+    public void setOriginalRow() throws SQLException {
+        crsInternal.setOriginalRow();
+    }
+
+   /**
+    * Returns the columns that make a key to uniquely identify a
+    * row in this <code>JoinRowSetImpl</code> object.
+    *
+    * @return an array of column number that constites a primary
+    *           key for this rowset. This array should be empty
+    *           if no columns is representitive of a primary key
+    * @throws SQLException if the rowset is empty or no columns
+    *           are designated as primary keys
+    * @see #setKeyColumns
+    */
+    public int[] getKeyColumns() throws SQLException {
+        return crsInternal.getKeyColumns();
+    }
+
+    /**
+     * Sets this <code>JoinRowSetImpl</code> object's
+     * <code>keyCols</code> field with the given array of column
+     * numbers, which forms a key for uniquely identifying a row
+     * in this rowset.
+     *
+     * @param cols an array of <code>int</code> indicating the
+     *        columns that form a primary key for this
+     *        <code>JoinRowSetImpl</code> object; every
+     *        element in the array must be greater than
+     *        <code>0</code> and less than or equal to the number
+     *        of columns in this rowset
+     * @throws SQLException if any of the numbers in the
+     *            given array is not valid for this rowset
+     * @see #getKeyColumns
+     */
+    public void setKeyColumns(int[] cols) throws SQLException {
+        crsInternal.setKeyColumns(cols);
+    }
+
+    /**
+     * Sets the designated column in either the current row or the insert
+     * row of this <code>JoinRowSetImpl</code> object with the given
+     * <code>Ref</code> value.
+     * <P>
+     * This method updates a column value in the current row or the insert
+     * row of this rowset, but it does not update the database.
+     * If the cursor is on a row in the rowset, the
+     * method {@link #updateRow} must be called to update the database.
+     * If the cursor is on the insert row, the method {@link #insertRow}
+     * must be called, which will insert the new row into both this rowset
+     * and the database. Either of these methods must be called before the
+     * cursor moves to another row.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in this rowset
+     * @param ref the <code>java.sql.Ref</code> object that will be set as
+     *         the new column value
+     * @throws SQLException if (1) the given column index is out of bounds,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) this rowset is
+     *            <code>ResultSet.CONCUR_READ_ONLY</code>
+     */
+    public void updateRef(int columnIndex, java.sql.Ref ref) throws SQLException {
+        crsInternal.updateRef(columnIndex, ref);
+    }
+
+    /**
+     * Sets the designated column in either the current row or the insert
+     * row of this <code>JoinRowSetImpl</code> object with the given
+     * <code>Ref</code> value.
+     * <P>
+     * This method updates a column value in the current row or the insert
+     * row of this rowset, but it does not update the database.
+     * If the cursor is on a row in the rowset, the
+     * method {@link #updateRow} must be called to update the database.
+     * If the cursor is on the insert row, the method {@link #insertRow}
+     * must be called, which will insert the new row into both this rowset
+     * and the database. Either of these methods must be called before the
+     * cursor moves to another row.
+     *
+     * @param columnName a <code>String</code> object giving the name of the column
+     *        to be updated; must match one of the column names in this
+     *        <code>JoinRowSetImpl</code> object
+     * @param ref the <code>java.sql.Ref</code> object that will be set as
+     *         the new column value
+     * @throws SQLException if (1) the given column name is not valid,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) this rowset is
+     *            <code>ResultSet.CONCUR_READ_ONLY</code>
+     */
+    public void updateRef(String columnName, java.sql.Ref ref) throws SQLException {
+        crsInternal.updateRef(columnName, ref);
+    }
+
+    /**
+     * Sets the designated column in either the current row or the insert
+     * row of this <code>JoinRowSetImpl</code> object with the given
+     * <code>Clob</code> object.
+     * <P>
+     * This method updates a column value in the current row or the insert
+     * row of this rowset, but it does not update the database.
+     * If the cursor is on a row in the rowset, the
+     * method {@link #updateRow} must be called to update the database.
+     * If the cursor is on the insert row, the method {@link #insertRow}
+     * must be called, which will insert the new row into both this rowset
+     * and the database. Either of these methods must be called before the
+     * cursor moves to another row.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in this rowset
+     * @param c the <code>java.sql.Clob</code> object that will be set as
+     *         the new column value
+     * @throws SQLException if (1) the given column index is out of bounds,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) this rowset is
+     *            <code>ResultSet.CONCUR_READ_ONLY</code>
+     */
+    public void updateClob(int columnIndex, Clob c) throws SQLException {
+        crsInternal.updateClob(columnIndex, c);
+    }
+
+    /**
+     * Sets the designated column in either the current row or the insert
+     * row of this <code>JoinRowSetImpl</code> object with the given
+     * <code>Clob</code> object.
+     * <P>
+     * This method updates a column value in the current row or the insert
+     * row of this rowset, but it does not update the database.
+     * If the cursor is on a row in the rowset, the
+     * method {@link #updateRow} must be called to update the database.
+     * If the cursor is on the insert row, the method {@link #insertRow}
+     * must be called, which will insert the new row into both this rowset
+     * and the database. Either of these methods must be called before the
+     * cursor moves to another row.
+     *
+     * @param columnName a <code>String</code> object giving the name of the column
+     *        to be updated; must match one of the column names in this
+     *        <code>JoinRowSetImpl</code> object
+     * @param c the <code>java.sql.Clob</code> object that will be set as
+     *         the new column value
+     * @throws SQLException if (1) the given column name is not valid,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) this rowset is
+     *            <code>ResultSet.CONCUR_READ_ONLY</code>
+     */
+    public void updateClob(String columnName, Clob c) throws SQLException {
+        crsInternal.updateClob(columnName, c);
+    }
+
+    /**
+     * Sets the designated column in either the current row or the insert
+     * row of this <code>JoinRowSetImpl</code> object with the given
+     * <code>Blob</code> value.
+     * <P>
+     * This method updates a column value in the current row or the insert
+     * row of this rowset, but it does not update the database.
+     * If the cursor is on a row in the rowset, the
+     * method {@link #updateRow} must be called to update the database.
+     * If the cursor is on the insert row, the method {@link #insertRow}
+     * must be called, which will insert the new row into both this rowset
+     * and the database. Either of these methods must be called before the
+     * cursor moves to another row.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in this rowset
+     * @param b the <code>java.sql.Blob</code> object that will be set as
+     *         the new column value
+     * @throws SQLException if (1) the given column index is out of bounds,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) this rowset is
+     *            <code>ResultSet.CONCUR_READ_ONLY</code>
+     */
+    public void updateBlob(int columnIndex, Blob b) throws SQLException {
+         crsInternal.updateBlob(columnIndex, b);
+    }
+
+    /**
+     * Sets the designated column in either the current row or the insert
+     * row of this <code>JoinRowSetImpl</code> object with the given
+     * <code>Blob</code> object.
+     * <P>
+     * This method updates a column value in the current row or the insert
+     * row of this rowset, but it does not update the database.
+     * If the cursor is on a row in the rowset, the
+     * method {@link #updateRow} must be called to update the database.
+     * If the cursor is on the insert row, the method {@link #insertRow}
+     * must be called, which will insert the new row into both this rowset
+     * and the database. Either of these methods must be called before the
+     * cursor moves to another row.
+     *
+     * @param columnName a <code>String</code> object giving the name of the column
+     *        to be updated; must match one of the column names in this
+     *        <code>JoinRowSetImpl</code> object
+     * @param b the <code>java.sql.Blob</code> object that will be set as
+     *         the new column value
+     * @throws SQLException if (1) the given column name is not valid,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) this rowset is
+     *            <code>ResultSet.CONCUR_READ_ONLY</code>
+     */
+    public void updateBlob(String columnName, Blob b) throws SQLException {
+         crsInternal.updateBlob(columnName, b);
+    }
+
+    /**
+     * Sets the designated column in either the current row or the insert
+     * row of this <code>JoinRowSetImpl</code> object with the given
+     * <code>Array</code> object.
+     * <P>
+     * This method updates a column value in the current row or the insert
+     * row of this rowset, but it does not update the database.
+     * If the cursor is on a row in the rowset, the
+     * method {@link #updateRow} must be called to update the database.
+     * If the cursor is on the insert row, the method {@link #insertRow}
+     * must be called, which will insert the new row into both this rowset
+     * and the database. Either of these methods must be called before the
+     * cursor moves to another row.
+     *
+     * @param columnIndex the first column is <code>1</code>, the second
+     *        is <code>2</code>, and so on; must be <code>1</code> or larger
+     *        and equal to or less than the number of columns in this rowset
+     * @param a the <code>java.sql.Array</code> object that will be set as
+     *         the new column value
+     * @throws SQLException if (1) the given column index is out of bounds,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) this rowset is
+     *            <code>ResultSet.CONCUR_READ_ONLY</code>
+     */
+    public void updateArray(int columnIndex, Array a) throws SQLException {
+         crsInternal.updateArray(columnIndex, a);
+    }
+
+    /**
+     * Sets the designated column in either the current row or the insert
+     * row of this <code>JoinRowSetImpl</code> object with the given
+     * <code>Array</code> object.
+     * <P>
+     * This method updates a column value in the current row or the insert
+     * row of this rowset, but it does not update the database.
+     * If the cursor is on a row in the rowset, the
+     * method {@link #updateRow} must be called to update the database.
+     * If the cursor is on the insert row, the method {@link #insertRow}
+     * must be called, which will insert the new row into both this rowset
+     * and the database. Either of these methods must be called before the
+     * cursor moves to another row.
+     *
+     * @param columnName a <code>String</code> object giving the name of the column
+     *        to be updated; must match one of the column names in this
+     *        <code>JoinRowSetImpl</code> object
+     * @param a the <code>java.sql.Array</code> object that will be set as
+     *         the new column value
+     * @throws SQLException if (1) the given column name is not valid,
+     *            (2) the cursor is not on one of this rowset's rows or its
+     *            insert row, or (3) this rowset is
+     *            <code>ResultSet.CONCUR_READ_ONLY</code>
+     */
+    public void updateArray(String columnName, Array a) throws SQLException {
+         crsInternal.updateArray(columnName, a);
+    }
+
+    /**
+     * Populates this <code>JoinRowSetImpl</code> object with data.
+     * This form of the method uses the rowset's user, password, and url or
+     * data source name properties to create a database
+     * connection.  If properties that are needed
+     * have not been set, this method will throw an exception.
+     * <P>
+     * Another form of this method uses an existing JDBC <code>Connection</code>
+     * object instead of creating a new one; therefore, it ignores the
+     * properties used for establishing a new connection.
+     * <P>
+     * The query specified by the command property is executed to create a
+     * <code>ResultSet</code> object from which to retrieve data.
+     * The current contents of the rowset are discarded, and the
+     * rowset's metadata is also (re)set.  If there are outstanding updates,
+     * they are also ignored.
+     * <P>
+     * The method <code>execute</code> closes any database connections that it
+     * creates.
+     *
+     * @throws SQLException if an error occurs or the
+     *                         necessary properties have not been set
+     */
+    public void execute() throws SQLException {
+        crsInternal.execute();
+    }
+
+    /**
+     * Populates this <code>JoinRowSetImpl</code> object with data,
+     * using the given connection to produce the result set from
+     * which data will be read.  A second form of this method,
+     * which takes no arguments, uses the values from this rowset's
+     * user, password, and either url or data source properties to
+     * create a new database connection. The form of <code>execute</code>
+     * that is given a connection ignores these properties.
+     *
+     *  @param conn A standard JDBC <code>Connection</code> object with valid
+     *           properties that the <code>JoinRowSet</code> implementation
+     *           can pass to a synchronization provider to establish a
+     *           connection to the datasource
+     * @throws SQLException if an invalid <code>Connection</code> is supplied
+     *           or an error occurs in establishing the connection to the
+     *           data source
+     * @see java.sql.Connection
+     */
+    public void execute(Connection conn) throws SQLException {
+        crsInternal.execute(conn);
+    }
+
+    /**
+     * Provide interface coverage for getURL(int) in
+     * ResultSet{@literal ->}RowSet
+     */
+    public java.net.URL getURL(int columnIndex) throws SQLException {
+        return crsInternal.getURL(columnIndex);
+    }
+
+    /**
+     * Provide interface coverage for getURL(String) in
+     * ResultSet{@literal ->}RowSet
+     */
+    public java.net.URL getURL(String columnName) throws SQLException {
+        return crsInternal.getURL(columnName);
+    }
+
+   /**
+    * Creates a new <code>WebRowSet</code> object, populates it with the
+    * data in the given <code>ResultSet</code> object, and writes it
+    * to the given <code>java.io.Writer</code> object in XML format.
+    *
+    * @throws SQLException if an error occurs writing out the rowset
+    *          contents to XML
+    */
+    public void writeXml(ResultSet rs, java.io.Writer writer)
+        throws SQLException {
+             wrs = new WebRowSetImpl();
+             wrs.populate(rs);
+             wrs.writeXml(writer);
+    }
+
+    /**
+     * Writes this <code>JoinRowSet</code> object to the given
+     * <code>java.io.Writer</code> object in XML format. In
+     * addition to the rowset's data, its properties and metadata
+     * are also included.
+     *
+     * @throws SQLException if an error occurs writing out the rowset
+     *          contents to XML
+     */
+    public void writeXml(java.io.Writer writer) throws SQLException {
+        createWebRowSet().writeXml(writer);
+}
+
+    /**
+     * Reads this <code>JoinRowSet</code> object in its XML format.
+     *
+     * @throws SQLException if a database access error occurs
+     */
+    public void readXml(java.io.Reader reader) throws SQLException {
+        wrs = new WebRowSetImpl();
+        wrs.readXml(reader);
+        crsInternal = (CachedRowSetImpl)wrs;
+    }
+
+    // Stream based methods
+    /**
+     * Reads a stream based XML input to populate an <code>WebRowSet</code>
+     *
+     * @throws SQLException if a data source access occurs
+     * @throws IOException if a IO exception occurs
+     */
+    public void readXml(java.io.InputStream iStream) throws SQLException, IOException {
+         wrs = new WebRowSetImpl();
+         wrs.readXml(iStream);
+         crsInternal = (CachedRowSetImpl)wrs;
+    }
+
+    /**
+     * Creates an output stream of the internal state and contents of a
+     * <code>WebRowSet</code> for XML proceessing
+     *
+     * @throws SQLException if a datasource access occurs
+     * @throws IOException if an IO exception occurs
+     */
+    public void writeXml(java.io.OutputStream oStream) throws SQLException, IOException {
+         createWebRowSet().writeXml(oStream);
+    }
+
+    /**
+     * Creates a new <code>WebRowSet</code> object, populates it with
+     * the contents of the <code>ResultSet</code> and creates an output
+     * streams the internal state and contents of the rowset for XML processing.
+     *
+     * @throws SQLException if a datasource access occurs
+     * @throws IOException if an IO exception occurs
+     */
+    public void writeXml(ResultSet rs, java.io.OutputStream oStream) throws SQLException, IOException {
+             wrs = new WebRowSetImpl();
+             wrs.populate(rs);
+             wrs.writeXml(oStream);
+    }
+
+    /**
+     * %%% Javadoc comments to be added here
+     */
+    private WebRowSet createWebRowSet() throws SQLException {
+       if(wrs != null) {
+           // check if it has already been initialized.
+           return wrs;
+       } else {
+         wrs = new WebRowSetImpl();
+          crsInternal.beforeFirst();
+          wrs.populate(crsInternal);
+          return wrs;
+       }
+    }
+
+    /**
+     * Returns the last set SQL <code>JOIN</code> type in this JoinRowSetImpl
+     * object
+     *
+     * @return joinType One of the standard JoinRowSet static field JOIN types
+     * @throws SQLException if an error occurs determining the current join type
+     */
+    public int getJoinType() throws SQLException {
+        if (vecJoinType == null) {
+            // Default JoinRowSet type
+            this.setJoinType(JoinRowSet.INNER_JOIN);
+        }
+        Integer i = vecJoinType.get(vecJoinType.size()-1);
+        return i.intValue();
+    }
+
+    /**
+    * The listener will be notified whenever an event occurs on this <code>JoinRowSet</code>
+    * object.
+    * <P>
+    * A listener might, for example, be a table or graph that needs to
+    * be updated in order to accurately reflect the current state of
+    * the <code>RowSet</code> object.
+    * <p>
+    * <b>Note</b>: if the <code>RowSetListener</code> object is
+    * <code>null</code>, this method silently discards the <code>null</code>
+    * value and does not add a null reference to the set of listeners.
+    * <p>
+    * <b>Note</b>: if the listener is already set, and the new <code>RowSetListerner</code>
+    * instance is added to the set of listeners already registered to receive
+    * event notifications from this <code>RowSet</code>.
+    *
+    * @param listener an object that has implemented the
+    *     <code>javax.sql.RowSetListener</code> interface and wants to be notified
+    *     of any events that occur on this <code>JoinRowSet</code> object; May be
+    *     null.
+    * @see #removeRowSetListener
+    */
+    public void addRowSetListener(RowSetListener listener) {
+        crsInternal.addRowSetListener(listener);
+    }
+
+    /**
+    * Removes the designated object from this <code>JoinRowSet</code> object's list of listeners.
+    * If the given argument is not a registered listener, this method
+    * does nothing.
+    *
+    *  <b>Note</b>: if the <code>RowSetListener</code> object is
+    * <code>null</code>, this method silently discards the <code>null</code>
+    * value.
+    *
+    * @param listener a <code>RowSetListener</code> object that is on the list
+    *        of listeners for this <code>JoinRowSet</code> object
+    * @see #addRowSetListener
+    */
+     public void removeRowSetListener(RowSetListener listener) {
+        crsInternal.removeRowSetListener(listener);
+    }
+
+    /**
+     * Converts this <code>JoinRowSetImpl</code> object to a collection
+     * of tables. The sample implementation utilizes the <code>TreeMap</code>
+     * collection type.
+     * This class guarantees that the map will be in ascending key order,
+     * sorted according to the natural order for the key's class.
+     *
+     * @return a <code>Collection</code> object consisting of tables,
+     *         each of which is a copy of a row in this
+     *         <code>JoinRowSetImpl</code> object
+     * @throws SQLException if an error occurs in generating the collection
+     * @see #toCollection(int)
+     * @see #toCollection(String)
+     * @see java.util.TreeMap
+     */
+     public Collection<?> toCollection() throws SQLException {
+        return crsInternal.toCollection();
+    }
+
+    /**
+     * Returns the specified column of this <code>JoinRowSetImpl</code> object
+     * as a <code>Collection</code> object.  This method makes a copy of the
+     * column's data and utilizes the <code>Vector</code> to establish the
+     * collection. The <code>Vector</code> class implements a growable array
+     * objects allowing the individual components to be accessed using an
+     * an integer index similar to that of an array.
+     *
+     * @return a <code>Collection</code> object that contains the value(s)
+     *         stored in the specified column of this
+     *         <code>JoinRowSetImpl</code>
+     *         object
+     * @throws SQLException if an error occurs generated the collection; or
+     *          an invalid column is provided.
+     * @see #toCollection()
+     * @see #toCollection(String)
+     * @see java.util.Vector
+     */
+    public Collection<?> toCollection(int column) throws SQLException {
+        return crsInternal.toCollection(column);
+    }
+
+    /**
+     * Returns the specified column of this <code>JoinRowSetImpl</code> object
+     * as a <code>Collection</code> object.  This method makes a copy of the
+     * column's data and utilizes the <code>Vector</code> to establish the
+     * collection. The <code>Vector</code> class implements a growable array
+     * objects allowing the individual components to be accessed using an
+     * an integer index similar to that of an array.
+     *
+     * @return a <code>Collection</code> object that contains the value(s)
+     *         stored in the specified column of this
+     *         <code>JoinRowSetImpl</code>
+     *         object
+     * @throws SQLException if an error occurs generated the collection; or
+     *          an invalid column is provided.
+     * @see #toCollection()
+     * @see #toCollection(int)
+     * @see java.util.Vector
+     */
+    public Collection<?> toCollection(String column) throws SQLException {
+        return crsInternal.toCollection(column);
+    }
+
+    /**
+     * Creates a <code>RowSet</code> object that is a copy of
+     * this <code>JoinRowSetImpl</code> object's table structure
+     * and the constraints only.
+     * There will be no data in the object being returned.
+     * Updates made on a copy are not visible to the original rowset.
+     * <P>
+     * This helps in getting the underlying XML schema which can
+     * be used as the basis for populating a <code>WebRowSet</code>.
+     *
+     * @return a new <code>CachedRowSet</code> object that is a copy
+     * of this <code>JoinRowSetImpl</code> object's schema and
+     * retains all the constraints on the original rowset but contains
+     * no data
+     * @throws SQLException if an error occurs in generating the copy
+     * of the <code>CachedRowSet</code> object
+     * @see #createShared
+     * @see #createCopy
+     * @see #createCopyNoConstraints
+     * @see javax.sql.RowSetEvent
+     * @see javax.sql.RowSetListener
+     */
+     public CachedRowSet createCopySchema() throws SQLException {
+         return crsInternal.createCopySchema();
+     }
+
+     /**
+      * {@inheritDoc}
+      */
+     public void setSyncProvider(String providerStr) throws SQLException {
+         crsInternal.setSyncProvider(providerStr);
+     }
+
+     /**
+      * {@inheritDoc}
+      */
+     public void acceptChanges() throws SyncProviderException {
+         crsInternal.acceptChanges();
+     }
+
+     /**
+      * {@inheritDoc}
+      */
+     public SyncProvider getSyncProvider() throws SQLException {
+        return crsInternal.getSyncProvider();
+     }
+
+    /**
+     * This method re populates the resBundle
+     * during the deserialization process
+     *
+     */
+     private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+        // Default state initialization happens here
+        ois.defaultReadObject();
+        // Initialization of transient Res Bundle happens here .
+        try {
+           resBundle = JdbcRowSetResourceBundle.getJdbcRowSetResourceBundle();
+        } catch(IOException ioe) {
+            throw new RuntimeException(ioe);
+        }
+
+     }
+
+     static final long serialVersionUID = -5590501621560008453L;
+}
