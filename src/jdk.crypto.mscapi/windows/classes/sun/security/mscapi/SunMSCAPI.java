@@ -198,4 +198,69 @@ public final class SunMSCAPI extends Provider {
                            null, attrs));
                 putService(new ProviderServiceA(p, "Signature",
                            "SHA256withRSA",
-                           
+                           "sun.security.mscapi.CSignature$SHA256withRSA",
+                           attrs));
+                putService(new ProviderServiceA(p, "Signature",
+                           "SHA384withRSA",
+                           "sun.security.mscapi.CSignature$SHA384withRSA",
+                           attrs));
+                putService(new ProviderServiceA(p, "Signature",
+                           "SHA512withRSA",
+                           "sun.security.mscapi.CSignature$SHA512withRSA",
+                           attrs));
+                putService(new ProviderServiceA(p, "Signature",
+                           "RSASSA-PSS", "sun.security.mscapi.CSignature$PSS",
+                           attrs));
+                putService(new ProviderService(p, "Signature",
+                           "MD5withRSA", "sun.security.mscapi.CSignature$MD5withRSA",
+                           null, attrs));
+                putService(new ProviderService(p, "Signature",
+                           "MD2withRSA", "sun.security.mscapi.CSignature$MD2withRSA",
+                           null, attrs));
+                putService(new ProviderServiceA(p, "Signature",
+                           "SHA1withECDSA",
+                           "sun.security.mscapi.CSignature$SHA1withECDSA",
+                           attrs));
+                putService(new ProviderServiceA(p, "Signature",
+                           "SHA224withECDSA",
+                           "sun.security.mscapi.CSignature$SHA224withECDSA",
+                           attrs));
+                putService(new ProviderServiceA(p, "Signature",
+                           "SHA256withECDSA",
+                           "sun.security.mscapi.CSignature$SHA256withECDSA",
+                           attrs));
+                putService(new ProviderServiceA(p, "Signature",
+                           "SHA384withECDSA",
+                           "sun.security.mscapi.CSignature$SHA384withECDSA",
+                           attrs));
+                putService(new ProviderServiceA(p, "Signature",
+                           "SHA512withECDSA",
+                           "sun.security.mscapi.CSignature$SHA512withECDSA",
+                           attrs));
+                /*
+                 * Key Pair Generator engines
+                 */
+                attrs.clear();
+                attrs.put("KeySize", "16384");
+                putService(new ProviderService(p, "KeyPairGenerator",
+                           "RSA", "sun.security.mscapi.CKeyPairGenerator$RSA",
+                           null, attrs));
+
+                /*
+                 * Cipher engines
+                 */
+                attrs.clear();
+                attrs.put("SupportedModes", "ECB");
+                attrs.put("SupportedPaddings", "PKCS1PADDING");
+                attrs.put("SupportedKeyClasses", "sun.security.mscapi.CKey");
+                putService(new ProviderService(p, "Cipher",
+                           "RSA", "sun.security.mscapi.CRSACipher",
+                           null, attrs));
+                putService(new ProviderService(p, "Cipher",
+                           "RSA/ECB/PKCS1Padding", "sun.security.mscapi.CRSACipher",
+                           null, attrs));
+                return null;
+            }
+        });
+    }
+}
