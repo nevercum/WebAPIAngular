@@ -90,4 +90,14 @@ jint  Agent_Initialize(JavaVM *vm, char *options, void *reserved) {
             nsk_printf(" Agent:: Error occured while setting event call back \n");
             return JNI_ERR;
         }
-        if (nsk_jvmti_enableNotification(jvmti, JVMTI_EVENT_CLASS_PREPARE, NULL))
+        if (nsk_jvmti_enableNotification(jvmti, JVMTI_EVENT_CLASS_PREPARE, NULL)) {
+            nsk_printf(" Enabled. noftification..");
+        } else {
+            nsk_printf(" Failed to Enable ..");
+        }
+    }
+    return JNI_OK;
+}
+
+
+}
