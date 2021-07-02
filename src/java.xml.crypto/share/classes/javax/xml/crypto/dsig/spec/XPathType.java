@@ -142,4 +142,60 @@ public class XPathType {
      *    namespace URI <code>String</code>.
      * @throws NullPointerException if <code>expression</code>,
      *    <code>filter</code> or <code>namespaceMap</code> are
-     *   
+     *    <code>null</code>
+     * @throws ClassCastException if any of the map's keys or entries are
+     *    not of type <code>String</code>
+     */
+    public XPathType(String expression, Filter filter,
+        Map<String,String> namespaceMap) {
+        if (expression == null) {
+            throw new NullPointerException("expression cannot be null");
+        }
+        if (filter == null) {
+            throw new NullPointerException("filter cannot be null");
+        }
+        if (namespaceMap == null) {
+            throw new NullPointerException("namespaceMap cannot be null");
+        }
+        this.expression = expression;
+        this.filter = filter;
+        Map<String,String> tempMap = Collections.checkedMap(new HashMap<>(),
+                                                            String.class,
+                                                            String.class);
+        tempMap.putAll(namespaceMap);
+        this.nsMap = Collections.unmodifiableMap(tempMap);
+    }
+
+    /**
+     * Returns the XPath expression to be evaluated.
+     *
+     * @return the XPath expression to be evaluated
+     */
+    public String getExpression() {
+        return expression;
+    }
+
+    /**
+     * Returns the filter operation.
+     *
+     * @return the filter operation
+     */
+    public Filter getFilter() {
+        return filter;
+    }
+
+    /**
+     * Returns a map of namespace prefixes. Each key is a namespace prefix
+     * <code>String</code> that maps to a corresponding namespace URI
+     * <code>String</code>.
+     * <p>
+     * This implementation returns an {@link Collections#unmodifiableMap
+     * unmodifiable map}.
+     *
+     * @return a <code>Map</code> of namespace prefixes to namespace URIs
+     *    (may be empty, but never <code>null</code>)
+     */
+    public Map<String,String> getNamespaceMap() {
+        return nsMap;
+    }
+}
