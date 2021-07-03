@@ -156,4 +156,35 @@ Java_nsk_jvmti_GetClassFields_getclfld007_check(JNIEnv *env, jclass cls, jint i,
         result = STATUS_FAILED;
     }
     for (j = 0; j < fcount; j++) {
-        if (fi
+        if (fields[j] == NULL) {
+            printf("(%d:%d) fieldID = null\n", i, j);
+        } else {
+            err = jvmti->GetFieldName(clazz, fields[j],
+                &name, &sig, &generic);
+            if (err != JVMTI_ERROR_NONE) {
+                printf("(GetFieldName#%d:%d) unexpected error: %s (%d)\n",
+                       i, j, TranslateError(err), err);
+            } else {
+                if (printdump == JNI_TRUE) {
+                    printf(">>>   [%d]: %s, sig = \"%s\"\n", j, name, sig);
+                }
+                if ((j < classes[i].fcount) &&
+                       (name == NULL || sig == NULL ||
+                        strcmp(name, classes[i].flds[j].name) != 0 ||
+                        strcmp(sig, classes[i].flds[j].sig) != 0)) {
+                    printf("(%d:%d) wrong field: \"%s%s\"", i, j, name, sig);
+                    printf(", expected: \"%s%s\"\n",
+                           classes[i].flds[j].name, classes[i].flds[j].sig);
+                    result = STATUS_FAILED;
+                }
+            }
+        }
+    }
+}
+
+JNIEXPORT int JNICALL
+Java_nsk_jvmti_GetClassFields_getclfld007_getRes(JNIEnv *env, jclass cls) {
+    return result;
+}
+
+}
