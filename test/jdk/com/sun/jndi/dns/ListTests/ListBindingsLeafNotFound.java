@@ -59,4 +59,13 @@ public class ListBindingsLeafNotFound extends ListTestBase {
         throw new RuntimeException("Failed: expecting NameNotFoundException");
     }
 
-    @Overrid
+    @Override
+    public boolean handleException(Exception e) {
+        if (e instanceof NameNotFoundException) {
+            System.out.println("Got expected exception: " + e);
+            return true;
+        }
+
+        return super.handleException(e);
+    }
+}
