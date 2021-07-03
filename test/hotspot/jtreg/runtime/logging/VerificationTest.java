@@ -51,4 +51,35 @@ public class VerificationTest {
 
         } else { // log level debug
             output.shouldContain("[debug][verification] StackMapTable: frame_count");
-    
+            output.shouldContain("[debug][verification] offset = 0,  opcode =");
+        }
+        output.shouldHaveExitValue(0);
+    }
+
+    static void analyzeOutputOff(ProcessBuilder pb) throws Exception {
+        OutputAnalyzer output = new OutputAnalyzer(pb.start());
+        output.shouldNotContain("[verification]");
+        output.shouldHaveExitValue(0);
+    }
+
+    public static void main(String[] args) throws Exception {
+        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("-Xlog:verification=info",
+                                                                  InternalClass.class.getName());
+        analyzeOutputOn(pb, true);
+
+        pb = ProcessTools.createJavaProcessBuilder("-Xlog:verification=off",
+                                                   InternalClass.class.getName());
+        analyzeOutputOff(pb);
+
+        // logging level 'debug' should output stackmaps and bytecode data.
+        pb = ProcessTools.createJavaProcessBuilder("-Xlog:verification=debug",
+                                                   InternalClass.class.getName());
+        analyzeOutputOn(pb, false);
+    }
+
+    public static class InternalClass {
+        public static void main(String[] args) throws Exception {
+            System.out.println("VerificationTest");
+        }
+    }
+}
