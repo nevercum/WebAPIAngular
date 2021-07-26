@@ -51,4 +51,34 @@ public class releaseevents002a {
         argumentHandler = new ArgumentHandler(args);
         log = new Log(out, argumentHandler);
 
-        
+        // ensure tested class is loaded
+        log.display("Creating object of tested class");
+        TestedClass object = new TestedClass();
+        log.display("  ... object created");
+
+        // invoke method with breakpoint
+        log.display("Invoking method with breakpoint");
+        object.run();
+        log.display("  ... method invoked");
+
+        // exit debugee
+        log.display("Debugee PASSED");
+        return releaseevents002.PASSED;
+    }
+
+    // tested class
+    public static class TestedClass {
+        int foo = 0;
+
+        public TestedClass() {
+            foo = 1000;
+        }
+
+        public void run() {
+            log.display("Breakpoint line reached");
+            // next line is for breakpoint
+            foo = 0; // BREAKPOINT_LINE
+            log.display("Breakpoint line passed");
+        }
+    }
+}
