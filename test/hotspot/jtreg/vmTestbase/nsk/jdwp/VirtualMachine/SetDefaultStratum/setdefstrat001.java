@@ -203,4 +203,67 @@ public class setdefstrat001 {
         if (code == JCK_STATUS_BASE + PASSED) {
             log.display("Debugee PASSED with exit code: " + code);
         } else {
-            log.complain("Debugee FAILED with exit code: " + 
+            log.complain("Debugee FAILED with exit code: " + code);
+            success = false;
+        }
+    }
+
+    /**
+     * Perform testing JDWP command.
+     */
+    void testCommand() {
+        // create command packet and fill requred out data
+        log.display("Create command packet:");
+        log.display("Command: " + JDWP_COMMAND_NAME);
+        CommandPacket command = new CommandPacket(JDWP_COMMAND_ID);
+        log.display("  stratumID: " + NEW_DEFAULT_STRATUM);
+        command.addString(NEW_DEFAULT_STRATUM);
+        command.setLength();
+
+        // send command packet to debugee
+        try {
+            log.display("Sending command packet:\n" + command);
+            transport.write(command);
+        } catch (IOException e) {
+            log.complain("Unable to send command packet:\n\t" + e);
+            success = false;
+            return;
+        }
+
+        ReplyPacket reply = new ReplyPacket();
+
+        // receive reply packet from debugee
+        try {
+            log.display("Waiting for reply packet");
+            transport.read(reply);
+            log.display("Reply packet received:\n" + reply);
+        } catch (IOException e) {
+            log.complain("Unable to read reply packet:\n\t" + e);
+            success = false;
+            return;
+        }
+
+        // check reply packet header
+        try{
+            log.display("Checking reply packet header");
+            reply.checkHeader(command.getPacketID());
+        } catch (BoundException e) {
+            log.complain("Bad header of reply packet:\n\t" + e.getMessage());
+            success = false;
+            return;
+        }
+
+        // start parsing reply packet data
+        log.display("Parsing reply packet:");
+        reply.resetPosition();
+
+        // no data in reply packet
+
+        // check for extra data in reply packet
+        if (!reply.isParsed()) {
+            log.complain("Extra trailing bytes found in reply packet at: "
+                        + reply.offsetString());
+            success = false;
+        }
+    }
+}
