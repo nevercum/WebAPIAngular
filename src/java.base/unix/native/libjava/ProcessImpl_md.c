@@ -217,4 +217,295 @@ xmalloc(JNIEnv *env, size_t size)
     void *p = malloc(size);
     if (p == NULL)
         JNU_ThrowOutOfMemoryError(env, NULL);
-   
+    return p;
+}
+
+#define NEW(type, n) ((type *) xmalloc(env, (n) * sizeof(type)))
+
+/**
+ * If PATH is not defined, the OS provides some default value.
+ * Unfortunately, there's no portable way to get this value.
+ * Fortunately, it's only needed if the child has PATH while we do not.
+ */
+static const char*
+defaultPath(void)
+{
+    return ":/bin:/usr/bin";
+}
+
+static const char*
+effectivePath(void)
+{
+    const char *s = getenv("PATH");
+    return (s != NULL) ? s : defaultPath();
+}
+
+static int
+countOccurrences(const char *s, char c)
+{
+    int count;
+    for (count = 0; *s != '\0'; s++)
+        count += (*s == c);
+    return count;
+}
+
+static const char * const *
+effectivePathv(JNIEnv *env)
+{
+    char *p;
+    int i;
+    const char *path = effectivePath();
+    int count = countOccurrences(path, ':') + 1;
+    size_t pathvsize = sizeof(const char *) * (count+1);
+    size_t pathsize = strlen(path) + 1;
+    const char **pathv = (const char **) xmalloc(env, pathvsize + pathsize);
+
+    if (pathv == NULL)
+        return NULL;
+    p = (char *) pathv + pathvsize;
+    memcpy(p, path, pathsize);
+    /* split PATH by replacing ':' with NULs; empty components => "." */
+    for (i = 0; i < count; i++) {
+        char *q = p + strcspn(p, ":");
+        pathv[i] = (p == q) ? "." : p;
+        *q = '\0';
+        p = q + 1;
+    }
+    pathv[count] = NULL;
+    return pathv;
+}
+
+JNIEXPORT void JNICALL
+Java_java_lang_ProcessImpl_init(JNIEnv *env, jclass clazz)
+{
+    parentPathv = effectivePathv(env);
+    CHECK_NULL(parentPathv);
+    setSIGCHLDHandler(env);
+}
+
+
+#ifndef WIFEXITED
+#define WIFEXITED(status) (((status)&0xFF) == 0)
+#endif
+
+#ifndef WEXITSTATUS
+#define WEXITSTATUS(status) (((status)>>8)&0xFF)
+#endif
+
+#ifndef WIFSIGNALED
+#define WIFSIGNALED(status) (((status)&0xFF) > 0 && ((status)&0xFF00) == 0)
+#endif
+
+#ifndef WTERMSIG
+#define WTERMSIG(status) ((status)&0x7F)
+#endif
+
+static const char *
+getBytes(JNIEnv *env, jbyteArray arr)
+{
+    return arr == NULL ? NULL :
+        (const char*) (*env)->GetByteArrayElements(env, arr, NULL);
+}
+
+static void
+releaseBytes(JNIEnv *env, jbyteArray arr, const char* parr)
+{
+    if (parr != NULL)
+        (*env)->ReleaseByteArrayElements(env, arr, (jbyte*) parr, JNI_ABORT);
+}
+
+#define IOE_FORMAT "error=%d, %s"
+
+static void
+throwIOException(JNIEnv *env, int errnum, const char *defaultDetail)
+{
+    const char *detail = defaultDetail;
+    char *errmsg;
+    size_t fmtsize;
+    char tmpbuf[1024];
+    jstring s;
+
+    if (errnum != 0) {
+        int ret = getErrorString(errnum, tmpbuf, sizeof(tmpbuf));
+        if (ret != EINVAL)
+            detail = tmpbuf;
+    }
+    /* ASCII Decimal representation uses 2.4 times as many bits as binary. */
+    fmtsize = sizeof(IOE_FORMAT) + strlen(detail) + 3 * sizeof(errnum);
+    errmsg = NEW(char, fmtsize);
+    if (errmsg == NULL)
+        return;
+
+    snprintf(errmsg, fmtsize, IOE_FORMAT, errnum, detail);
+    s = JNU_NewStringPlatform(env, errmsg);
+    if (s != NULL) {
+        jobject x = JNU_NewObjectByName(env, "java/io/IOException",
+                                        "(Ljava/lang/String;)V", s);
+        if (x != NULL)
+            (*env)->Throw(env, x);
+    }
+    free(errmsg);
+}
+
+/**
+ * Throws an IOException with a message composed from the result of waitpid status.
+ */
+static void throwExitCause(JNIEnv *env, int pid, int status) {
+    char ebuf[128];
+    if (WIFEXITED(status)) {
+        snprintf(ebuf, sizeof ebuf,
+            "Failed to exec spawn helper: pid: %d, exit value: %d",
+            pid, WEXITSTATUS(status));
+    } else if (WIFSIGNALED(status)) {
+        snprintf(ebuf, sizeof ebuf,
+            "Failed to exec spawn helper: pid: %d, signal: %d",
+            pid, WTERMSIG(status));
+    } else {
+        snprintf(ebuf, sizeof ebuf,
+            "Failed to exec spawn helper: pid: %d, status: 0x%08x",
+            pid, status);
+    }
+    throwIOException(env, 0, ebuf);
+}
+
+#ifdef DEBUG_PROCESS
+/* Debugging process code is difficult; where to write debug output? */
+static void
+debugPrint(char *format, ...)
+{
+    FILE *tty = fopen("/dev/tty", "w");
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(tty, format, ap);
+    va_end(ap);
+    fclose(tty);
+}
+#endif /* DEBUG_PROCESS */
+
+static void
+copyPipe(int from[2], int to[2])
+{
+    to[0] = from[0];
+    to[1] = from[1];
+}
+
+/* arg is an array of pointers to 0 terminated strings. array is terminated
+ * by a null element.
+ *
+ * *nelems and *nbytes receive the number of elements of array (incl 0)
+ * and total number of bytes (incl. 0)
+ * Note. An empty array will have one null element
+ * But if arg is null, then *nelems set to 0, and *nbytes to 0
+ */
+static void arraysize(const char * const *arg, int *nelems, int *nbytes)
+{
+    int bytes, count;
+    const char * const *a = arg;
+    if (arg == 0) {
+        *nelems = 0;
+        *nbytes = 0;
+        return;
+    }
+    /* count the array elements and number of bytes */
+    for (count=0, bytes=0; *a != 0; count++, a++) {
+        bytes += strlen(*a)+1;
+    }
+    *nbytes = bytes;
+    *nelems = count+1;
+}
+
+/* copy the strings from arg[] into buf, starting at given offset
+ * return new offset to next free byte
+ */
+static int copystrings(char *buf, int offset, const char * const *arg) {
+    char *p;
+    const char * const *a;
+    int count=0;
+
+    if (arg == 0) {
+        return offset;
+    }
+    for (p=buf+offset, a=arg; *a != 0; a++) {
+        int len = strlen(*a) +1;
+        memcpy(p, *a, len);
+        p += len;
+        count += len;
+    }
+    return offset+count;
+}
+
+/**
+ * We are unusually paranoid; use of vfork is
+ * especially likely to tickle gcc/glibc bugs.
+ */
+#ifdef __attribute_noinline__  /* See: sys/cdefs.h */
+__attribute_noinline__
+#endif
+
+/* vfork(2) is deprecated on Darwin */
+#ifndef __APPLE__
+static pid_t
+vforkChild(ChildStuff *c) {
+    volatile pid_t resultPid;
+
+    /*
+     * We separate the call to vfork into a separate function to make
+     * very sure to keep stack of child from corrupting stack of parent,
+     * as suggested by the scary gcc warning:
+     *  warning: variable 'foo' might be clobbered by 'longjmp' or 'vfork'
+     */
+    resultPid = vfork();
+
+    if (resultPid == 0) {
+        childProcess(c);
+    }
+    assert(resultPid != 0);  /* childProcess never returns */
+    return resultPid;
+}
+#endif
+
+static pid_t
+forkChild(ChildStuff *c) {
+    pid_t resultPid;
+
+    /*
+     * From Solaris fork(2): In Solaris 10, a call to fork() is
+     * identical to a call to fork1(); only the calling thread is
+     * replicated in the child process. This is the POSIX-specified
+     * behavior for fork().
+     */
+    resultPid = fork();
+
+    if (resultPid == 0) {
+        childProcess(c);
+    }
+    assert(resultPid != 0);  /* childProcess never returns */
+    return resultPid;
+}
+
+static pid_t
+spawnChild(JNIEnv *env, jobject process, ChildStuff *c, const char *helperpath) {
+    pid_t resultPid;
+    int i, offset, rval, bufsize, magic;
+    char *buf, buf1[16];
+    char *hlpargs[2];
+    SpawnInfo sp;
+
+    /* need to tell helper which fd is for receiving the childstuff
+     * and which fd to send response back on
+     */
+    snprintf(buf1, sizeof(buf1), "%d:%d", c->childenv[0], c->fail[1]);
+    /* put the fd string as argument to the helper cmd */
+    hlpargs[0] = buf1;
+    hlpargs[1] = 0;
+
+    /* Following items are sent down the pipe to the helper
+     * after it is spawned.
+     * All strings are null terminated. All arrays of strings
+     * have an empty string for termination.
+     * - the ChildStuff struct
+     * - the SpawnInfo struct
+     * - the argv strings array
+     * - the envv strings array
+     * - the home directory string
+     * - the
