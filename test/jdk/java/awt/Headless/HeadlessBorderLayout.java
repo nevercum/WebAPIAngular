@@ -45,4 +45,18 @@ public class HeadlessBorderLayout {
         bl.addLayoutComponent(new Component(){}, BorderLayout.AFTER_LINE_ENDS);
         bl.addLayoutComponent(new Component(){}, BorderLayout.BEFORE_FIRST_LINE);
         bl.addLayoutComponent(new Component(){}, BorderLayout.BEFORE_LINE_BEGINS);
-        bl.addLayoutComponent(new Component(){}, BorderLayou
+        bl.addLayoutComponent(new Component(){}, BorderLayout.PAGE_START);
+        bl.addLayoutComponent(new Component(){}, BorderLayout.PAGE_END);
+        bl.addLayoutComponent(new Component(){}, BorderLayout.LINE_START);
+        bl.addLayoutComponent(new Component(){}, BorderLayout.LINE_END);
+        bl.addLayoutComponent(new Component(){}, BorderLayout.CENTER);
+        bl.addLayoutComponent(new Component(){}, BorderLayout.EAST);
+        bl.addLayoutComponent(new Component(){}, BorderLayout.NORTH);
+        bl.addLayoutComponent(new Component(){}, BorderLayout.SOUTH);
+        bl.addLayoutComponent(new Component(){}, BorderLayout.WEST);
+
+        Component cb = new Component(){};
+        bl.addLayoutComponent(cb, BorderLayout.WEST);
+        bl.removeLayoutComponent(cb);
+    }
+}
