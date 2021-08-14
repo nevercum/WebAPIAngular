@@ -508,4 +508,220 @@ spawnChild(JNIEnv *env, jobject process, ChildStuff *c, const char *helperpath) 
      * - the argv strings array
      * - the envv strings array
      * - the home directory string
-     * - the
+     * - the parentPath string
+     * - the parentPathv array
+     */
+    /* First calculate the sizes */
+    arraysize(c->argv, &sp.nargv, &sp.argvBytes);
+    bufsize = sp.argvBytes;
+    arraysize(c->envv, &sp.nenvv, &sp.envvBytes);
+    bufsize += sp.envvBytes;
+    sp.dirlen = c->pdir == 0 ? 0 : strlen(c->pdir)+1;
+    bufsize += sp.dirlen;
+    arraysize(parentPathv, &sp.nparentPathv, &sp.parentPathvBytes);
+    bufsize += sp.parentPathvBytes;
+    /* We need to clear FD_CLOEXEC if set in the fds[].
+     * Files are created FD_CLOEXEC in Java.
+     * Otherwise, they will be closed when the target gets exec'd */
+    for (i=0; i<3; i++) {
+        if (c->fds[i] != -1) {
+            int flags = fcntl(c->fds[i], F_GETFD);
+            if (flags & FD_CLOEXEC) {
+                fcntl(c->fds[i], F_SETFD, flags & (~1));
+            }
+        }
+    }
+
+    rval = posix_spawn(&resultPid, helperpath, 0, 0, (char * const *) hlpargs, environ);
+
+    if (rval != 0) {
+        return -1;
+    }
+
+    /* now the lengths are known, copy the data */
+    buf = NEW(char, bufsize);
+    if (buf == 0) {
+        return -1;
+    }
+    offset = copystrings(buf, 0, &c->argv[0]);
+    offset = copystrings(buf, offset, &c->envv[0]);
+    memcpy(buf+offset, c->pdir, sp.dirlen);
+    offset += sp.dirlen;
+    offset = copystrings(buf, offset, parentPathv);
+    assert(offset == bufsize);
+
+    magic = magicNumber();
+
+    /* write the two structs and the data buffer */
+    write(c->childenv[1], (char *)&magic, sizeof(magic)); // magic number first
+    write(c->childenv[1], (char *)c, sizeof(*c));
+    write(c->childenv[1], (char *)&sp, sizeof(sp));
+    write(c->childenv[1], buf, bufsize);
+    free(buf);
+
+    /* In this mode an external main() in invoked which calls back into
+     * childProcess() in this file, rather than directly
+     * via the statement below */
+    return resultPid;
+}
+
+/*
+ * Start a child process running function childProcess.
+ * This function only returns in the parent.
+ */
+static pid_t
+startChild(JNIEnv *env, jobject process, ChildStuff *c, const char *helperpath) {
+    switch (c->mode) {
+/* vfork(2) is deprecated on Darwin*/
+      #ifndef __APPLE__
+      case MODE_VFORK:
+        return vforkChild(c);
+      #endif
+      case MODE_FORK:
+        return forkChild(c);
+      case MODE_POSIX_SPAWN:
+        return spawnChild(env, process, c, helperpath);
+      default:
+        return -1;
+    }
+}
+
+JNIEXPORT jint JNICALL
+Java_java_lang_ProcessImpl_forkAndExec(JNIEnv *env,
+                                       jobject process,
+                                       jint mode,
+                                       jbyteArray helperpath,
+                                       jbyteArray prog,
+                                       jbyteArray argBlock, jint argc,
+                                       jbyteArray envBlock, jint envc,
+                                       jbyteArray dir,
+                                       jintArray std_fds,
+                                       jboolean redirectErrorStream)
+{
+    int errnum;
+    int resultPid = -1;
+    int in[2], out[2], err[2], fail[2], childenv[2];
+    jint *fds = NULL;
+    const char *phelperpath = NULL;
+    const char *pprog = NULL;
+    const char *pargBlock = NULL;
+    const char *penvBlock = NULL;
+    ChildStuff *c;
+
+    in[0] = in[1] = out[0] = out[1] = err[0] = err[1] = fail[0] = fail[1] = -1;
+    childenv[0] = childenv[1] = -1;
+
+    if ((c = NEW(ChildStuff, 1)) == NULL) return -1;
+    c->argv = NULL;
+    c->envv = NULL;
+    c->pdir = NULL;
+
+    /* Convert prog + argBlock into a char ** argv.
+     * Add one word room for expansion of argv for use by
+     * execve_as_traditional_shell_script.
+     * This word is also used when using posix_spawn mode
+     */
+    assert(prog != NULL && argBlock != NULL);
+    if ((phelperpath = getBytes(env, helperpath))   == NULL) goto Catch;
+    if ((pprog       = getBytes(env, prog))         == NULL) goto Catch;
+    if ((pargBlock   = getBytes(env, argBlock))     == NULL) goto Catch;
+    if ((c->argv     = NEW(const char *, argc + 3)) == NULL) goto Catch;
+    c->argv[0] = pprog;
+    c->argc = argc + 2;
+    initVectorFromBlock(c->argv+1, pargBlock, argc);
+
+    if (envBlock != NULL) {
+        /* Convert envBlock into a char ** envv */
+        if ((penvBlock = getBytes(env, envBlock))   == NULL) goto Catch;
+        if ((c->envv = NEW(const char *, envc + 1)) == NULL) goto Catch;
+        initVectorFromBlock(c->envv, penvBlock, envc);
+    }
+
+    if (dir != NULL) {
+        if ((c->pdir = getBytes(env, dir)) == NULL) goto Catch;
+    }
+
+    assert(std_fds != NULL);
+    fds = (*env)->GetIntArrayElements(env, std_fds, NULL);
+    if (fds == NULL) goto Catch;
+
+    if ((fds[0] == -1 && pipe(in)  < 0) ||
+        (fds[1] == -1 && pipe(out) < 0) ||
+        (fds[2] == -1 && pipe(err) < 0) ||
+        (pipe(childenv) < 0) ||
+        (pipe(fail) < 0)) {
+        throwIOException(env, errno, "Bad file descriptor");
+        goto Catch;
+    }
+    c->fds[0] = fds[0];
+    c->fds[1] = fds[1];
+    c->fds[2] = fds[2];
+
+    copyPipe(in,   c->in);
+    copyPipe(out,  c->out);
+    copyPipe(err,  c->err);
+    copyPipe(fail, c->fail);
+    copyPipe(childenv, c->childenv);
+
+    c->redirectErrorStream = redirectErrorStream;
+    c->mode = mode;
+
+    /* In posix_spawn mode, require the child process to signal aliveness
+     * right after it comes up. This is because there are implementations of
+     * posix_spawn() which do not report failed exec()s back to the caller
+     * (e.g. glibc, see JDK-8223777). In those cases, the fork() will have
+     * worked and successfully started the child process, but the exec() will
+     * have failed. There is no way for us to distinguish this from a target
+     * binary just exiting right after start.
+     *
+     * Note that we could do this additional handshake in all modes but for
+     * prudence only do it when it is needed (in posix_spawn mode). */
+    c->sendAlivePing = (mode == MODE_POSIX_SPAWN) ? 1 : 0;
+
+    resultPid = startChild(env, process, c, phelperpath);
+    assert(resultPid != 0);
+
+    if (resultPid < 0) {
+        switch (c->mode) {
+          case MODE_VFORK:
+            throwIOException(env, errno, "vfork failed");
+            break;
+          case MODE_FORK:
+            throwIOException(env, errno, "fork failed");
+            break;
+          case MODE_POSIX_SPAWN:
+            throwIOException(env, errno, "posix_spawn failed");
+            break;
+        }
+        goto Catch;
+    }
+    close(fail[1]); fail[1] = -1; /* See: WhyCantJohnnyExec  (childproc.c)  */
+
+    /* If we expect the child to ping aliveness, wait for it. */
+    if (c->sendAlivePing) {
+        switch(readFully(fail[0], &errnum, sizeof(errnum))) {
+        case 0: /* First exec failed; */
+            {
+                int tmpStatus = 0;
+                int p = waitpid(resultPid, &tmpStatus, 0);
+                throwExitCause(env, p, tmpStatus);
+                goto Catch;
+            }
+        case sizeof(errnum):
+            assert(errnum == CHILD_IS_ALIVE);
+            if (errnum != CHILD_IS_ALIVE) {
+                /* Should never happen since the first thing the spawn
+                 * helper should do is to send an alive ping to the parent,
+                 * before doing any subsequent work. */
+                throwIOException(env, 0, "Bad code from spawn helper "
+                                         "(Failed to exec spawn helper)");
+                goto Catch;
+            }
+            break;
+        default:
+            throwIOException(env, errno, "Read failed");
+            goto Catch;
+        }
+    }
+
+    switch (readFully(fail[0], 
