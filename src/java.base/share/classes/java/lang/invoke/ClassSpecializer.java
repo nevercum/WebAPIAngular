@@ -143,4 +143,183 @@ abstract class ClassSpecializer<T,K,S extends ClassSpecializer<T,K,S>.SpeciesDat
     protected static Field reflectField(Class<?> defc, String name) {
         try {
             return defc.getDeclaredField(name);
-        } catch (NoSuchFieldException ex)
+        } catch (NoSuchFieldException ex) {
+            throw newIAE(defc.getName()+"."+name, ex);
+        }
+    }
+
+    private static RuntimeException newIAE(String message, Throwable cause) {
+        return new IllegalArgumentException(message, cause);
+    }
+
+    private static final Function<Object, Object> CREATE_RESERVATION = new Function<>() {
+        @Override
+        public Object apply(Object key) {
+            return new Object();
+        }
+    };
+
+    public final S findSpecies(K key) {
+        // Note:  Species instantiation may throw VirtualMachineError because of
+        // code cache overflow.  If this happens the species bytecode may be
+        // loaded but not linked to its species metadata (with MH's etc).
+        // That will cause a throw out of Factory.loadSpecies.
+        //
+        // In a later attempt to get the same species, the already-loaded
+        // class will be present in the system dictionary, causing an
+        // error when the species generator tries to reload it.
+        // We try to detect this case and link the pre-existing code.
+        //
+        // Although it would be better to start fresh by loading a new
+        // copy, we have to salvage the previously loaded but broken code.
+        // (As an alternative, we might spin a new class with a new name,
+        // or use the anonymous class mechanism.)
+        //
+        // In the end, as long as everybody goes through this findSpecies method,
+        // it will ensure only one SpeciesData will be set successfully on a
+        // concrete class if ever.
+        // The concrete class is published via SpeciesData instance
+        // returned here only after the class and species data are linked together.
+        Object speciesDataOrReservation = cache.computeIfAbsent(key, CREATE_RESERVATION);
+        // Separating the creation of a placeholder SpeciesData instance above
+        // from the loading and linking a real one below ensures we can never
+        // accidentally call computeIfAbsent recursively.
+        S speciesData;
+        if (speciesDataOrReservation.getClass() == Object.class) {
+            synchronized (speciesDataOrReservation) {
+                Object existingSpeciesData = cache.get(key);
+                if (existingSpeciesData == speciesDataOrReservation) { // won the race
+                    // create a new SpeciesData...
+                    speciesData = newSpeciesData(key);
+                    // load and link it...
+                    speciesData = factory.loadSpecies(speciesData);
+                    if (!cache.replace(key, existingSpeciesData, speciesData)) {
+                        throw newInternalError("Concurrent loadSpecies");
+                    }
+                } else { // lost the race; the retrieved existingSpeciesData is the final
+                    speciesData = metaType.cast(existingSpeciesData);
+                }
+            }
+        } else {
+            speciesData = metaType.cast(speciesDataOrReservation);
+        }
+        assert(speciesData != null && speciesData.isResolved());
+        return speciesData;
+    }
+
+    /**
+     * Meta-data wrapper for concrete subtypes of the top class.
+     * Each concrete subtype corresponds to a given sequence of basic field types (LIJFD).
+     * The fields are immutable; their values are fully specified at object construction.
+     * Each species supplies an array of getter functions which may be used in lambda forms.
+     * A concrete value is always constructed from the full tuple of its field values,
+     * accompanied by the required constructor parameters.
+     * There *may* also be transforms which cloning a species instance and
+     * either replace a constructor parameter or add one or more new field values.
+     * The shortest possible species has zero fields.
+     * Subtypes are not interrelated among themselves by subtyping, even though
+     * it would appear that a shorter species could serve as a supertype of a
+     * longer one which extends it.
+     */
+    public abstract class SpeciesData {
+        // Bootstrapping requires circular relations Class -> SpeciesData -> Class
+        // Therefore, we need non-final links in the chain.  Use @Stable fields.
+        private final K key;
+        private final List<Class<?>> fieldTypes;
+        @Stable private Class<? extends T> speciesCode;
+        @Stable private List<MethodHandle> factories;
+        @Stable private List<MethodHandle> getters;
+        @Stable private List<LambdaForm.NamedFunction> nominalGetters;
+        @Stable private final MethodHandle[] transformHelpers = new MethodHandle[transformMethods.size()];
+
+        protected SpeciesData(K key) {
+            this.key = keyType.cast(Objects.requireNonNull(key));
+            List<Class<?>> types = deriveFieldTypes(key);
+            this.fieldTypes = List.copyOf(types);
+        }
+
+        public final K key() {
+            return key;
+        }
+
+        protected final List<Class<?>> fieldTypes() {
+            return fieldTypes;
+        }
+
+        protected final int fieldCount() {
+            return fieldTypes.size();
+        }
+
+        protected ClassSpecializer<T,K,S> outer() {
+            return ClassSpecializer.this;
+        }
+
+        protected final boolean isResolved() {
+            return speciesCode != null && factories != null && !factories.isEmpty();
+        }
+
+        @Override public String toString() {
+            return metaType.getSimpleName() + "[" + key.toString() + " => " + (isResolved() ? speciesCode.getSimpleName() : "UNRESOLVED") + "]";
+        }
+
+        @Override
+        public int hashCode() {
+            return key.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof ClassSpecializer.SpeciesData)) {
+                return false;
+            }
+            @SuppressWarnings("rawtypes")
+            ClassSpecializer.SpeciesData that = (ClassSpecializer.SpeciesData) obj;
+            return this.outer() == that.outer() && this.key.equals(that.key);
+        }
+
+        /** Throws NPE if this species is not yet resolved. */
+        protected final Class<? extends T> speciesCode() {
+            return Objects.requireNonNull(speciesCode);
+        }
+
+        /**
+         * Return a {@link MethodHandle} which can get the indexed field of this species.
+         * The return type is the type of the species field it accesses.
+         * The argument type is the {@code fieldHolder} class of this species.
+         */
+        protected MethodHandle getter(int i) {
+            return getters.get(i);
+        }
+
+        /**
+         * Return a {@link LambdaForm.Name} containing a {@link LambdaForm.NamedFunction} that
+         * represents a MH bound to a generic invoker, which in turn forwards to the corresponding
+         * getter.
+         */
+        protected LambdaForm.NamedFunction getterFunction(int i) {
+            LambdaForm.NamedFunction nf = nominalGetters.get(i);
+            assert(nf.memberDeclaringClassOrNull() == speciesCode());
+            assert(nf.returnType() == BasicType.basicType(fieldTypes.get(i)));
+            return nf;
+        }
+
+        protected List<LambdaForm.NamedFunction> getterFunctions() {
+            return nominalGetters;
+        }
+
+        protected List<MethodHandle> getters() {
+            return getters;
+        }
+
+        protected MethodHandle factory() {
+            return factories.get(0);
+        }
+
+        protected MethodHandle transformHelper(int whichtm) {
+            MethodHandle mh = transformHelpers[whichtm];
+            if (mh != null)  return mh;
+            mh = deriveTransformHelper(transformMethods().get(whichtm), whichtm);
+            // Do a little type checking before we start using the MH.
+            // (It will be called with invokeBasic, so this is our only chance.)
+            final MethodType mt = transformHelperType(whichtm);
+            
