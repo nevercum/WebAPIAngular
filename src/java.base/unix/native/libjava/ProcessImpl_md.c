@@ -724,4 +724,52 @@ Java_java_lang_ProcessImpl_forkAndExec(JNIEnv *env,
         }
     }
 
-    switch (readFully(fail[0], 
+    switch (readFully(fail[0], &errnum, sizeof(errnum))) {
+    case 0: break; /* Exec succeeded */
+    case sizeof(errnum):
+        waitpid(resultPid, NULL, 0);
+        throwIOException(env, errnum, "Exec failed");
+        goto Catch;
+    default:
+        throwIOException(env, errno, "Read failed");
+        goto Catch;
+    }
+
+    fds[0] = (in [1] != -1) ? in [1] : -1;
+    fds[1] = (out[0] != -1) ? out[0] : -1;
+    fds[2] = (err[0] != -1) ? err[0] : -1;
+
+ Finally:
+    /* Always clean up the child's side of the pipes */
+    closeSafely(in [0]);
+    closeSafely(out[1]);
+    closeSafely(err[1]);
+
+    /* Always clean up fail and childEnv descriptors */
+    closeSafely(fail[0]);
+    closeSafely(fail[1]);
+    closeSafely(childenv[0]);
+    closeSafely(childenv[1]);
+
+    releaseBytes(env, helperpath, phelperpath);
+    releaseBytes(env, prog,       pprog);
+    releaseBytes(env, argBlock,   pargBlock);
+    releaseBytes(env, envBlock,   penvBlock);
+    releaseBytes(env, dir,        c->pdir);
+
+    free(c->argv);
+    free(c->envv);
+    free(c);
+
+    if (fds != NULL)
+        (*env)->ReleaseIntArrayElements(env, std_fds, fds, 0);
+
+    return resultPid;
+
+ Catch:
+    /* Clean up the parent's side of the pipes in case of failure only */
+    closeSafely(in [1]); in[1] = -1;
+    closeSafely(out[0]); out[0] = -1;
+    closeSafely(err[0]); err[0] = -1;
+    goto Finally;
+}
