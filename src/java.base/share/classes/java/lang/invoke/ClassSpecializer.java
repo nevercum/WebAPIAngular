@@ -322,4 +322,172 @@ abstract class ClassSpecializer<T,K,S extends ClassSpecializer<T,K,S>.SpeciesDat
             // Do a little type checking before we start using the MH.
             // (It will be called with invokeBasic, so this is our only chance.)
             final MethodType mt = transformHelperType(whichtm);
-            
+            mh = mh.asType(mt);
+            return transformHelpers[whichtm] = mh;
+        }
+
+        private final MethodType transformHelperType(int whichtm) {
+            MemberName tm = transformMethods().get(whichtm);
+            MethodType tmt = tm.getMethodType();
+            ArrayList<Class<?>> args = new ArrayList<>();
+            ArrayList<Class<?>> fields = new ArrayList<>();
+            Collections.addAll(args, tmt.ptypes());
+            fields.addAll(fieldTypes());
+            List<Class<?>> helperArgs = deriveTransformHelperArguments(tm, whichtm, args, fields);
+            return MethodType.methodType(tmt.returnType(), helperArgs);
+        }
+
+        // Hooks for subclasses:
+
+        /**
+         * Given a key, derive the list of field types, which all instances of this
+         * species must store.
+         */
+        protected abstract List<Class<?>> deriveFieldTypes(K key);
+
+        /**
+         * Given the index of a method in the transforms list, supply a factory
+         * method that takes the arguments of the transform, plus the local fields,
+         * and produce a value of the required type.
+         * You can override this to return null or throw if there are no transforms.
+         * This method exists so that the transforms can be "grown" lazily.
+         * This is necessary if the transform *adds* a field to an instance,
+         * which sometimes requires the creation, on the fly, of an extended species.
+         * This method is only called once for any particular parameter.
+         * The species caches the result in a private array.
+         *
+         * @param transform the transform being implemented
+         * @param whichtm the index of that transform in the original list of transforms
+         * @return the method handle which creates a new result from a mix of transform
+         * arguments and field values
+         */
+        protected abstract MethodHandle deriveTransformHelper(MemberName transform, int whichtm);
+
+        /**
+         * During code generation, this method is called once per transform to determine
+         * what is the mix of arguments to hand to the transform-helper.  The bytecode
+         * which marshals these arguments is open-coded in the species-specific transform.
+         * The two lists are of opaque objects, which you shouldn't do anything with besides
+         * reordering them into the output list.  (They are both mutable, to make editing
+         * easier.)  The imputed types of the args correspond to the transform's parameter
+         * list, while the imputed types of the fields correspond to the species field types.
+         * After code generation, this method may be called occasionally by error-checking code.
+         *
+         * @param transform the transform being implemented
+         * @param whichtm the index of that transform in the original list of transforms
+         * @param args a list of opaque objects representing the incoming transform arguments
+         * @param fields a list of opaque objects representing the field values of the receiver
+         * @param <X> the common element type of the various lists
+         * @return a new list
+         */
+        protected abstract <X> List<X> deriveTransformHelperArguments(MemberName transform, int whichtm,
+                                                                      List<X> args, List<X> fields);
+
+        /** Given a key, generate the name of the class which implements the species for that key.
+         * This algorithm must be stable.
+         *
+         * @return class name, which by default is {@code outer().topClass().getName() + "$Species_" + deriveTypeString(key)}
+         */
+        protected String deriveClassName() {
+            return outer().topClass().getName() + "$Species_" + deriveTypeString();
+        }
+
+        /**
+         * Default implementation collects basic type characters,
+         * plus possibly type names, if some types don't correspond
+         * to basic types.
+         *
+         * @return a string suitable for use in a class name
+         */
+        protected String deriveTypeString() {
+            List<Class<?>> types = fieldTypes();
+            StringBuilder buf = new StringBuilder();
+            StringBuilder end = new StringBuilder();
+            for (Class<?> type : types) {
+                BasicType basicType = BasicType.basicType(type);
+                if (basicType.basicTypeClass() == type) {
+                    buf.append(basicType.basicTypeChar());
+                } else {
+                    buf.append('V');
+                    end.append(classSig(type));
+                }
+            }
+            String typeString;
+            if (end.length() > 0) {
+                typeString = BytecodeName.toBytecodeName(buf.append("_").append(end).toString());
+            } else {
+                typeString = buf.toString();
+            }
+            return LambdaForm.shortenSignature(typeString);
+        }
+
+        /**
+         * Report what immediate super-class to use for the concrete class of this species.
+         * Normally this is {@code topClass}, but if that is an interface, the factory must override.
+         * The super-class must provide a constructor which takes the {@code baseConstructorType} arguments, if any.
+         * This hook also allows the code generator to use more than one canned supertype for species.
+         *
+         * @return the super-class of the class to be generated
+         */
+        protected Class<? extends T> deriveSuperClass() {
+            final Class<T> topc = topClass();
+            if (!topClassIsSuper) {
+                try {
+                    final Constructor<T> con = reflectConstructor(topc, baseConstructorType().ptypes());
+                    if (!topc.isInterface() && !Modifier.isPrivate(con.getModifiers())) {
+                        topClassIsSuper = true;
+                    }
+                } catch (Exception|InternalError ex) {
+                    // fall through...
+                }
+                if (!topClassIsSuper) {
+                    throw newInternalError("must override if the top class cannot serve as a super class");
+                }
+            }
+            return topc;
+        }
+    }
+
+    protected abstract S newSpeciesData(K key);
+
+    protected K topSpeciesKey() {
+        return null;  // null means don't report a top species
+    }
+
+    /**
+     * Code generation support for instances.
+     * Subclasses can modify the behavior.
+     */
+    public class Factory {
+        /**
+         * Constructs a factory.
+         */
+        Factory() {}
+
+        /**
+         * Get a concrete subclass of the top class for a given combination of bound types.
+         *
+         * @param speciesData the species requiring the class, not yet linked
+         * @return a linked version of the same species
+         */
+        S loadSpecies(S speciesData) {
+            String className = speciesData.deriveClassName();
+            assert(className.indexOf('/') < 0) : className;
+            Class<?> salvage = null;
+            try {
+                salvage = BootLoader.loadClassOrNull(className);
+            } catch (Error ex) {
+                // ignore
+            } finally {
+                traceSpeciesType(className, salvage);
+            }
+            final Class<? extends T> speciesCode;
+            if (salvage != null) {
+                speciesCode = salvage.asSubclass(topClass());
+                linkSpeciesDataToCode(speciesData, speciesCode);
+                linkCodeToSpeciesData(speciesCode, speciesData, true);
+            } else {
+                // Not pregenerated, generate the class
+                try {
+                    speciesCode = generateConcreteSpeciesCode(className, speciesData);
+              
