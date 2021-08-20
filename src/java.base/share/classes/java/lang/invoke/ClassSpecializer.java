@@ -490,4 +490,157 @@ abstract class ClassSpecializer<T,K,S extends ClassSpecializer<T,K,S>.SpeciesDat
                 // Not pregenerated, generate the class
                 try {
                     speciesCode = generateConcreteSpeciesCode(className, speciesData);
-              
+                    // This operation causes a lot of churn:
+                    linkSpeciesDataToCode(speciesData, speciesCode);
+                    // This operation commits the relation, but causes little churn:
+                    linkCodeToSpeciesData(speciesCode, speciesData, false);
+                } catch (Error ex) {
+                    // We can get here if there is a race condition loading a class.
+                    // Or maybe we are out of resources.  Back out of the CHM.get and retry.
+                    throw ex;
+                }
+            }
+
+            if (!speciesData.isResolved()) {
+                throw newInternalError("bad species class linkage for " + className + ": " + speciesData);
+            }
+            assert(speciesData == loadSpeciesDataFromCode(speciesCode));
+            return speciesData;
+        }
+
+        /**
+         * Generate a concrete subclass of the top class for a given combination of bound types.
+         *
+         * A concrete species subclass roughly matches the following schema:
+         *
+         * <pre>
+         * class Species_[[types]] extends [[T]] {
+         *     final [[S]] speciesData() { return ... }
+         *     static [[T]] make([[fields]]) { return ... }
+         *     [[fields]]
+         *     final [[T]] transform([[args]]) { return ... }
+         * }
+         * </pre>
+         *
+         * The {@code [[types]]} signature is precisely the key for the species.
+         *
+         * The {@code [[fields]]} section consists of one field definition per character in
+         * the type signature, adhering to the naming schema described in the definition of
+         * {@link #chooseFieldName}.
+         *
+         * For example, a concrete species for two references and one integral bound value
+         * has a shape like the following:
+         *
+         * <pre>
+         * class TopClass {
+         *     ...
+         *     private static final class Species_LLI extends TopClass {
+         *         final Object argL0;
+         *         final Object argL1;
+         *         final int argI2;
+         *         private Species_LLI(CT ctarg, ..., Object argL0, Object argL1, int argI2) {
+         *             super(ctarg, ...);
+         *             this.argL0 = argL0;
+         *             this.argL1 = argL1;
+         *             this.argI2 = argI2;
+         *         }
+         *         final SpeciesData speciesData() { return BMH_SPECIES; }
+         *         &#64;Stable static SpeciesData BMH_SPECIES; // injected afterwards
+         *         static TopClass make(CT ctarg, ..., Object argL0, Object argL1, int argI2) {
+         *             return new Species_LLI(ctarg, ..., argL0, argL1, argI2);
+         *         }
+         *         final TopClass copyWith(CT ctarg, ...) {
+         *             return new Species_LLI(ctarg, ..., argL0, argL1, argI2);
+         *         }
+         *         // two transforms, for the sake of illustration:
+         *         final TopClass copyWithExtendL(CT ctarg, ..., Object narg) {
+         *             return BMH_SPECIES.transform(L_TYPE).invokeBasic(ctarg, ..., argL0, argL1, argI2, narg);
+         *         }
+         *         final TopClass copyWithExtendI(CT ctarg, ..., int narg) {
+         *             return BMH_SPECIES.transform(I_TYPE).invokeBasic(ctarg, ..., argL0, argL1, argI2, narg);
+         *         }
+         *     }
+         * }
+         * </pre>
+         *
+         * @param className of the species
+         * @param speciesData what species we are generating
+         * @return the generated concrete TopClass class
+         */
+        @SuppressWarnings("removal")
+        Class<? extends T> generateConcreteSpeciesCode(String className, ClassSpecializer<T,K,S>.SpeciesData speciesData) {
+            byte[] classFile = generateConcreteSpeciesCodeFile(className, speciesData);
+
+            // load class
+            InvokerBytecodeGenerator.maybeDump(classBCName(className), classFile);
+            ClassLoader cl = topClass.getClassLoader();
+            ProtectionDomain pd = null;
+            if (cl != null) {
+                pd = AccessController.doPrivileged(
+                        new PrivilegedAction<>() {
+                            @Override
+                            public ProtectionDomain run() {
+                                return topClass().getProtectionDomain();
+                            }
+                        });
+            }
+            Class<?> speciesCode = SharedSecrets.getJavaLangAccess()
+                    .defineClass(cl, className, classFile, pd, "_ClassSpecializer_generateConcreteSpeciesCode");
+            return speciesCode.asSubclass(topClass());
+        }
+
+        // These are named like constants because there is only one per specialization scheme:
+        private final String SPECIES_DATA = classBCName(metaType);
+        private final String SPECIES_DATA_SIG = classSig(SPECIES_DATA);
+        private final String SPECIES_DATA_NAME = sdAccessor.getName();
+        private final int SPECIES_DATA_MODS = sdAccessor.getModifiers();
+        private final List<String> TRANSFORM_NAMES;  // derived from transformMethods
+        private final List<MethodType> TRANSFORM_TYPES;
+        private final List<Integer> TRANSFORM_MODS;
+        {
+            // Tear apart transformMethods to get the names, types, and modifiers.
+            List<String> tns = new ArrayList<>();
+            List<MethodType> tts = new ArrayList<>();
+            List<Integer> tms = new ArrayList<>();
+            for (int i = 0; i < transformMethods.size(); i++) {
+                MemberName tm = transformMethods.get(i);
+                tns.add(tm.getName());
+                final MethodType tt = tm.getMethodType();
+                tts.add(tt);
+                tms.add(tm.getModifiers());
+            }
+            TRANSFORM_NAMES = List.of(tns.toArray(new String[0]));
+            TRANSFORM_TYPES = List.of(tts.toArray(new MethodType[0]));
+            TRANSFORM_MODS = List.of(tms.toArray(new Integer[0]));
+        }
+        private static final int ACC_PPP = ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED;
+
+        /*non-public*/
+        byte[] generateConcreteSpeciesCodeFile(String className0, ClassSpecializer<T,K,S>.SpeciesData speciesData) {
+            final String className = classBCName(className0);
+            final String superClassName = classBCName(speciesData.deriveSuperClass());
+
+            final ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS + ClassWriter.COMPUTE_FRAMES);
+            final int NOT_ACC_PUBLIC = 0;  // not ACC_PUBLIC
+            cw.visit(CLASSFILE_VERSION, NOT_ACC_PUBLIC + ACC_FINAL + ACC_SUPER, className, null, superClassName, null);
+
+            final String sourceFile = className.substring(className.lastIndexOf('.')+1);
+            cw.visitSource(sourceFile, null);
+
+            // emit static types and BMH_SPECIES fields
+            FieldVisitor fw = cw.visitField(NOT_ACC_PUBLIC + ACC_STATIC, sdFieldName, SPECIES_DATA_SIG, null, null);
+            fw.visitAnnotation(STABLE_SIG, true);
+            fw.visitEnd();
+
+            // handy holder for dealing with groups of typed values (ctor arguments and fields)
+            class Var {
+                final int index;
+                final String name;
+                final Class<?> type;
+                final String desc;
+                final BasicType basicType;
+                final int slotIndex;
+                Var(int index, int slotIndex) {
+                    this.index = index;
+                    this.slotIndex = slotIndex;
+                    name = null; type = null; desc = nu
