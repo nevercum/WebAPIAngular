@@ -643,4 +643,171 @@ abstract class ClassSpecializer<T,K,S extends ClassSpecializer<T,K,S>.SpeciesDat
                 Var(int index, int slotIndex) {
                     this.index = index;
                     this.slotIndex = slotIndex;
-                    name = null; type = null; desc = nu
+                    name = null; type = null; desc = null;
+                    basicType = BasicType.V_TYPE;
+                }
+                Var(String name, Class<?> type, Var prev) {
+                    int slotIndex = prev.nextSlotIndex();
+                    int index = prev.nextIndex();
+                    if (name == null)  name = "x";
+                    if (name.endsWith("#"))
+                        name = name.substring(0, name.length()-1) + index;
+                    assert(!type.equals(void.class));
+                    String desc = classSig(type);
+                    BasicType basicType = BasicType.basicType(type);
+                    this.index = index;
+                    this.name = name;
+                    this.type = type;
+                    this.desc = desc;
+                    this.basicType = basicType;
+                    this.slotIndex = slotIndex;
+                }
+                Var lastOf(List<Var> vars) {
+                    int n = vars.size();
+                    return (n == 0 ? this : vars.get(n-1));
+                }
+                <X> List<Var> fromTypes(List<X> types) {
+                    Var prev = this;
+                    ArrayList<Var> result = new ArrayList<>(types.size());
+                    int i = 0;
+                    for (X x : types) {
+                        String vn = name;
+                        Class<?> vt;
+                        if (x instanceof Class) {
+                            vt = (Class<?>) x;
+                            // make the names friendlier if debugging
+                            assert((vn = vn + "_" + (i++)) != null);
+                        } else {
+                            @SuppressWarnings("unchecked")
+                            Var v = (Var) x;
+                            vn = v.name;
+                            vt = v.type;
+                        }
+                        prev = new Var(vn, vt, prev);
+                        result.add(prev);
+                    }
+                    return result;
+                }
+
+                int slotSize() { return basicType.basicTypeSlots(); }
+                int nextIndex() { return index + (slotSize() == 0 ? 0 : 1); }
+                int nextSlotIndex() { return slotIndex >= 0 ? slotIndex + slotSize() : slotIndex; }
+                boolean isInHeap() { return slotIndex < 0; }
+                void emitVarInstruction(int asmop, MethodVisitor mv) {
+                    if (asmop == ALOAD)
+                        asmop = typeLoadOp(basicType.basicTypeChar());
+                    else
+                        throw new AssertionError("bad op="+asmop+" for desc="+desc);
+                    mv.visitVarInsn(asmop, slotIndex);
+                }
+                public void emitFieldInsn(int asmop, MethodVisitor mv) {
+                    mv.visitFieldInsn(asmop, className, name, desc);
+                }
+            }
+
+            final Var NO_THIS = new Var(0, 0),
+                    AFTER_THIS = new Var(0, 1),
+                    IN_HEAP = new Var(0, -1);
+
+            // figure out the field types
+            final List<Class<?>> fieldTypes = speciesData.fieldTypes();
+            final List<Var> fields = new ArrayList<>(fieldTypes.size());
+            {
+                Var nextF = IN_HEAP;
+                for (Class<?> ft : fieldTypes) {
+                    String fn = chooseFieldName(ft, nextF.nextIndex());
+                    nextF = new Var(fn, ft, nextF);
+                    fields.add(nextF);
+                }
+            }
+
+            // emit bound argument fields
+            for (Var field : fields) {
+                cw.visitField(ACC_FINAL, field.name, field.desc, null, null).visitEnd();
+            }
+
+            MethodVisitor mv;
+
+            // emit implementation of speciesData()
+            mv = cw.visitMethod((SPECIES_DATA_MODS & ACC_PPP) + ACC_FINAL,
+                    SPECIES_DATA_NAME, "()" + SPECIES_DATA_SIG, null, null);
+            mv.visitCode();
+            mv.visitFieldInsn(GETSTATIC, className, sdFieldName, SPECIES_DATA_SIG);
+            mv.visitInsn(ARETURN);
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+
+            // figure out the constructor arguments
+            MethodType superCtorType = ClassSpecializer.this.baseConstructorType();
+            MethodType thisCtorType = superCtorType.appendParameterTypes(fieldTypes);
+
+            // emit constructor
+            {
+                mv = cw.visitMethod(ACC_PRIVATE,
+                        "<init>", methodSig(thisCtorType), null, null);
+                mv.visitCode();
+                mv.visitVarInsn(ALOAD, 0); // this
+
+                final List<Var> ctorArgs = AFTER_THIS.fromTypes(superCtorType.parameterList());
+                for (Var ca : ctorArgs) {
+                    ca.emitVarInstruction(ALOAD, mv);
+                }
+
+                // super(ca...)
+                mv.visitMethodInsn(INVOKESPECIAL, superClassName,
+                        "<init>", methodSig(superCtorType), false);
+
+                // store down fields
+                Var lastFV = AFTER_THIS.lastOf(ctorArgs);
+                for (Var f : fields) {
+                    // this.argL1 = argL1
+                    mv.visitVarInsn(ALOAD, 0);  // this
+                    lastFV = new Var(f.name, f.type, lastFV);
+                    lastFV.emitVarInstruction(ALOAD, mv);
+                    f.emitFieldInsn(PUTFIELD, mv);
+                }
+
+                mv.visitInsn(RETURN);
+                mv.visitMaxs(0, 0);
+                mv.visitEnd();
+            }
+
+            // emit make()  ...factory method wrapping constructor
+            {
+                MethodType ftryType = thisCtorType.changeReturnType(topClass());
+                mv = cw.visitMethod(NOT_ACC_PUBLIC + ACC_STATIC,
+                        "make", methodSig(ftryType), null, null);
+                mv.visitCode();
+                // make instance
+                mv.visitTypeInsn(NEW, className);
+                mv.visitInsn(DUP);
+                // load factory method arguments:  ctarg... and arg...
+                for (Var v : NO_THIS.fromTypes(ftryType.parameterList())) {
+                    v.emitVarInstruction(ALOAD, mv);
+                }
+
+                // finally, invoke the constructor and return
+                mv.visitMethodInsn(INVOKESPECIAL, className,
+                        "<init>", methodSig(thisCtorType), false);
+                mv.visitInsn(ARETURN);
+                mv.visitMaxs(0, 0);
+                mv.visitEnd();
+            }
+
+            // For each transform, emit the customized override of the transform method.
+            // This method mixes together some incoming arguments (from the transform's
+            // static type signature) with the field types themselves, and passes
+            // the resulting mish-mosh of values to a method handle produced by
+            // the species itself.  (Typically this method handle is the factory
+            // method of this species or a related one.)
+            for (int whichtm = 0; whichtm < TRANSFORM_NAMES.size(); whichtm++) {
+                final String     TNAME = TRANSFORM_NAMES.get(whichtm);
+                final MethodType TTYPE = TRANSFORM_TYPES.get(whichtm);
+                final int        TMODS = TRANSFORM_MODS.get(whichtm);
+                mv = cw.visitMethod((TMODS & ACC_PPP) | ACC_FINAL,
+                        TNAME, TTYPE.toMethodDescriptorString(), null, E_THROWABLE);
+                mv.visitCode();
+                // return a call to the corresponding "transform helper", something like this:
+                //   MY_SPECIES.transformHelper(whichtm).invokeBasic(ctarg, ..., argL0, ..., xarg)
+                mv.visitFieldInsn(GETSTATIC, className,
+              
