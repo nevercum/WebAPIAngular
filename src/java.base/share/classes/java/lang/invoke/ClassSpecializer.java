@@ -810,4 +810,177 @@ abstract class ClassSpecializer<T,K,S extends ClassSpecializer<T,K,S>.SpeciesDat
                 // return a call to the corresponding "transform helper", something like this:
                 //   MY_SPECIES.transformHelper(whichtm).invokeBasic(ctarg, ..., argL0, ..., xarg)
                 mv.visitFieldInsn(GETSTATIC, className,
-              
+                        sdFieldName, SPECIES_DATA_SIG);
+                emitIntConstant(whichtm, mv);
+                mv.visitMethodInsn(INVOKEVIRTUAL, SPECIES_DATA,
+                        "transformHelper", "(I)" + MH_SIG, false);
+
+                List<Var> targs = AFTER_THIS.fromTypes(TTYPE.parameterList());
+                List<Var> tfields = new ArrayList<>(fields);
+                // mix them up and load them for the transform helper:
+                List<Var> helperArgs = speciesData.deriveTransformHelperArguments(transformMethods.get(whichtm), whichtm, targs, tfields);
+                List<Class<?>> helperTypes = new ArrayList<>(helperArgs.size());
+                for (Var ha : helperArgs) {
+                    helperTypes.add(ha.basicType.basicTypeClass());
+                    if (ha.isInHeap()) {
+                        assert(tfields.contains(ha));
+                        mv.visitVarInsn(ALOAD, 0);
+                        ha.emitFieldInsn(GETFIELD, mv);
+                    } else {
+                        assert(targs.contains(ha));
+                        ha.emitVarInstruction(ALOAD, mv);
+                    }
+                }
+
+                // jump into the helper (which is probably a factory method)
+                final Class<?> rtype = TTYPE.returnType();
+                final BasicType rbt = BasicType.basicType(rtype);
+                MethodType invokeBasicType = MethodType.methodType(rbt.basicTypeClass(), helperTypes);
+                mv.visitMethodInsn(INVOKEVIRTUAL, MH,
+                        "invokeBasic", methodSig(invokeBasicType), false);
+                if (rbt == BasicType.L_TYPE) {
+                    mv.visitTypeInsn(CHECKCAST, classBCName(rtype));
+                    mv.visitInsn(ARETURN);
+                } else {
+                    throw newInternalError("NYI: transform of type "+rtype);
+                }
+                mv.visitMaxs(0, 0);
+                mv.visitEnd();
+            }
+
+            cw.visitEnd();
+
+            return cw.toByteArray();
+        }
+
+        private int typeLoadOp(char t) {
+            return switch (t) {
+                case 'L' -> ALOAD;
+                case 'I' -> ILOAD;
+                case 'J' -> LLOAD;
+                case 'F' -> FLOAD;
+                case 'D' -> DLOAD;
+                default -> throw newInternalError("unrecognized type " + t);
+            };
+        }
+
+        private void emitIntConstant(int con, MethodVisitor mv) {
+            if (ICONST_M1 - ICONST_0 <= con && con <= ICONST_5 - ICONST_0)
+                mv.visitInsn(ICONST_0 + con);
+            else if (con == (byte) con)
+                mv.visitIntInsn(BIPUSH, con);
+            else if (con == (short) con)
+                mv.visitIntInsn(SIPUSH, con);
+            else {
+                mv.visitLdcInsn(con);
+            }
+
+        }
+
+        //
+        // Getter MH generation.
+        //
+
+        private MethodHandle findGetter(Class<?> speciesCode, List<Class<?>> types, int index) {
+            Class<?> fieldType = types.get(index);
+            String fieldName = chooseFieldName(fieldType, index);
+            try {
+                return IMPL_LOOKUP.findGetter(speciesCode, fieldName, fieldType);
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                throw newInternalError(e);
+            }
+        }
+
+        private List<MethodHandle> findGetters(Class<?> speciesCode, List<Class<?>> types) {
+            MethodHandle[] mhs = new MethodHandle[types.size()];
+            for (int i = 0; i < mhs.length; ++i) {
+                mhs[i] = findGetter(speciesCode, types, i);
+                assert(mhs[i].internalMemberName().getDeclaringClass() == speciesCode);
+            }
+            return List.of(mhs);
+        }
+
+        private List<MethodHandle> findFactories(Class<? extends T> speciesCode, List<Class<?>> types) {
+            MethodHandle[] mhs = new MethodHandle[1];
+            mhs[0] = findFactory(speciesCode, types);
+            return List.of(mhs);
+        }
+
+        List<LambdaForm.NamedFunction> makeNominalGetters(List<Class<?>> types, List<MethodHandle> getters) {
+            LambdaForm.NamedFunction[] nfs = new LambdaForm.NamedFunction[types.size()];
+            for (int i = 0; i < nfs.length; ++i) {
+                nfs[i] = new LambdaForm.NamedFunction(getters.get(i));
+            }
+            return List.of(nfs);
+        }
+
+        //
+        // Auxiliary methods.
+        //
+
+        protected void linkSpeciesDataToCode(ClassSpecializer<T,K,S>.SpeciesData speciesData, Class<? extends T> speciesCode) {
+            speciesData.speciesCode = speciesCode.asSubclass(topClass);
+            final List<Class<?>> types = speciesData.fieldTypes;
+            speciesData.factories = this.findFactories(speciesCode, types);
+            speciesData.getters = this.findGetters(speciesCode, types);
+            speciesData.nominalGetters = this.makeNominalGetters(types, speciesData.getters);
+        }
+
+        private Field reflectSDField(Class<? extends T> speciesCode) {
+            final Field field = reflectField(speciesCode, sdFieldName);
+            assert(field.getType() == metaType);
+            assert(Modifier.isStatic(field.getModifiers()));
+            return field;
+        }
+
+        private S readSpeciesDataFromCode(Class<? extends T> speciesCode) {
+            try {
+                MemberName sdField = IMPL_LOOKUP.resolveOrFail(REF_getStatic, speciesCode, sdFieldName, metaType);
+                Object base = MethodHandleNatives.staticFieldBase(sdField);
+                long offset = MethodHandleNatives.staticFieldOffset(sdField);
+                UNSAFE.loadFence();
+                return metaType.cast(UNSAFE.getReference(base, offset));
+            } catch (Error err) {
+                throw err;
+            } catch (Exception ex) {
+                throw newInternalError("Failed to load speciesData from speciesCode: " + speciesCode.getName(), ex);
+            } catch (Throwable t) {
+                throw uncaughtException(t);
+            }
+        }
+
+        protected S loadSpeciesDataFromCode(Class<? extends T> speciesCode) {
+            if (speciesCode == topClass()) {
+                return topSpecies;
+            }
+            S result = readSpeciesDataFromCode(speciesCode);
+            if (result.outer() != ClassSpecializer.this) {
+                throw newInternalError("wrong class");
+            }
+            return result;
+        }
+
+        protected void linkCodeToSpeciesData(Class<? extends T> speciesCode, ClassSpecializer<T,K,S>.SpeciesData speciesData, boolean salvage) {
+            try {
+                assert(readSpeciesDataFromCode(speciesCode) == null ||
+                    (salvage && readSpeciesDataFromCode(speciesCode).equals(speciesData)));
+
+                MemberName sdField = IMPL_LOOKUP.resolveOrFail(REF_putStatic, speciesCode, sdFieldName, metaType);
+                Object base = MethodHandleNatives.staticFieldBase(sdField);
+                long offset = MethodHandleNatives.staticFieldOffset(sdField);
+                UNSAFE.storeFence();
+                UNSAFE.putReference(base, offset, speciesData);
+                UNSAFE.storeFence();
+            } catch (Error err) {
+                throw err;
+            } catch (Exception ex) {
+                throw newInternalError("Failed to link speciesData to speciesCode: " + speciesCode.getName(), ex);
+            } catch (Throwable t) {
+                throw uncaughtException(t);
+            }
+        }
+
+        /**
+         * Field names in concrete species classes adhere to this pattern:
+         * type + index, where type is a single character (L, I, J, F, D).
+         * The factory subclas
