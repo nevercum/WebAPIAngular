@@ -983,4 +983,64 @@ abstract class ClassSpecializer<T,K,S extends ClassSpecializer<T,K,S>.SpeciesDat
         /**
          * Field names in concrete species classes adhere to this pattern:
          * type + index, where type is a single character (L, I, J, F, D).
-         * The factory subclas
+         * The factory subclass can customize this.
+         * The name is purely cosmetic, since it applies to a private field.
+         */
+        protected String chooseFieldName(Class<?> type, int index) {
+            BasicType bt = BasicType.basicType(type);
+            return "" + bt.basicTypeChar() + index;
+        }
+
+        MethodHandle findFactory(Class<? extends T> speciesCode, List<Class<?>> types) {
+            final MethodType type = baseConstructorType().changeReturnType(topClass()).appendParameterTypes(types);
+            try {
+                return IMPL_LOOKUP.findStatic(speciesCode, "make", type);
+            } catch (NoSuchMethodException | IllegalAccessException | IllegalArgumentException | TypeNotPresentException e) {
+                throw newInternalError(e);
+            }
+        }
+    }
+
+    /** Hook that virtualizes the Factory class, allowing subclasses to extend it. */
+    protected Factory makeFactory() {
+        return new Factory();
+    }
+
+
+    // Other misc helpers:
+    private static final String MH = "java/lang/invoke/MethodHandle";
+    private static final String MH_SIG = "L" + MH + ";";
+    private static final String STABLE = "jdk/internal/vm/annotation/Stable";
+    private static final String STABLE_SIG = "L" + STABLE + ";";
+    private static final String[] E_THROWABLE = new String[] { "java/lang/Throwable" };
+    static {
+        assert(MH_SIG.equals(classSig(MethodHandle.class)));
+        assert(MH.equals(classBCName(MethodHandle.class)));
+    }
+
+    static String methodSig(MethodType mt) {
+        return mt.toMethodDescriptorString();
+    }
+    static String classSig(Class<?> cls) {
+        if (cls.isPrimitive() || cls.isArray())
+            return MethodType.methodType(cls).toMethodDescriptorString().substring(2);
+        return classSig(classBCName(cls));
+    }
+    static String classSig(String bcName) {
+        assert(bcName.indexOf('.') < 0);
+        assert(!bcName.endsWith(";"));
+        assert(!bcName.startsWith("["));
+        return "L" + bcName + ";";
+    }
+    static String classBCName(Class<?> cls) {
+        return classBCName(className(cls));
+    }
+    static String classBCName(String str) {
+        assert(str.indexOf('/') < 0) : str;
+        return str.replace('.', '/');
+    }
+    static String className(Class<?> cls) {
+        assert(!cls.isArray() && !cls.isPrimitive());
+        return cls.getName();
+    }
+}
