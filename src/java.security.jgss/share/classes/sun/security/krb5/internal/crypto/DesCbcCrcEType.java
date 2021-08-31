@@ -70,4 +70,23 @@ public class DesCbcCrcEType extends DesCbcEType {
      */
     public byte[] encrypt(byte[] data, byte[] key, int usage)
          throws KrbCryptoException {
-        return encrypt(data, key, key, 
+        return encrypt(data, key, key, usage);
+    }
+
+    /**
+     * Decrypts data with provided key using DES in CBC mode with CRC32.
+     * @param cipher the cipher text to be decrypted.
+     * @param key  the secret key to decrypt the data.
+     *
+     * @written by Yanni Zhang, Dec 10, 1999
+     */
+    public byte[] decrypt(byte[] cipher, byte[] key, int usage)
+         throws KrbApErrException, KrbCryptoException{
+        return decrypt(cipher, key, key, usage);
+    }
+
+    protected byte[] calculateChecksum(byte[] data, int size) {
+        return crc32.byte2crc32sum_bytes(data, size);
+    }
+
+}
