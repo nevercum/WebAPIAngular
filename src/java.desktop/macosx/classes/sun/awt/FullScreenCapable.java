@@ -1,10 +1,12 @@
 /*
- * Copyright (c) 2000, 2003, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -19,25 +21,24 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
- *
  */
 
-package sun.jvm.hotspot.debugger;
+package sun.awt;
 
-public class DebuggerException extends RuntimeException {
-  public DebuggerException() {
-    super();
-  }
+/**
+ * A class implements the FullScreenCapable interface to
+ * indicate that it's capable to enter the full-screen mode.
+ */
+public interface FullScreenCapable {
 
-  public DebuggerException(String message) {
-    super(message);
-  }
+    /**
+     * Enters full-screen mode.
+     */
+    public void enterFullScreenMode();
 
-  public DebuggerException(String message, Throwable cause) {
-    super(message, cause);
-  }
+    /**
+     * Returns to windowed mode.
+     */
+    public void exitFullScreenMode();
 
-  public DebuggerException(Throwable cause) {
-    super(cause);
-  }
 }

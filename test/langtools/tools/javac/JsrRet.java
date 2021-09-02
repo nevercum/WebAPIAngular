@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2003, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2004, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -19,25 +19,52 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
- *
  */
 
-package sun.jvm.hotspot.debugger;
+/*
+ * @test
+ * @bug 4933139
+ * @summary StackOverflowError from javac
+ * @author gafter
+ *
+ * @compile JsrRet.java
+ */
 
-public class DebuggerException extends RuntimeException {
-  public DebuggerException() {
-    super();
-  }
+package jsr.ret;
 
-  public DebuggerException(String message) {
-    super(message);
-  }
-
-  public DebuggerException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
-  public DebuggerException(Throwable cause) {
-    super(cause);
-  }
+class T {
+    {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        try {} finally {
+        }
+        }
+        }
+        }
+        }
+        }
+        }
+        }
+        }
+        }
+        }
+        }
+        }
+        }
+        }
+        }
+    }
 }
