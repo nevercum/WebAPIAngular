@@ -182,4 +182,33 @@ public class ExecutorCompletionService<V> implements CompletionService<V> {
      */
     public Future<V> submit(Callable<V> task) {
         if (task == null) throw new NullPointerException();
-        RunnableFuture<V> f = newTaskFor(ta
+        RunnableFuture<V> f = newTaskFor(task);
+        executor.execute(new QueueingFuture<V>(f, completionQueue));
+        return f;
+    }
+
+    /**
+     * @throws RejectedExecutionException {@inheritDoc}
+     * @throws NullPointerException       {@inheritDoc}
+     */
+    public Future<V> submit(Runnable task, V result) {
+        if (task == null) throw new NullPointerException();
+        RunnableFuture<V> f = newTaskFor(task, result);
+        executor.execute(new QueueingFuture<V>(f, completionQueue));
+        return f;
+    }
+
+    public Future<V> take() throws InterruptedException {
+        return completionQueue.take();
+    }
+
+    public Future<V> poll() {
+        return completionQueue.poll();
+    }
+
+    public Future<V> poll(long timeout, TimeUnit unit)
+            throws InterruptedException {
+        return completionQueue.poll(timeout, unit);
+    }
+
+}
