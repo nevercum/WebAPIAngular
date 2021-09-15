@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2001, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,28 +22,33 @@
  * questions.
  */
 
-
 /*
  * @test
- *
- * @summary converted from VM Testbase nsk/jvmti/scenarios/multienv/MA01/ma01t001.
- * VM Testbase keywords: [quick, jpda, jvmti, noras]
- * VM Testbase readme:
- * DESCRIPTION
- *     This test is for MA01 scenario of "multiple environments support".
- *     The test checks if VM can start with two different agents of
- *     different libraries. The libraries are specified by -agentlib
- *     command line argument with different options (opt1 and opt2)
- *     and the test checks if these options are correctly passed to
- *     the start-up routines of the agents.
- * COMMENTS
- *
- * @library /vmTestbase
- *          /test/lib
- * @build nsk.jvmti.scenarios.multienv.MA01.ma01t001
- * @run main/othervm/native
- *      -agentlib:ma01t001=opt1=opt1,-waittime=5
- *      -agentlib:ma01t001a=opt2=opt2,-waittime=5
- *      nsk.jvmti.scenarios.multienv.MA01.ma01t001
+ * @bug 4470717
+ * @summary fix default handling and other misc
+ * @run main/manual Default
  */
 
+import com.sun.security.auth.callback.TextCallbackHandler;
+import javax.security.auth.callback.*;
+
+public class Default {
+   public static void main(String args[]) throws Exception {
+        TextCallbackHandler h = new TextCallbackHandler();
+        NameCallback nc = new NameCallback("Name: ", "charlie");
+        ConfirmationCallback cc = new ConfirmationCallback
+                        ("Correct?",
+                        ConfirmationCallback.INFORMATION,
+                        ConfirmationCallback.YES_NO_OPTION,
+                        ConfirmationCallback.NO);
+
+        Callback[] callbacks = { nc, cc };
+        h.handle(callbacks);
+
+        if (cc.getSelectedIndex() == ConfirmationCallback.YES) {
+            System.out.println("yes");
+        } else {
+            System.out.println("no");
+        }
+   }
+}
