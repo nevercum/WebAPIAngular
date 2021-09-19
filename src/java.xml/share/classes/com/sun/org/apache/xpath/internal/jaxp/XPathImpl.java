@@ -110,4 +110,133 @@ public class XPathImpl extends XPathImplUtil implements javax.xml.xpath.XPath {
 
     /**
      * Evaluate an {@code XPath} expression in the specified context.
-     *
+     * @param expression The XPath expression.
+     * @param contextItem The starting context.
+     * @return an XObject as the result of evaluating the expression
+     * @throws TransformerException if evaluating fails
+     */
+    private XObject eval(String expression, Object contextItem)
+        throws TransformerException {
+        requireNonNull(expression, "XPath expression");
+        XPath xpath = new XPath(expression, null, prefixResolver, XPath.SELECT,
+                null, null, xmlSecMgr);
+
+        return eval(contextItem, xpath);
+    }
+
+    //-Override-
+    public Object evaluate(String expression, Object item, QName returnType)
+            throws XPathExpressionException {
+        //this check is necessary before calling eval to maintain binary compatibility
+        requireNonNull(expression, "XPath expression");
+        isSupported(returnType);
+
+        try {
+
+            XObject resultObject = eval(expression, item);
+            return getResultAsType(resultObject, returnType);
+        } catch (TransformerException te) {
+            Throwable nestedException = te.getException();
+            if (nestedException instanceof javax.xml.xpath.XPathFunctionException) {
+                throw (javax.xml.xpath.XPathFunctionException)nestedException;
+            } else {
+                // For any other exceptions we need to throw
+                // XPathExpressionException (as per spec)
+                throw new XPathExpressionException(te);
+            }
+        } catch (RuntimeException re) {
+            if (re instanceof WrappedRuntimeException) {
+                throw new XPathExpressionException(((WrappedRuntimeException)re).getException());
+            }
+            throw new XPathExpressionException(re);
+        }
+    }
+
+    //-Override-
+    public String evaluate(String expression, Object item)
+        throws XPathExpressionException {
+        return (String)this.evaluate(expression, item, XPathConstants.STRING);
+    }
+
+    //-Override-
+    public XPathExpression compile(String expression)
+        throws XPathExpressionException {
+        requireNonNull(expression, "XPath expression");
+        try {
+            XPath xpath = new XPath(expression, null, prefixResolver, XPath.SELECT,
+                    null, null, xmlSecMgr);
+            // Can have errorListener
+            XPathExpressionImpl ximpl = new XPathExpressionImpl (xpath,
+                    prefixResolver, functionResolver, variableResolver,
+                    featureSecureProcessing, featureManager);
+            return ximpl;
+        } catch (TransformerException te) {
+            throw new XPathExpressionException (te) ;
+        } catch (RuntimeException re) {
+            if (re instanceof WrappedRuntimeException) {
+                throw new XPathExpressionException(((WrappedRuntimeException)re).getException());
+            }
+            throw new XPathExpressionException(re);
+        }
+    }
+
+    //-Override-
+    public Object evaluate(String expression, InputSource source,
+            QName returnType) throws XPathExpressionException {
+        return evaluate(expression, getDocument(source), returnType);
+    }
+
+    //-Override-
+    public String evaluate(String expression, InputSource source)
+        throws XPathExpressionException {
+        return (String)this.evaluate(expression, source, XPathConstants.STRING);
+    }
+
+    //-Override-
+    public void reset() {
+        this.variableResolver = this.origVariableResolver;
+        this.functionResolver = this.origFunctionResolver;
+        this.namespaceContext = null;
+    }
+
+    //-Override-
+    public <T> T evaluateExpression(String expression, Object item, Class<T> type)
+            throws XPathExpressionException {
+         requireNonNull(expression, "XPath expression");
+         isSupportedClassType(type);
+        try {
+            XObject resultObject = eval(expression, item);
+            if (type == XPathEvaluationResult.class) {
+                return getXPathResult(resultObject, type);
+            } else {
+                return XPathResultImpl.getValue(resultObject, type);
+            }
+        } catch (TransformerException te) {
+            throw new XPathExpressionException(te);
+        } catch (RuntimeException re) {
+            if (re instanceof WrappedRuntimeException) {
+                throw new XPathExpressionException(((WrappedRuntimeException)re).getException());
+            }
+            throw new XPathExpressionException(re);
+        }
+    }
+
+    //-Override-
+    public XPathEvaluationResult<?> evaluateExpression(String expression, Object item)
+            throws XPathExpressionException {
+        return evaluateExpression(expression, item, XPathEvaluationResult.class);
+    }
+
+    //-Override-
+    public <T> T evaluateExpression(String expression, InputSource source, Class<T> type)
+            throws XPathExpressionException {
+        Document document = getDocument(source);
+        return evaluateExpression(expression, document, type);
+    }
+
+    //-Override-
+    public XPathEvaluationResult<?> evaluateExpression(String expression, InputSource source)
+            throws XPathExpressionException {
+        return evaluateExpression(expression, source, XPathEvaluationResult.class);
+    }
+}
