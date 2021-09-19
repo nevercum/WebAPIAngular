@@ -85,4 +85,42 @@ public interface CSSRule {
 
     /**
      *  The type of the rule, as defined above. The expectation is that
-     * binding-specific casting methods can be used to cast down from a
+     * binding-specific casting methods can be used to cast down from an
+     * instance of the <code>CSSRule</code> interface to the specific
+     * derived interface implied by the <code>type</code>.
+     */
+    public short getType();
+
+    /**
+     *  The parsable textual representation of the rule. This reflects the
+     * current state of the rule and not its initial value.
+     */
+    public String getCssText();
+    /**
+     *  The parsable textual representation of the rule. This reflects the
+     * current state of the rule and not its initial value.
+     * @exception DOMException
+     *   SYNTAX_ERR: Raised if the specified CSS string value has a syntax
+     *   error and is unparsable.
+     *   <br>INVALID_MODIFICATION_ERR: Raised if the specified CSS string
+     *   value represents a different type of rule than the current one.
+     *   <br>HIERARCHY_REQUEST_ERR: Raised if the rule cannot be inserted at
+     *   this point in the style sheet.
+     *   <br>NO_MODIFICATION_ALLOWED_ERR: Raised if the rule is readonly.
+     */
+    public void setCssText(String cssText)
+                        throws DOMException;
+
+    /**
+     *  The style sheet that contains this rule.
+     */
+    public CSSStyleSheet getParentStyleSheet();
+
+    /**
+     *  If this rule is contained inside another rule (e.g. a style rule
+     * inside an @media block), this is the containing rule. If this rule is
+     * not nested inside any other rules, this returns <code>null</code>.
+     */
+    public CSSRule getParentRule();
+
+}
