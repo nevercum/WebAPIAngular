@@ -80,4 +80,13 @@ public abstract class TestThread
             failure = new Exception(name + " threw an exception",
                                     failure);
         if (isAlive() && (failure == null))
-            failure = new Exception(name + " t
+            failure = new Exception(name + " timed out");
+        if (failure != null)
+            throw failure;
+    }
+
+    public String toString() {
+        return name;
+    }
+
+}
