@@ -59,4 +59,44 @@ public class Bug6859210 {
     }
 
     public Bug6859210() throws Exception {
-        SchemaFactory fact
+        SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        Schema schema = factory.newSchema(new File(getClass().getResource("CREMAS01.xsd").getFile()));
+
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(true);
+        dbf.setSchema(schema);
+
+        documentBuilder = dbf.newDocumentBuilder();
+        documentBuilder.setErrorHandler(new ErrorHandler() {
+            public void error(SAXParseException e) throws SAXException {
+                System.out.println("Error: " + e.getMessage());
+                errorFound = true;
+            }
+
+            public void fatalError(SAXParseException e) throws SAXException {
+                System.out.println("Fatal error: " + e.getMessage());
+            }
+
+            public void warning(SAXParseException e) throws SAXException {
+                System.out.println("Warning: " + e.getMessage());
+            }
+        });
+    }
+
+    @Test
+    public void testGeneratedSample() throws Exception {
+        printMethodName();
+
+        File xmlFile = new File(getClass().getResource("CREMAS01.xml").getFile());
+        try {
+            errorFound = false;
+            documentBuilder.parse(xmlFile);
+        } catch (SAXException ex) {
+            Assert.fail(ex.getMessage());
+        }
+        if (errorFound) {
+            Assert.fail("Unexpected validation error reported");
+        }
+    }
+
+}
