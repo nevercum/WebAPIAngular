@@ -81,4 +81,23 @@ location from which the core dump file was produced.
 .PP
 \f[B]Note:\f[R]
 .PP
-If none of the
+If none of the following options are used, both the command-line flags
+and the system property name-value pairs are printed.
+.TP
+\f[V]-flag\f[R] \f[I]name\f[R]
+Prints the name and value of the specified command-line flag.
+.TP
+\f[V]-flag\f[R] [\f[V]+\f[R]|\f[V]-\f[R]]\f[I]name\f[R]
+Enables or disables the specified Boolean command-line flag.
+.TP
+\f[V]-flag\f[R] \f[I]name\f[R]\f[V]=\f[R]\f[I]value\f[R]
+Sets the specified command-line flag to the specified value.
+.TP
+\f[V]-flags\f[R]
+Prints command-line flags passed to the JVM.
+.TP
+\f[V]-sysprops\f[R]
+Prints Java system properties as name-value pairs.
+.TP
+\f[V]-h\f[R] or \f[V]-help\f[R]
+Prints a help message.
