@@ -51,4 +51,50 @@ public class ContiguousSpace extends CompactibleSpace implements LiveRegionsProv
     topField = type.getAddressField("_top");
   }
 
-  public Contiguous
+  public ContiguousSpace(Address addr) {
+    super(addr);
+  }
+
+  public Address top() {
+    return topField.getValue(addr);
+  }
+
+  /** In bytes */
+  public long capacity() {
+    return end().minus(bottom());
+  }
+
+  /** In bytes */
+  public long used() {
+    return top().minus(bottom());
+  }
+
+  /** In bytes */
+  public long free() {
+    return end().minus(top());
+  }
+
+  /** In a contiguous space we have a more obvious bound on what parts
+      contain objects. */
+  public MemRegion usedRegion() {
+    return new MemRegion(bottom(), top());
+  }
+
+  /** Returns regions of Space where live objects live */
+  public List<MemRegion> getLiveRegions() {
+    List<MemRegion> res = new ArrayList<>();
+    res.add(new MemRegion(bottom(), top()));
+    return res;
+  }
+
+  /** Testers */
+  public boolean contains(Address p) {
+    return (bottom().lessThanOrEqual(p) && top().greaterThan(p));
+  }
+
+  public void printOn(PrintStream tty) {
+    tty.print(" [" + bottom() + "," +
+                top() + "," + end() + ")");
+    super.printOn(tty);
+  }
+}
