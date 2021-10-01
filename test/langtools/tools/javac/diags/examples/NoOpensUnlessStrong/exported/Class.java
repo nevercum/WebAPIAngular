@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2003, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,35 +22,7 @@
  * questions.
  */
 
-package nsk.jvmti.unit;
+package exported;
 
-import java.io.PrintStream;
-
-public class heapref {
-
-    final static int JCK_STATUS_BASE = 95;
-
-    static {
-        try {
-            System.loadLibrary("heapref");
-        } catch (UnsatisfiedLinkError ule) {
-            System.err.println("Could not load heapref library");
-            System.err.println("java.library.path:"
-                + System.getProperty("java.library.path"));
-            throw ule;
-        }
-    }
-
-    native static int check();
-
-    public static void main(String args[]) {
-        args = nsk.share.jvmti.JVMTITest.commonInit(args);
-
-        // produce JCK-like exit status.
-        System.exit(run(args, System.out) + JCK_STATUS_BASE);
-    }
-
-    public static int run(String args[], PrintStream out) {
-        return check();
-    }
+public class Class {
 }

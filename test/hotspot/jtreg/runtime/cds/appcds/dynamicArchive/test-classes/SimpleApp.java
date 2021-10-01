@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -19,37 +19,33 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
+ *
  */
 
-package nsk.jvmti.unit;
+@FunctionalInterface
+interface MyInterface {
+    public String sayHello();
+}
 
-import java.io.PrintStream;
-
-public class heapref {
-
-    final static int JCK_STATUS_BASE = 95;
-
-    static {
-        try {
-            System.loadLibrary("heapref");
-        } catch (UnsatisfiedLinkError ule) {
-            System.err.println("Could not load heapref library");
-            System.err.println("java.library.path:"
-                + System.getProperty("java.library.path"));
-            throw ule;
-        }
+class MyClass implements MyInterface {
+    public String sayHello() {
+        return "Hello";
     }
+}
 
-    native static int check();
+public class SimpleApp {
+    public static boolean useLambda;
 
     public static void main(String args[]) {
-        args = nsk.share.jvmti.JVMTITest.commonInit(args);
-
-        // produce JCK-like exit status.
-        System.exit(run(args, System.out) + JCK_STATUS_BASE);
-    }
-
-    public static int run(String args[], PrintStream out) {
-        return check();
+        useLambda = (args.length == 1 && args[0].equals("lambda")) ? true : false;
+        if (!useLambda) {
+            MyClass mc = new MyClass();
+            System.out.println(mc.sayHello());
+        } else {
+            MyInterface msg = () -> {
+                return "Hello";
+            };
+            System.out.println(msg.sayHello());
+        }
     }
 }
