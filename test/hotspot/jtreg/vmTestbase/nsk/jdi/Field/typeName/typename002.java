@@ -70,3 +70,67 @@ public class typename002 {
     }
 
     private static void display(String msg) {
+        log.display("debugger > " + msg);
+    }
+
+    private static void complain(String msg) {
+        log.complain("debugger FAILURE > " + msg);
+    }
+
+    public static int run(String argv[], PrintStream out) {
+
+        exitStatus = Consts.TEST_PASSED;
+
+        argHandler = new ArgumentHandler(argv);
+        log = new Log(out, argHandler);
+        waitTime = argHandler.getWaitTime() * 60000;
+
+        debuggee = Debugee.prepareDebugee(argHandler, log, debuggeeName);
+
+        debuggeeClass = debuggee.classByName(debuggeeName);
+        if ( debuggeeClass == null ) {
+            complain("Class '" + debuggeeName + "' not found.");
+            exitStatus = Consts.TEST_FAILED;
+        }
+
+        execTest();
+
+        debuggee.quit();
+
+        return exitStatus;
+    }
+
+    //------------------------------------------------------ mutable common method
+
+    private static void execTest() {
+        for (int i=0; i < expectedFieldNames.length; i++) {
+            check(expectedFieldNames[i], expectedTypeNames[i]);
+            display("");
+        }
+        display("Checking completed!");
+    }
+
+    //--------------------------------------------------------- test specific methods
+
+    private static void check (String fieldName, String typeName) {
+        try {
+            Field foundField = debuggeeClass.fieldByName(fieldName);
+            if (foundField != null) {
+                if (foundField.typeName().equals(typeName)) {
+                    display("Field " + fieldName + " is of expected type " + typeName);
+                } else {
+                    complain("Field " + fieldName + " is of unexpected type " + foundField.typeName());
+                    exitStatus = Consts.TEST_FAILED;
+                }
+            } else {
+                complain(" Cannot find field " + fieldName);
+                exitStatus = Consts.TEST_FAILED;
+            }
+        } catch (Exception e) {
+            complain("Unexpected exception while checking of field " + fieldName + ": " + e);
+            e.printStackTrace(System.out);
+            exitStatus = Consts.TEST_FAILED;
+        }
+    }
+}
+//--------------------------------------------------------- test specific classes
