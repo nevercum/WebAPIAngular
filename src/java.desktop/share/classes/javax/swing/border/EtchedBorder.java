@@ -245,4 +245,16 @@ public class EtchedBorder extends AbstractBorder
     }
 
     /**
-   
+     * Returns the shadow color of the etched border.
+     * Will return null if no shadow color was specified
+     * at instantiation.
+     *
+     * @return the shadow {@code Color} of this {@code EtchedBorder} or null
+     *         if none was specified
+     * @since 1.3
+     */
+    public Color getShadowColor()   {
+        return shadow;
+    }
+
+}
