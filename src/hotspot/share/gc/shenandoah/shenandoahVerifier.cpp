@@ -388,4 +388,233 @@ public:
            "Region top should not be less than bottom");
 
     verify(r, r->bottom() <= _heap->marking_context()->top_at_mark_start(r),
-           "Region TAMS should n
+           "Region TAMS should not be less than bottom");
+
+    verify(r, _heap->marking_context()->top_at_mark_start(r) <= r->top(),
+           "Complete TAMS should not be larger than top");
+
+    verify(r, r->get_live_data_bytes() <= r->capacity(),
+           "Live data cannot be larger than capacity");
+
+    verify(r, r->garbage() <= r->capacity(),
+           "Garbage cannot be larger than capacity");
+
+    verify(r, r->used() <= r->capacity(),
+           "Used cannot be larger than capacity");
+
+    verify(r, r->get_shared_allocs() <= r->capacity(),
+           "Shared alloc count should not be larger than capacity");
+
+    verify(r, r->get_tlab_allocs() <= r->capacity(),
+           "TLAB alloc count should not be larger than capacity");
+
+    verify(r, r->get_gclab_allocs() <= r->capacity(),
+           "GCLAB alloc count should not be larger than capacity");
+
+    verify(r, r->get_shared_allocs() + r->get_tlab_allocs() + r->get_gclab_allocs() == r->used(),
+           "Accurate accounting: shared + TLAB + GCLAB = used");
+
+    verify(r, !r->is_empty() || !r->has_live(),
+           "Empty regions should not have live data");
+
+    verify(r, r->is_cset() == _heap->collection_set()->is_in(r),
+           "Transitional: region flags and collection set agree");
+  }
+};
+
+class ShenandoahVerifierReachableTask : public WorkerTask {
+private:
+  const char* _label;
+  ShenandoahVerifier::VerifyOptions _options;
+  ShenandoahHeap* _heap;
+  ShenandoahLivenessData* _ld;
+  MarkBitMap* _bitmap;
+  volatile size_t _processed;
+
+public:
+  ShenandoahVerifierReachableTask(MarkBitMap* bitmap,
+                                  ShenandoahLivenessData* ld,
+                                  const char* label,
+                                  ShenandoahVerifier::VerifyOptions options) :
+    WorkerTask("Shenandoah Verifier Reachable Objects"),
+    _label(label),
+    _options(options),
+    _heap(ShenandoahHeap::heap()),
+    _ld(ld),
+    _bitmap(bitmap),
+    _processed(0) {};
+
+  size_t processed() {
+    return _processed;
+  }
+
+  virtual void work(uint worker_id) {
+    ResourceMark rm;
+    ShenandoahVerifierStack stack;
+
+    // On level 2, we need to only check the roots once.
+    // On level 3, we want to check the roots, and seed the local stack.
+    // It is a lesser evil to accept multiple root scans at level 3, because
+    // extended parallelism would buy us out.
+    if (((ShenandoahVerifyLevel == 2) && (worker_id == 0))
+        || (ShenandoahVerifyLevel >= 3)) {
+        ShenandoahVerifyOopClosure cl(&stack, _bitmap, _ld,
+                                      ShenandoahMessageBuffer("%s, Roots", _label),
+                                      _options);
+        if (_heap->unload_classes()) {
+          ShenandoahRootVerifier::strong_roots_do(&cl);
+        } else {
+          ShenandoahRootVerifier::roots_do(&cl);
+        }
+    }
+
+    size_t processed = 0;
+
+    if (ShenandoahVerifyLevel >= 3) {
+      ShenandoahVerifyOopClosure cl(&stack, _bitmap, _ld,
+                                    ShenandoahMessageBuffer("%s, Reachable", _label),
+                                    _options);
+      while (!stack.is_empty()) {
+        processed++;
+        ShenandoahVerifierTask task = stack.pop();
+        cl.verify_oops_from(task.obj());
+      }
+    }
+
+    Atomic::add(&_processed, processed, memory_order_relaxed);
+  }
+};
+
+class ShenandoahVerifierMarkedRegionTask : public WorkerTask {
+private:
+  const char* _label;
+  ShenandoahVerifier::VerifyOptions _options;
+  ShenandoahHeap *_heap;
+  MarkBitMap* _bitmap;
+  ShenandoahLivenessData* _ld;
+  volatile size_t _claimed;
+  volatile size_t _processed;
+
+public:
+  ShenandoahVerifierMarkedRegionTask(MarkBitMap* bitmap,
+                                     ShenandoahLivenessData* ld,
+                                     const char* label,
+                                     ShenandoahVerifier::VerifyOptions options) :
+          WorkerTask("Shenandoah Verifier Marked Objects"),
+          _label(label),
+          _options(options),
+          _heap(ShenandoahHeap::heap()),
+          _bitmap(bitmap),
+          _ld(ld),
+          _claimed(0),
+          _processed(0) {};
+
+  size_t processed() {
+    return Atomic::load(&_processed);
+  }
+
+  virtual void work(uint worker_id) {
+    ShenandoahVerifierStack stack;
+    ShenandoahVerifyOopClosure cl(&stack, _bitmap, _ld,
+                                  ShenandoahMessageBuffer("%s, Marked", _label),
+                                  _options);
+
+    while (true) {
+      size_t v = Atomic::fetch_and_add(&_claimed, 1u, memory_order_relaxed);
+      if (v < _heap->num_regions()) {
+        ShenandoahHeapRegion* r = _heap->get_region(v);
+        if (!r->is_humongous() && !r->is_trash()) {
+          work_regular(r, stack, cl);
+        } else if (r->is_humongous_start()) {
+          work_humongous(r, stack, cl);
+        }
+      } else {
+        break;
+      }
+    }
+  }
+
+  virtual void work_humongous(ShenandoahHeapRegion *r, ShenandoahVerifierStack& stack, ShenandoahVerifyOopClosure& cl) {
+    size_t processed = 0;
+    HeapWord* obj = r->bottom();
+    if (_heap->complete_marking_context()->is_marked(cast_to_oop(obj))) {
+      verify_and_follow(obj, stack, cl, &processed);
+    }
+    Atomic::add(&_processed, processed, memory_order_relaxed);
+  }
+
+  virtual void work_regular(ShenandoahHeapRegion *r, ShenandoahVerifierStack &stack, ShenandoahVerifyOopClosure &cl) {
+    size_t processed = 0;
+    ShenandoahMarkingContext* ctx = _heap->complete_marking_context();
+    HeapWord* tams = ctx->top_at_mark_start(r);
+
+    // Bitmaps, before TAMS
+    if (tams > r->bottom()) {
+      HeapWord* start = r->bottom();
+      HeapWord* addr = ctx->get_next_marked_addr(start, tams);
+
+      while (addr < tams) {
+        verify_and_follow(addr, stack, cl, &processed);
+        addr += 1;
+        if (addr < tams) {
+          addr = ctx->get_next_marked_addr(addr, tams);
+        }
+      }
+    }
+
+    // Size-based, after TAMS
+    {
+      HeapWord* limit = r->top();
+      HeapWord* addr = tams;
+
+      while (addr < limit) {
+        verify_and_follow(addr, stack, cl, &processed);
+        addr += cast_to_oop(addr)->size();
+      }
+    }
+
+    Atomic::add(&_processed, processed, memory_order_relaxed);
+  }
+
+  void verify_and_follow(HeapWord *addr, ShenandoahVerifierStack &stack, ShenandoahVerifyOopClosure &cl, size_t *processed) {
+    if (!_bitmap->par_mark(addr)) return;
+
+    // Verify the object itself:
+    oop obj = cast_to_oop(addr);
+    cl.verify_oop_standalone(obj);
+
+    // Verify everything reachable from that object too, hopefully realizing
+    // everything was already marked, and never touching further:
+    if (!is_instance_ref_klass(obj->klass())) {
+      cl.verify_oops_from(obj);
+      (*processed)++;
+    }
+    while (!stack.is_empty()) {
+      ShenandoahVerifierTask task = stack.pop();
+      cl.verify_oops_from(task.obj());
+      (*processed)++;
+    }
+  }
+};
+
+class VerifyThreadGCState : public ThreadClosure {
+private:
+  const char* const _label;
+         char const _expected;
+
+public:
+  VerifyThreadGCState(const char* label, char expected) : _label(label), _expected(expected) {}
+  void do_thread(Thread* t) {
+    char actual = ShenandoahThreadLocalData::gc_state(t);
+    if (actual != _expected) {
+      fatal("%s: Thread %s: expected gc-state %d, actual %d", _label, t->name(), _expected, actual);
+    }
+  }
+};
+
+void ShenandoahVerifier::verify_at_safepoint(const char *label,
+                                             VerifyForwarded forwarded, VerifyMarked marked,
+                                             VerifyCollectionSet cset,
+                                             VerifyLiveness liveness, VerifyRegions regions,
+                                             VerifyGCState gcstate) {
+  guarantee(ShenandoahSafepoin
