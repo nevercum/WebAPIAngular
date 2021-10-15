@@ -799,4 +799,176 @@ void ShenandoahVerifier::verify_before_concmark() {
           _verify_cset_none,           // UR should have fixed this
           _verify_liveness_disable,    // no reliable liveness data
           _verify_regions_notrash,     // no trash regions
-          _verify_gcstate_stable       // there
+          _verify_gcstate_stable       // there are no forwarded objects
+  );
+}
+
+void ShenandoahVerifier::verify_after_concmark() {
+  verify_at_safepoint(
+          "After Mark",
+          _verify_forwarded_none,      // no forwarded references
+          _verify_marked_complete_except_references, // bitmaps as precise as we can get, except dangling j.l.r.Refs
+          _verify_cset_none,           // no references to cset anymore
+          _verify_liveness_complete,   // liveness data must be complete here
+          _verify_regions_disable,     // trash regions not yet recycled
+          _verify_gcstate_stable_weakroots  // heap is still stable, weakroots are in progress
+  );
+}
+
+void ShenandoahVerifier::verify_before_evacuation() {
+  verify_at_safepoint(
+          "Before Evacuation",
+          _verify_forwarded_none,                    // no forwarded references
+          _verify_marked_complete_except_references, // walk over marked objects too
+          _verify_cset_disable,                      // non-forwarded references to cset expected
+          _verify_liveness_complete,                 // liveness data must be complete here
+          _verify_regions_disable,                   // trash regions not yet recycled
+          _verify_gcstate_stable_weakroots           // heap is still stable, weakroots are in progress
+  );
+}
+
+void ShenandoahVerifier::verify_during_evacuation() {
+  verify_at_safepoint(
+          "During Evacuation",
+          _verify_forwarded_allow,    // some forwarded references are allowed
+          _verify_marked_disable,     // walk only roots
+          _verify_cset_disable,       // some cset references are not forwarded yet
+          _verify_liveness_disable,   // liveness data might be already stale after pre-evacs
+          _verify_regions_disable,    // trash regions not yet recycled
+          _verify_gcstate_evacuation  // evacuation is in progress
+  );
+}
+
+void ShenandoahVerifier::verify_after_evacuation() {
+  verify_at_safepoint(
+          "After Evacuation",
+          _verify_forwarded_allow,     // objects are still forwarded
+          _verify_marked_complete,     // bitmaps might be stale, but alloc-after-mark should be well
+          _verify_cset_forwarded,      // all cset refs are fully forwarded
+          _verify_liveness_disable,    // no reliable liveness data anymore
+          _verify_regions_notrash,     // trash regions have been recycled already
+          _verify_gcstate_forwarded    // evacuation produced some forwarded objects
+  );
+}
+
+void ShenandoahVerifier::verify_before_updaterefs() {
+  verify_at_safepoint(
+          "Before Updating References",
+          _verify_forwarded_allow,     // forwarded references allowed
+          _verify_marked_complete,     // bitmaps might be stale, but alloc-after-mark should be well
+          _verify_cset_forwarded,      // all cset refs are fully forwarded
+          _verify_liveness_disable,    // no reliable liveness data anymore
+          _verify_regions_notrash,     // trash regions have been recycled already
+          _verify_gcstate_forwarded    // evacuation should have produced some forwarded objects
+  );
+}
+
+void ShenandoahVerifier::verify_after_updaterefs() {
+  verify_at_safepoint(
+          "After Updating References",
+          _verify_forwarded_none,      // no forwarded references
+          _verify_marked_complete,     // bitmaps might be stale, but alloc-after-mark should be well
+          _verify_cset_none,           // no cset references, all updated
+          _verify_liveness_disable,    // no reliable liveness data anymore
+          _verify_regions_nocset,      // no cset regions, trash regions have appeared
+          _verify_gcstate_stable       // update refs had cleaned up forwarded objects
+  );
+}
+
+void ShenandoahVerifier::verify_after_degenerated() {
+  verify_at_safepoint(
+          "After Degenerated GC",
+          _verify_forwarded_none,      // all objects are non-forwarded
+          _verify_marked_complete,     // all objects are marked in complete bitmap
+          _verify_cset_none,           // no cset references
+          _verify_liveness_disable,    // no reliable liveness data anymore
+          _verify_regions_notrash_nocset, // no trash, no cset
+          _verify_gcstate_stable       // degenerated refs had cleaned up forwarded objects
+  );
+}
+
+void ShenandoahVerifier::verify_before_fullgc() {
+  verify_at_safepoint(
+          "Before Full GC",
+          _verify_forwarded_allow,     // can have forwarded objects
+          _verify_marked_disable,      // do not verify marked: lots ot time wasted checking dead allocations
+          _verify_cset_disable,        // cset might be foobared
+          _verify_liveness_disable,    // no reliable liveness data anymore
+          _verify_regions_disable,     // no reliable region data here
+          _verify_gcstate_disable      // no reliable gcstate data
+  );
+}
+
+void ShenandoahVerifier::verify_after_fullgc() {
+  verify_at_safepoint(
+          "After Full GC",
+          _verify_forwarded_none,      // all objects are non-forwarded
+          _verify_marked_complete,     // all objects are marked in complete bitmap
+          _verify_cset_none,           // no cset references
+          _verify_liveness_disable,    // no reliable liveness data anymore
+          _verify_regions_notrash_nocset, // no trash, no cset
+          _verify_gcstate_stable        // full gc cleaned up everything
+  );
+}
+
+class ShenandoahVerifyNoForwared : public OopClosure {
+private:
+  template <class T>
+  void do_oop_work(T* p) {
+    T o = RawAccess<>::oop_load(p);
+    if (!CompressedOops::is_null(o)) {
+      oop obj = CompressedOops::decode_not_null(o);
+      oop fwd = ShenandoahForwarding::get_forwardee_raw_unchecked(obj);
+      if (obj != fwd) {
+        ShenandoahAsserts::print_failure(ShenandoahAsserts::_safe_all, obj, p, nullptr,
+                                         "Verify Roots", "Should not be forwarded", __FILE__, __LINE__);
+      }
+    }
+  }
+
+public:
+  void do_oop(narrowOop* p) { do_oop_work(p); }
+  void do_oop(oop* p)       { do_oop_work(p); }
+};
+
+class ShenandoahVerifyInToSpaceClosure : public OopClosure {
+private:
+  template <class T>
+  void do_oop_work(T* p) {
+    T o = RawAccess<>::oop_load(p);
+    if (!CompressedOops::is_null(o)) {
+      oop obj = CompressedOops::decode_not_null(o);
+      ShenandoahHeap* heap = ShenandoahHeap::heap();
+
+      if (!heap->marking_context()->is_marked(obj)) {
+        ShenandoahAsserts::print_failure(ShenandoahAsserts::_safe_all, obj, p, nullptr,
+                "Verify Roots In To-Space", "Should be marked", __FILE__, __LINE__);
+      }
+
+      if (heap->in_collection_set(obj)) {
+        ShenandoahAsserts::print_failure(ShenandoahAsserts::_safe_all, obj, p, nullptr,
+                "Verify Roots In To-Space", "Should not be in collection set", __FILE__, __LINE__);
+      }
+
+      oop fwd = ShenandoahForwarding::get_forwardee_raw_unchecked(obj);
+      if (obj != fwd) {
+        ShenandoahAsserts::print_failure(ShenandoahAsserts::_safe_all, obj, p, nullptr,
+                "Verify Roots In To-Space", "Should not be forwarded", __FILE__, __LINE__);
+      }
+    }
+  }
+
+public:
+  void do_oop(narrowOop* p) { do_oop_work(p); }
+  void do_oop(oop* p)       { do_oop_work(p); }
+};
+
+void ShenandoahVerifier::verify_roots_in_to_space() {
+  ShenandoahVerifyInToSpaceClosure cl;
+  ShenandoahRootVerifier::roots_do(&cl);
+}
+
+void ShenandoahVerifier::verify_roots_no_forwarded() {
+  ShenandoahVerifyNoForwared cl;
+  ShenandoahRootVerifier::roots_do(&cl);
+}
