@@ -617,4 +617,186 @@ void ShenandoahVerifier::verify_at_safepoint(const char *label,
                                              VerifyCollectionSet cset,
                                              VerifyLiveness liveness, VerifyRegions regions,
                                              VerifyGCState gcstate) {
-  guarantee(ShenandoahSafepoin
+  guarantee(ShenandoahSafepoint::is_at_shenandoah_safepoint(), "only when nothing else happens");
+  guarantee(ShenandoahVerify, "only when enabled, and bitmap is initialized in ShenandoahHeap::initialize");
+
+  // Avoid side-effect of changing workers' active thread count, but bypass concurrent/parallel protocol check
+  ShenandoahPushWorkerScope verify_worker_scope(_heap->workers(), _heap->max_workers(), false /*bypass check*/);
+
+  log_info(gc,start)("Verify %s, Level " INTX_FORMAT, label, ShenandoahVerifyLevel);
+
+  // GC state checks
+  {
+    char expected = -1;
+    bool enabled;
+    switch (gcstate) {
+      case _verify_gcstate_disable:
+        enabled = false;
+        break;
+      case _verify_gcstate_forwarded:
+        enabled = true;
+        expected = ShenandoahHeap::HAS_FORWARDED;
+        break;
+      case _verify_gcstate_evacuation:
+        enabled = true;
+        expected = ShenandoahHeap::HAS_FORWARDED | ShenandoahHeap::EVACUATION;
+        if (!_heap->is_stw_gc_in_progress()) {
+          // Only concurrent GC sets this.
+          expected |= ShenandoahHeap::WEAK_ROOTS;
+        }
+        break;
+      case _verify_gcstate_stable:
+        enabled = true;
+        expected = ShenandoahHeap::STABLE;
+        break;
+      case _verify_gcstate_stable_weakroots:
+        enabled = true;
+        expected = ShenandoahHeap::STABLE;
+        if (!_heap->is_stw_gc_in_progress()) {
+          // Only concurrent GC sets this.
+          expected |= ShenandoahHeap::WEAK_ROOTS;
+        }
+        break;
+      default:
+        enabled = false;
+        assert(false, "Unhandled gc-state verification");
+    }
+
+    if (enabled) {
+      char actual = _heap->gc_state();
+      if (actual != expected) {
+        fatal("%s: Global gc-state: expected %d, actual %d", label, expected, actual);
+      }
+
+      VerifyThreadGCState vtgcs(label, expected);
+      Threads::java_threads_do(&vtgcs);
+    }
+  }
+
+  // Deactivate barriers temporarily: Verifier wants plain heap accesses
+  ShenandoahGCStateResetter resetter;
+
+  // Heap size checks
+  {
+    ShenandoahHeapLocker lock(_heap->lock());
+
+    ShenandoahCalculateRegionStatsClosure cl;
+    _heap->heap_region_iterate(&cl);
+    size_t heap_used = _heap->used();
+    guarantee(cl.used() == heap_used,
+              "%s: heap used size must be consistent: heap-used = " SIZE_FORMAT "%s, regions-used = " SIZE_FORMAT "%s",
+              label,
+              byte_size_in_proper_unit(heap_used), proper_unit_for_byte_size(heap_used),
+              byte_size_in_proper_unit(cl.used()), proper_unit_for_byte_size(cl.used()));
+
+    size_t heap_committed = _heap->committed();
+    guarantee(cl.committed() == heap_committed,
+              "%s: heap committed size must be consistent: heap-committed = " SIZE_FORMAT "%s, regions-committed = " SIZE_FORMAT "%s",
+              label,
+              byte_size_in_proper_unit(heap_committed), proper_unit_for_byte_size(heap_committed),
+              byte_size_in_proper_unit(cl.committed()), proper_unit_for_byte_size(cl.committed()));
+  }
+
+  // Internal heap region checks
+  if (ShenandoahVerifyLevel >= 1) {
+    ShenandoahVerifyHeapRegionClosure cl(label, regions);
+    _heap->heap_region_iterate(&cl);
+  }
+
+  OrderAccess::fence();
+
+  if (UseTLAB) {
+    _heap->labs_make_parsable();
+  }
+
+  // Allocate temporary bitmap for storing marking wavefront:
+  _verification_bit_map->clear();
+
+  // Allocate temporary array for storing liveness data
+  ShenandoahLivenessData* ld = NEW_C_HEAP_ARRAY(ShenandoahLivenessData, _heap->num_regions(), mtGC);
+  Copy::fill_to_bytes((void*)ld, _heap->num_regions()*sizeof(ShenandoahLivenessData), 0);
+
+  const VerifyOptions& options = ShenandoahVerifier::VerifyOptions(forwarded, marked, cset, liveness, regions, gcstate);
+
+  // Steps 1-2. Scan root set to get initial reachable set. Finish walking the reachable heap.
+  // This verifies what application can see, since it only cares about reachable objects.
+  size_t count_reachable = 0;
+  if (ShenandoahVerifyLevel >= 2) {
+    ShenandoahVerifierReachableTask task(_verification_bit_map, ld, label, options);
+    _heap->workers()->run_task(&task);
+    count_reachable = task.processed();
+  }
+
+  // Step 3. Walk marked objects. Marked objects might be unreachable. This verifies what collector,
+  // not the application, can see during the region scans. There is no reason to process the objects
+  // that were already verified, e.g. those marked in verification bitmap. There is interaction with TAMS:
+  // before TAMS, we verify the bitmaps, if available; after TAMS, we walk until the top(). It mimics
+  // what marked_object_iterate is doing, without calling into that optimized (and possibly incorrect)
+  // version
+
+  size_t count_marked = 0;
+  if (ShenandoahVerifyLevel >= 4 && (marked == _verify_marked_complete || marked == _verify_marked_complete_except_references)) {
+    guarantee(_heap->marking_context()->is_complete(), "Marking context should be complete");
+    ShenandoahVerifierMarkedRegionTask task(_verification_bit_map, ld, label, options);
+    _heap->workers()->run_task(&task);
+    count_marked = task.processed();
+  } else {
+    guarantee(ShenandoahVerifyLevel < 4 || marked == _verify_marked_incomplete || marked == _verify_marked_disable, "Should be");
+  }
+
+  // Step 4. Verify accumulated liveness data, if needed. Only reliable if verification level includes
+  // marked objects.
+
+  if (ShenandoahVerifyLevel >= 4 && marked == _verify_marked_complete && liveness == _verify_liveness_complete) {
+    for (size_t i = 0; i < _heap->num_regions(); i++) {
+      ShenandoahHeapRegion* r = _heap->get_region(i);
+
+      juint verf_live = 0;
+      if (r->is_humongous()) {
+        // For humongous objects, test if start region is marked live, and if so,
+        // all humongous regions in that chain have live data equal to their "used".
+        juint start_live = Atomic::load(&ld[r->humongous_start_region()->index()]);
+        if (start_live > 0) {
+          verf_live = (juint)(r->used() / HeapWordSize);
+        }
+      } else {
+        verf_live = Atomic::load(&ld[r->index()]);
+      }
+
+      size_t reg_live = r->get_live_data_words();
+      if (reg_live != verf_live) {
+        stringStream ss;
+        r->print_on(&ss);
+        fatal("%s: Live data should match: region-live = " SIZE_FORMAT ", verifier-live = " UINT32_FORMAT "\n%s",
+              label, reg_live, verf_live, ss.freeze());
+      }
+    }
+  }
+
+  log_info(gc)("Verify %s, Level " INTX_FORMAT " (" SIZE_FORMAT " reachable, " SIZE_FORMAT " marked)",
+               label, ShenandoahVerifyLevel, count_reachable, count_marked);
+
+  FREE_C_HEAP_ARRAY(ShenandoahLivenessData, ld);
+}
+
+void ShenandoahVerifier::verify_generic(VerifyOption vo) {
+  verify_at_safepoint(
+          "Generic Verification",
+          _verify_forwarded_allow,     // conservatively allow forwarded
+          _verify_marked_disable,      // do not verify marked: lots ot time wasted checking dead allocations
+          _verify_cset_disable,        // cset may be inconsistent
+          _verify_liveness_disable,    // no reliable liveness data
+          _verify_regions_disable,     // no reliable region data
+          _verify_gcstate_disable      // no data about gcstate
+  );
+}
+
+void ShenandoahVerifier::verify_before_concmark() {
+    verify_at_safepoint(
+          "Before Mark",
+          _verify_forwarded_none,      // UR should have fixed up
+          _verify_marked_disable,      // do not verify marked: lots ot time wasted checking dead allocations
+          _verify_cset_none,           // UR should have fixed this
+          _verify_liveness_disable,    // no reliable liveness data
+          _verify_regions_notrash,     // no trash regions
+          _verify_gcstate_stable       // there
