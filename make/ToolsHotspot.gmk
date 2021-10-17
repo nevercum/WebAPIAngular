@@ -15,4 +15,33 @@
 # accompanied this code).
 #
 # You should have received a copy of the GNU General Public License version
-# 2 along with this work; if not, write to the F
+# 2 along with this work; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+# Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+# or visit www.oracle.com if you need additional information or have any
+# questions.
+#
+
+ifndef _TOOLS_HOTSPOT_GMK
+_TOOLS_HOTSPOT_GMK := 1
+
+include JavaCompilation.gmk
+
+HOTSPOT_TOOLS_OUTPUTDIR := $(BUILDTOOLS_OUTPUTDIR)/buildtools/hotspot_tools_classes
+
+################################################################################
+# To avoid reevaluating the compilation setup for the tools each time this file
+# is included, the actual compilation is handled by CompileToolsHotspot.gmk. The
+# following trick is used to be able to declare a dependency on the built tools.
+BUILD_TOOLS_HOTSPOT := $(call SetupJavaCompilationCompileTarget, \
+    BUILD_TOOLS_HOTSPOT, $(HOTSPOT_TOOLS_OUTPUTDIR))
+
+################################################################################
+
+TOOL_JFR_GEN := $(JAVA_SMALL) -cp $(HOTSPOT_TOOLS_OUTPUTDIR) \
+    build.tools.jfr.GenerateJfrFiles
+
+##########################################################################################
+
+endif # _TOOLS_HOTSPOT_GMK
