@@ -344,4 +344,204 @@ typedef void (TransformInterpFunc)(jint *pRGBbase, jint numpix,
  * inner loop functions to facilitate nicer looking and faster thin
  * transformed drawrect calls.
  */
-typedef void (FillParallelogramFunc)(SurfaceDataRasInfo *pR
+typedef void (FillParallelogramFunc)(SurfaceDataRasInfo *pRasInfo,
+                                     jint lox, jint loy, jint hix, jint hiy,
+                                     jlong leftx, jlong dleftx,
+                                     jlong rightx, jlong drightx,
+                                     jint pixel, struct _NativePrimitive *pPrim,
+                                     CompositeInfo *pCompInfo);
+
+typedef struct {
+    FillParallelogramFunc       *fillpgram;
+    DrawLineFunc                *drawline;
+} DrawParallelogramFuncs;
+
+/*
+ * This structure contains all information for defining a single
+ * native GraphicsPrimitive, including:
+ * - The information about the type of the GraphicsPrimitive subclass.
+ * - The information about the type of the source surface.
+ * - The information about the type of the compositing operation.
+ * - The information about the type of the destination surface.
+ * - A pointer to the function that performs the actual inner loop work.
+ * - Extra flags needed for locking the source and destination surfaces
+ *   above and beyond the flags specified in the Primitive, Composite
+ *   and SurfaceType structures.  (For most native primitives these
+ *   flags can be calculated automatically from information stored in
+ *   the PrimitiveType, SurfaceType, and CompositeType structures.)
+ */
+typedef struct _NativePrimitive {
+    PrimitiveType       *pPrimType;
+    SurfaceType         *pSrcType;
+    CompositeType       *pCompType;
+    SurfaceType         *pDstType;
+    /* See declaration of AnyFunc type above for comments explaining why
+     * only AnyFunc is used by the initializers for these union fields
+     * and consequent type restrictions.
+     */
+    union {
+        AnyFunc                 *initializer;
+        BlitFunc                *blit;
+        BlitBgFunc              *blitbg;
+        ScaleBlitFunc           *scaledblit;
+        FillRectFunc            *fillrect;
+        FillSpansFunc           *fillspans;
+        FillParallelogramFunc   *fillparallelogram;
+        DrawParallelogramFuncs  *drawparallelogram;
+        DrawLineFunc            *drawline;
+        MaskFillFunc            *maskfill;
+        MaskBlitFunc            *maskblit;
+        DrawGlyphListFunc       *drawglyphlist;
+        DrawGlyphListFunc       *drawglyphlistaa;
+        DrawGlyphListLCDFunc    *drawglyphlistlcd;
+        TransformHelperFuncs    *transformhelpers;
+    } funcs, funcs_c;
+    jint                srcflags;
+    jint                dstflags;
+} NativePrimitive;
+
+/*
+ * The global collection of all primitive types.  Specific NativePrimitive
+ * structures can be statically initialized by pointing to these structures.
+ */
+extern struct _PrimitiveTypes {
+    PrimitiveType       Blit;
+    PrimitiveType       BlitBg;
+    PrimitiveType       ScaledBlit;
+    PrimitiveType       FillRect;
+    PrimitiveType       FillSpans;
+    PrimitiveType       FillParallelogram;
+    PrimitiveType       DrawParallelogram;
+    PrimitiveType       DrawLine;
+    PrimitiveType       DrawRect;
+    PrimitiveType       DrawPolygons;
+    PrimitiveType       DrawPath;
+    PrimitiveType       FillPath;
+    PrimitiveType       MaskBlit;
+    PrimitiveType       MaskFill;
+    PrimitiveType       DrawGlyphList;
+    PrimitiveType       DrawGlyphListAA;
+    PrimitiveType       DrawGlyphListLCD;
+    PrimitiveType       TransformHelper;
+} PrimitiveTypes;
+
+/*
+ * The global collection of all surface types.  Specific NativePrimitive
+ * structures can be statically initialized by pointing to these structures.
+ */
+extern struct _SurfaceTypes {
+    SurfaceType         OpaqueColor;
+    SurfaceType         AnyColor;
+    SurfaceType         AnyByte;
+    SurfaceType         ByteBinary1Bit;
+    SurfaceType         ByteBinary2Bit;
+    SurfaceType         ByteBinary4Bit;
+    SurfaceType         ByteIndexed;
+    SurfaceType         ByteIndexedBm;
+    SurfaceType         ByteGray;
+    SurfaceType         Index8Gray;
+    SurfaceType         Index12Gray;
+    SurfaceType         AnyShort;
+    SurfaceType         Ushort555Rgb;
+    SurfaceType         Ushort555Rgbx;
+    SurfaceType         Ushort565Rgb;
+    SurfaceType         Ushort4444Argb;
+    SurfaceType         UshortGray;
+    SurfaceType         UshortIndexed;
+    SurfaceType         Any3Byte;
+    SurfaceType         ThreeByteBgr;
+    SurfaceType         AnyInt;
+    SurfaceType         IntArgb;
+    SurfaceType         IntArgbPre;
+    SurfaceType         IntArgbBm;
+    SurfaceType         IntRgb;
+    SurfaceType         IntBgr;
+    SurfaceType         IntRgbx;
+    SurfaceType         Any4Byte;
+    SurfaceType         FourByteAbgr;
+    SurfaceType         FourByteAbgrPre;
+} SurfaceTypes;
+
+/*
+ * The global collection of all composite types.  Specific NativePrimitive
+ * structures can be statically initialized by pointing to these structures.
+ */
+extern struct _CompositeTypes {
+    CompositeType       SrcNoEa;
+    CompositeType       SrcOverNoEa;
+    CompositeType       SrcOverBmNoEa;
+    CompositeType       Src;
+    CompositeType       SrcOver;
+    CompositeType       Xor;
+    CompositeType       AnyAlpha;
+} CompositeTypes;
+
+#define ArraySize(A)    (sizeof(A) / sizeof(A[0]))
+
+#define PtrAddBytes(p, b)               ((void *) (((intptr_t) (p)) + (b)))
+#define PtrCoord(p, x, xinc, y, yinc)   PtrAddBytes(p, \
+                                                    ((ptrdiff_t)(y))*(yinc) + \
+                                                    ((ptrdiff_t)(x))*(xinc))
+#define PtrPixelsRow(p, y, scanStride)    PtrAddBytes(p, \
+    ((intptr_t) (y)) * (scanStride))
+
+#define PtrPixelsBand(p, y, length, elemSize)    PtrAddBytes(p, \
+    ((intptr_t) (y)) * (length) * (elemSize))
+
+/*
+ * The function to call with an array of NativePrimitive structures
+ * to register them with the Java GraphicsPrimitiveMgr.
+ */
+extern jboolean RegisterPrimitives(JNIEnv *env,
+                                   NativePrimitive *pPrim,
+                                   jint NumPrimitives);
+
+/*
+ * The utility function to retrieve the NativePrimitive structure
+ * from a given Java GraphicsPrimitive object.
+ */
+extern JNIEXPORT NativePrimitive * JNICALL
+GetNativePrim(JNIEnv *env, jobject gp);
+
+/*
+ * Utility functions to get values from a Java SunGraphics2D or Color object.
+ */
+extern JNIEXPORT void JNICALL
+GrPrim_Sg2dGetCompInfo(JNIEnv *env, jobject sg2d,
+                       NativePrimitive *pPrim,
+                       CompositeInfo *pCompInfo);
+extern JNIEXPORT jint JNICALL
+GrPrim_CompGetXorColor(JNIEnv *env, jobject comp);
+extern JNIEXPORT void JNICALL
+GrPrim_CompGetXorInfo(JNIEnv *env, CompositeInfo *pCompInfo, jobject comp);
+extern JNIEXPORT void JNICALL
+GrPrim_CompGetAlphaInfo(JNIEnv *env, CompositeInfo *pCompInfo, jobject comp);
+
+extern JNIEXPORT void JNICALL
+GrPrim_Sg2dGetClip(JNIEnv *env, jobject sg2d,
+                   SurfaceDataBounds *bounds);
+
+extern JNIEXPORT jint JNICALL
+GrPrim_Sg2dGetPixel(JNIEnv *env, jobject sg2d);
+extern JNIEXPORT jint JNICALL
+GrPrim_Sg2dGetEaRGB(JNIEnv *env, jobject sg2d);
+extern JNIEXPORT jint JNICALL
+GrPrim_Sg2dGetLCDTextContrast(JNIEnv *env, jobject sg2d);
+
+/*
+ * Data structure and functions to retrieve and use
+ * AffineTransform objects from the native level.
+ */
+typedef struct {
+    jdouble dxdx;       /* dx in dest space for each dx in src space */
+    jdouble dxdy;       /* dx in dest space for each dy in src space */
+    jdouble tx;
+    jdouble dydx;       /* dy in dest space for each dx in src space */
+    jdouble dydy;       /* dy in dest space for each dy in src space */
+    jdouble ty;
+} TransformInfo;
+
+extern JNIEXPORT void JNICALL
+Transform_GetInfo(JNIEnv *env, jobject txform, TransformInfo *pTxInfo);
+extern JNIEXPORT void JNICALL
+Transform_transform(TransformInfo *pTxInfo, jdouble *pX, jdouble *pY);
