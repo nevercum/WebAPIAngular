@@ -170,4 +170,178 @@ struct _NativePrimitive;        /* forward reference for function typedefs */
 
 /*
  * This empty function signature represents an "old pre-ANSI style"
- * function declaration which makes no claims about the argument
+ * function declaration which makes no claims about the argument list
+ * other than that the types of the arguments will undergo argument
+ * promotion in the calling conventions.
+ * (See section A7.3.2 in K&R 2nd edition.)
+ *
+ * When trying to statically initialize the function pointer field of
+ * a NativePrimitive structure, which is a union of all possible
+ * inner loop function signatures, the initializer constant must be
+ * compatible with the first field in the union.  This generic function
+ * type allows us to assign any function pointer to that union as long
+ * as it meets the requirements specified above (i.e. all arguments
+ * are compatible with their promoted values according to the old
+ * style argument promotion calling semantics).
+ *
+ * Note: This means that you cannot define an argument to any of
+ * these native functions which is a byte or a short as that value
+ * would not be passed in the same way for an ANSI-style full prototype
+ * calling convention and an old-style argument promotion calling
+ * convention.
+ */
+typedef void (AnyFunc)();
+
+/*
+ * The signature of the inner loop function for a "Blit".
+ */
+typedef void (BlitFunc)(void *pSrc, void *pDst,
+                        juint width, juint height,
+                        SurfaceDataRasInfo *pSrcInfo,
+                        SurfaceDataRasInfo *pDstInfo,
+                        struct _NativePrimitive *pPrim,
+                        CompositeInfo *pCompInfo);
+
+/*
+ * The signature of the inner loop function for a "BlitBg".
+ */
+typedef void (BlitBgFunc)(void *pSrc, void *pDst,
+                          juint width, juint height, jint bgpixel,
+                          SurfaceDataRasInfo *pSrcInfo,
+                          SurfaceDataRasInfo *pDstInfo,
+                          struct _NativePrimitive *pPrim,
+                          CompositeInfo *pCompInfo);
+
+/*
+ * The signature of the inner loop function for a "ScaleBlit".
+ */
+typedef void (ScaleBlitFunc)(void *pSrc, void *pDst,
+                             juint dstwidth, juint dstheight,
+                             jint sxloc, jint syloc,
+                             jint sxinc, jint syinc, jint scale,
+                             SurfaceDataRasInfo *pSrcInfo,
+                             SurfaceDataRasInfo *pDstInfo,
+                             struct _NativePrimitive *pPrim,
+                             CompositeInfo *pCompInfo);
+
+/*
+ * The signature of the inner loop function for a "FillRect".
+ */
+typedef void (FillRectFunc)(SurfaceDataRasInfo *pRasInfo,
+                            jint lox, jint loy,
+                            jint hix, jint hiy,
+                            jint pixel, struct _NativePrimitive *pPrim,
+                            CompositeInfo *pCompInfo);
+
+/*
+ * The signature of the inner loop function for a "FillSpans".
+ */
+typedef void (FillSpansFunc)(SurfaceDataRasInfo *pRasInfo,
+                             SpanIteratorFuncs *pSpanFuncs, void *siData,
+                             jint pixel, struct _NativePrimitive *pPrim,
+                             CompositeInfo *pCompInfo);
+
+/*
+ * The signature of the inner loop function for a "DrawLine".
+ * Note that this same inner loop is used for native DrawRect
+ * and DrawPolygons primitives.
+ */
+typedef void (DrawLineFunc)(SurfaceDataRasInfo *pRasInfo,
+                            jint x1, jint y1, jint pixel,
+                            jint steps, jint error,
+                            jint bumpmajormask, jint errmajor,
+                            jint bumpminormask, jint errminor,
+                            struct _NativePrimitive *pPrim,
+                            CompositeInfo *pCompInfo);
+
+/*
+ * The signature of the inner loop function for a "MaskFill".
+ */
+typedef void (MaskFillFunc)(void *pRas,
+                            unsigned char *pMask, jint maskOff, jint maskScan,
+                            jint width, jint height,
+                            jint fgColor,
+                            SurfaceDataRasInfo *pRasInfo,
+                            struct _NativePrimitive *pPrim,
+                            CompositeInfo *pCompInfo);
+
+/*
+ * The signature of the inner loop function for a "MaskBlit".
+ */
+typedef void (MaskBlitFunc)(void *pDst, void *pSrc,
+                            unsigned char *pMask, jint maskOff, jint maskScan,
+                            jint width, jint height,
+                            SurfaceDataRasInfo *pDstInfo,
+                            SurfaceDataRasInfo *pSrcInfo,
+                            struct _NativePrimitive *pPrim,
+                            CompositeInfo *pCompInfo);
+/*
+ * The signature of the inner loop function for a "DrawGlyphList".
+ */
+typedef void (DrawGlyphListFunc)(SurfaceDataRasInfo *pRasInfo,
+                                 ImageRef *glyphs,
+                                 jint totalGlyphs,
+                                 jint fgpixel, jint fgcolor,
+                                 jint cx1, jint cy1,
+                                 jint cx2, jint cy2,
+                                 struct _NativePrimitive *pPrim,
+                                 CompositeInfo *pCompInfo);
+
+/*
+ * The signature of the inner loop function for a "DrawGlyphListAA".
+ */
+typedef void (DrawGlyphListAAFunc)(SurfaceDataRasInfo *pRasInfo,
+                                   ImageRef *glyphs,
+                                   jint totalGlyphs,
+                                   jint fgpixel, jint fgcolor,
+                                   jint cx1, jint cy1,
+                                   jint cx2, jint cy2,
+                                   struct _NativePrimitive *pPrim,
+                                   CompositeInfo *pCompInfo);
+
+/*
+ * The signature of the inner loop function for a "DrawGlyphListLCD".
+ * rgbOrder is a jint rather than a jboolean so that this typedef matches
+ * AnyFunc which is the first element in a union in NativePrimitive's
+ * initialiser. See the comments alongside declaration of the AnyFunc type for
+ * a full explanation.
+ */
+typedef void (DrawGlyphListLCDFunc)(SurfaceDataRasInfo *pRasInfo,
+                                    ImageRef *glyphs,
+                                    jint totalGlyphs,
+                                    jint fgpixel, jint fgcolor,
+                                    jint cx1, jint cy1,
+                                    jint cx2, jint cy2,
+                                    jint rgbOrder,
+                                    unsigned char *gammaLut,
+                                    unsigned char *invGammaLut,
+                                    struct _NativePrimitive *pPrim,
+                                    CompositeInfo *pCompInfo);
+
+/*
+ * The signature of the inner loop functions for a "TransformHelper".
+ */
+typedef void (TransformHelperFunc)(SurfaceDataRasInfo *pSrcInfo,
+                                   jint *pRGB, jint numpix,
+                                   jlong xlong, jlong dxlong,
+                                   jlong ylong, jlong dylong);
+
+typedef struct {
+    TransformHelperFunc         *nnHelper;
+    TransformHelperFunc         *blHelper;
+    TransformHelperFunc         *bcHelper;
+} TransformHelperFuncs;
+
+typedef void (TransformInterpFunc)(jint *pRGBbase, jint numpix,
+                                   jint xfract, jint dxfract,
+                                   jint yfract, jint dyfract);
+
+/*
+ * The signature of the inner loop function for a "FillParallelogram"
+ * Note that this same inner loop is used for native DrawParallelogram
+ * primitives.
+ * Note that these functions are paired with equivalent DrawLine
+ * inner loop functions to facilitate nicer looking and faster thin
+ * transformed drawrect calls.
+ */
+typedef void (FillParallelogramFunc)(SurfaceDataRasInfo *pR
