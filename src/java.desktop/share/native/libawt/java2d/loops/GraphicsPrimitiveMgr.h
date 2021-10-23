@@ -545,3 +545,111 @@ extern JNIEXPORT void JNICALL
 Transform_GetInfo(JNIEnv *env, jobject txform, TransformInfo *pTxInfo);
 extern JNIEXPORT void JNICALL
 Transform_transform(TransformInfo *pTxInfo, jdouble *pX, jdouble *pY);
+
+void GrPrim_RefineBounds(SurfaceDataBounds *bounds, jint transX, jint transY,
+                         jfloat *coords,  jint maxCoords);
+
+JNIEXPORT extern jfieldID path2DTypesID;
+JNIEXPORT extern jfieldID path2DNumTypesID;
+JNIEXPORT extern jfieldID path2DWindingRuleID;
+JNIEXPORT extern jfieldID path2DFloatCoordsID;
+JNIEXPORT extern jfieldID sg2dStrokeHintID;
+JNIEXPORT extern jint sunHints_INTVAL_STROKE_PURE;
+
+/*
+ * Macros for using jlong variables as 32bits.32bits fractional values
+ */
+#define LongOneHalf     (((jlong) 1) << 31)
+#define IntToLong(i)    (((jlong) (i)) << 32)
+#define DblToLong(d)    ((jlong) ((d) * IntToLong(1)))
+#define LongToDbl(l)    (((jdouble) l) / IntToLong(1))
+#define WholeOfLong(l)  ((jint) ((l) >> 32))
+#define FractOfLong(l)  ((jint) (l))
+#define URShift(i, n)   (((juint) (i)) >> (n))
+
+/*
+ * Macros to help in defining arrays of NativePrimitive structures.
+ *
+ * These macros are the very base macros.  More specific macros are
+ * defined in LoopMacros.h.
+ *
+ * Note that the DrawLine, DrawRect, and DrawPolygons primitives are
+ * all registered together from a single shared native function pointer.
+ */
+
+#define REGISTER_PRIMITIVE(TYPE, SRC, COMP, DST, FUNC) \
+    { \
+        & PrimitiveTypes.TYPE, \
+        & SurfaceTypes.SRC, \
+        & CompositeTypes.COMP, \
+        & SurfaceTypes.DST, \
+        {FUNC}, \
+        {FUNC}, \
+        0,   \
+        0   \
+    }
+
+#define REGISTER_PRIMITIVE_FLAGS(TYPE, SRC, COMP, DST, FUNC, SFLAGS, DFLAGS) \
+    { \
+        & PrimitiveTypes.TYPE, \
+        & SurfaceTypes.SRC, \
+        & CompositeTypes.COMP, \
+        & SurfaceTypes.DST, \
+        {FUNC}, \
+        {FUNC}, \
+        SFLAGS, \
+        DFLAGS, \
+    }
+
+#define REGISTER_BLIT(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(Blit, SRC, COMP, DST, FUNC)
+
+#define REGISTER_BLIT_FLAGS(SRC, COMP, DST, FUNC, SFLAGS, DFLAGS) \
+    REGISTER_PRIMITIVE_FLAGS(Blit, SRC, COMP, DST, FUNC, SFLAGS, DFLAGS)
+
+#define REGISTER_SCALEBLIT(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(ScaledBlit, SRC, COMP, DST, FUNC)
+
+#define REGISTER_SCALEBLIT_FLAGS(SRC, COMP, DST, FUNC, SFLAGS, DFLAGS) \
+    REGISTER_PRIMITIVE_FLAGS(ScaledBlit, SRC, COMP, DST, FUNC, SFLAGS, DFLAGS)
+
+#define REGISTER_BLITBG(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(BlitBg, SRC, COMP, DST, FUNC)
+
+#define REGISTER_FILLRECT(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(FillRect, SRC, COMP, DST, FUNC)
+
+#define REGISTER_FILLSPANS(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(FillSpans, SRC, COMP, DST, FUNC)
+
+#define REGISTER_FILLPGRAM(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(FillParallelogram, SRC, COMP, DST, FUNC), \
+    REGISTER_PRIMITIVE(DrawParallelogram, SRC, COMP, DST, FUNC)
+
+#define REGISTER_LINE_PRIMITIVES(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(DrawLine, SRC, COMP, DST, FUNC), \
+    REGISTER_PRIMITIVE(DrawRect, SRC, COMP, DST, FUNC), \
+    REGISTER_PRIMITIVE(DrawPolygons, SRC, COMP, DST, FUNC), \
+    REGISTER_PRIMITIVE(DrawPath, SRC, COMP, DST, FUNC), \
+    REGISTER_PRIMITIVE(FillPath, SRC, COMP, DST, FUNC)
+
+#define REGISTER_MASKBLIT(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(MaskBlit, SRC, COMP, DST, FUNC)
+
+#define REGISTER_MASKFILL(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(MaskFill, SRC, COMP, DST, FUNC)
+
+#define REGISTER_DRAWGLYPHLIST(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(DrawGlyphList, SRC, COMP, DST, FUNC)
+
+#define REGISTER_DRAWGLYPHLISTAA(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(DrawGlyphListAA, SRC, COMP, DST, FUNC)
+
+#define REGISTER_DRAWGLYPHLISTLCD(SRC, COMP, DST, FUNC) \
+    REGISTER_PRIMITIVE(DrawGlyphListLCD, SRC, COMP, DST, FUNC)
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* GraphicsPrimitiveMgr_h_Included */
