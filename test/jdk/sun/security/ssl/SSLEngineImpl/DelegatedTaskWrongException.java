@@ -192,4 +192,38 @@ public class DelegatedTaskWrongException {
             SSLEngine engine) throws Exception {
 
         if (result.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
-            Run
+            Runnable runnable;
+            while ((runnable = engine.getDelegatedTask()) != null) {
+                log("running delegated task...");
+                runnable.run();
+            }
+        }
+    }
+
+    private static boolean isEngineClosed(SSLEngine engine) {
+        return (engine.isOutboundDone() && engine.isInboundDone());
+    }
+
+    private static void checkTransfer(ByteBuffer a, ByteBuffer b)
+            throws Exception {
+        a.flip();
+        b.flip();
+
+        if (!a.equals(b)) {
+            throw new Exception("Data didn't transfer cleanly");
+        } else {
+            log("Data transferred cleanly");
+        }
+
+        a.position(a.limit());
+        b.position(b.limit());
+        a.limit(a.capacity());
+        b.limit(b.capacity());
+    }
+
+    private static void log(String str) {
+        if (debug) {
+            System.out.println(str);
+        }
+    }
+}
