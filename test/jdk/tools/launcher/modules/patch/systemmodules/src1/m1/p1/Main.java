@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,21 +22,10 @@
  * questions.
  */
 
-import javax.swing.*;
+package p1;
 
-/*
- * @test
- * @summary Check that SizeSequence constructors do not throw unexpected exceptions
- *          in headless mode
- * @run main/othervm -Djava.awt.headless=true HeadlessSizeSequence
- */
-
-public class HeadlessSizeSequence {
-    public static void main(String args[]) {
-        SizeSequence ss;
-        ss = new SizeSequence();
-        ss = new SizeSequence(10);
-        ss = new SizeSequence(10, 10);
-        ss = new SizeSequence(new int[]{1, 2, 3, 4, 5, 6, 76, 9});
+public class Main {
+    public static void main(String[] args) throws Exception {
+        throw new RuntimeException("should not reach here");
     }
 }
