@@ -107,4 +107,228 @@ public class HtmlIds {
     static final HtmlId SKIP_NAVBAR_TOP = HtmlId.of("skip-navbar-top");
     static final HtmlId UNNAMED_PACKAGE_ANCHOR = HtmlId.of("unnamed-package");
 
-    private static final String ENUM_CO
+    private static final String ENUM_CONSTANTS_INHERITANCE = "enum-constants-inherited-from-class-";
+    private static final String FIELDS_INHERITANCE = "fields-inherited-from-class-";
+    private static final String METHODS_INHERITANCE = "methods-inherited-from-class-";
+    private static final String NESTED_CLASSES_INHERITANCE = "nested-classes-inherited-from-class-";
+    private static final String PROPERTIES_INHERITANCE = "properties-inherited-from-class-";
+
+    /**
+     * Creates a factory for element-specific ids.
+     *
+     * @param configuration the configuration
+     */
+    HtmlIds(HtmlConfiguration configuration) {
+        this.configuration = configuration;
+        this.utils = configuration.utils;
+    }
+
+    /**
+     * Returns an id for a package.
+     *
+     * @param element the package
+     *
+     * @return the id
+     */
+    HtmlId forPackage(PackageElement element) {
+        return element == null || element.isUnnamed()
+                ? UNNAMED_PACKAGE_ANCHOR
+                : HtmlId.of(element.getQualifiedName().toString());
+    }
+
+    /**
+     * Returns an id for a package name.
+     *
+     * @param pkgName the package name
+     *
+     * @return the id
+     */
+    HtmlId forPackageName(String pkgName) {
+        return pkgName.isEmpty()
+                ? UNNAMED_PACKAGE_ANCHOR
+                : HtmlId.of(pkgName);
+    }
+
+    /**
+     * Returns an id for a class or interface.
+     *
+     * @param element the class or interface
+     *
+     * @return the id
+     */
+    HtmlId forClass(TypeElement element) {
+        return HtmlId.of(utils.getFullyQualifiedName(element));
+    }
+
+    /**
+     * Returns an id for an executable element, suitable for use when the
+     * simple name and argument list will be unique within the page, such as
+     * in the page for the declaration of the enclosing class or interface.
+     *
+     * @param element the element
+     *
+     * @return the id
+     */
+    HtmlId forMember(ExecutableElement element) {
+        String a = element.getSimpleName()
+                        + utils.makeSignature(element, null, true, true);
+        // utils.makeSignature includes spaces
+        return HtmlId.of(a.replaceAll("\\s", ""));
+    }
+
+    /**
+     * Returns an id for an executable element, including the context
+     * of its documented enclosing class or interface.
+     *
+     * @param typeElement the enclosing class or interface
+     * @param member      the element
+     *
+     * @return the id
+     */
+    HtmlId forMember(TypeElement typeElement, ExecutableElement member) {
+        return HtmlId.of(utils.getSimpleName(member) + utils.signature(member, typeElement));
+    }
+
+    /**
+     * Returns an id for a field, suitable for use when the simple name
+     * will be unique within the page, such as in the page for the
+     * declaration of the enclosing class or interface.
+     *
+     * <p>Warning: the name may not be unique if a property with the same
+     * name is also being documented in the same class.
+     *
+     * @param element the element
+     *
+     * @return the id
+     *
+     * @see #forProperty(ExecutableElement)
+     */
+    HtmlId forMember(VariableElement element) {
+        return HtmlId.of(element.getSimpleName().toString());
+    }
+
+    /**
+     * Returns an id for a field, including the context
+     * of its documented enclosing class or interface.
+     *
+     * @param typeElement the enclosing class or interface
+     * @param member the element
+     *
+     * @return the id
+     */
+    HtmlId forMember(TypeElement typeElement, VariableElement member) {
+        return HtmlId.of(typeElement.getQualifiedName() + "." + member.getSimpleName());
+    }
+
+    /**
+     * Returns an id for the erasure of an executable element,
+     * or {@code null} if there are no type variables in the signature.
+     *
+     * For backward compatibility, include an anchor using the erasures of the
+     * parameters.  NOTE:  We won't need this method anymore after we fix
+     * {@code @see} tags so that they use the type instead of the erasure.
+     *
+     * @param executableElement the element to anchor to
+     * @return the 1.4.x style anchor for the executable element
+     */
+    protected HtmlId forErasure(ExecutableElement executableElement) {
+        final StringBuilder buf = new StringBuilder(executableElement.getSimpleName().toString());
+        buf.append("(");
+        List<? extends VariableElement> parameters = executableElement.getParameters();
+        boolean foundTypeVariable = false;
+        for (int i = 0; i < parameters.size(); i++) {
+            if (i > 0) {
+                buf.append(",");
+            }
+            TypeMirror t = parameters.get(i).asType();
+            SimpleTypeVisitor9<Boolean, Void> stv = new SimpleTypeVisitor9<>() {
+                boolean foundTypeVariable = false;
+
+                @Override
+                public Boolean visitArray(ArrayType t, Void p) {
+                    visit(t.getComponentType());
+                    buf.append(utils.getDimension(t));
+                    return foundTypeVariable;
+                }
+
+                @Override
+                public Boolean visitTypeVariable(TypeVariable t, Void p) {
+                    buf.append(utils.asTypeElement(t).getQualifiedName().toString());
+                    foundTypeVariable = true;
+                    return foundTypeVariable;
+                }
+
+                @Override
+                public Boolean visitDeclared(DeclaredType t, Void p) {
+                    buf.append(utils.getQualifiedTypeName(t));
+                    return foundTypeVariable;
+                }
+
+                @Override
+                protected Boolean defaultAction(TypeMirror e, Void p) {
+                    buf.append(e);
+                    return foundTypeVariable;
+                }
+            };
+
+            boolean isTypeVariable = stv.visit(t);
+            if (!foundTypeVariable) {
+                foundTypeVariable = isTypeVariable;
+            }
+        }
+        buf.append(")");
+        return foundTypeVariable ? HtmlId.of(buf.toString()) : null;
+    }
+
+    /**
+     * Returns an id for a property, suitable for use when the simple name
+     * will be unique within the page, such as in the page for the
+     * declaration of the enclosing class or interface.
+     *
+     * <p>Warning: the name may not be unique if a field with the same
+     * name is also being documented in the same class.
+     *
+     * @param element the element
+     *
+     * @return the id
+     *
+     * @see #forMember(VariableElement)
+     */
+    HtmlId forProperty(ExecutableElement element) {
+        return HtmlId.of(element.getSimpleName().toString());
+    }
+
+    /**
+     * Returns an id for the list of classes and interfaces inherited from
+     * a class or interface.
+     *
+     * <p>Note: the use of {@code utils} may not be strictly necessary.
+     *
+     * @param element the class or interface
+     *
+     * @return the id
+     */
+    HtmlId forInheritedClasses(TypeElement element) {
+        return HtmlId.of(NESTED_CLASSES_INHERITANCE + utils.getFullyQualifiedName(element));
+    }
+
+    /**
+     * Returns an id for the list of fields inherited from a class or interface.
+     *
+     * @param element the class or interface
+     *
+     * @return the id
+     */
+    HtmlId forInheritedFields(TypeElement element) {
+        return forInherited(FIELDS_INHERITANCE, element);
+    }
+
+    /**
+     * Returns an id for the list of enum constants inherited from a class or interface.
+     *
+     * @param element the class or interface
+     *
+     * @return the id
+     */
+    HtmlId forInheritedEnumConstants(TypeElement element) {
+        return forInherited(ENUM_CONSTANTS_INHERITANCE,
