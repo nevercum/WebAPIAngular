@@ -331,4 +331,211 @@ public class HtmlIds {
      * @return the id
      */
     HtmlId forInheritedEnumConstants(TypeElement element) {
-        return forInherited(ENUM_CONSTANTS_INHERITANCE,
+        return forInherited(ENUM_CONSTANTS_INHERITANCE, element);
+    }
+
+    /**
+     * Returns an id for the list of methods inherited from a class or interface.
+     *
+     * @param element the class or interface
+     *
+     * @return the id
+     */
+    HtmlId forInheritedMethods(TypeElement element) {
+        return forInherited(METHODS_INHERITANCE, element);
+    }
+
+    /**
+     * Returns an id for the list of properties inherited from a class or interface.
+     *
+     * @param element the class or interface
+     *
+     * @return the id
+     */
+    HtmlId forInheritedProperties(TypeElement element) {
+        return forInherited(PROPERTIES_INHERITANCE, element);
+    }
+
+    // Note: the use of {@code configuration} may not be strictly necessary as
+    // compared to just using the fully qualified name, but would be a change in the value.
+    private HtmlId forInherited(String prefix, TypeElement element) {
+        return HtmlId.of(prefix + configuration.getClassName(element));
+    }
+
+    /**
+     * Returns an id for a character on the A-Z Index page.
+     *
+     * @param character the character
+     *
+     * @return the id
+     */
+    static HtmlId forIndexChar(char character) {
+        return HtmlId.of("I:" + character);
+    }
+
+    /**
+     * Returns an id for a line in a source-code listing.
+     *
+     * @param lineNumber the line number
+     *
+     * @return the id
+     */
+    static HtmlId forLine(int lineNumber) {
+        return HtmlId.of("line-" + lineNumber);
+    }
+
+    /**
+     * Returns an id for a parameter, such as a component of a record.
+     *
+     * <p>Warning: this may not be unique on the page if used when there are
+     * other like-named parameters.
+     *
+     * @param paramName the parameter name
+     *
+     * @return the id
+     */
+    static HtmlId forParam(String paramName) {
+        return HtmlId.of("param-" + paramName);
+    }
+
+    /**
+     * Returns an id for a fragment of text, such as in an {@code @index} tag,
+     * using a map of counts to ensure the id is unique.
+     *
+     * @param text the text
+     * @param counts the map of counts
+     *
+     * @return the id
+     */
+    static HtmlId forText(String text, Map<String, Integer> counts) {
+        String base = text.replaceAll("\\s+", "");
+        int count = counts.compute(base, (k, v) -> v == null ? 0 : v + 1);
+        return HtmlId.of(count == 0 ? base : base + "-" + count);
+    }
+
+    /**
+     * Returns an id for one of the kinds of section in the pages for item group summaries.
+     *
+     * <p>Note: while the use of simple names (that are not keywords)
+     * may seem undesirable, they cannot conflict with the unqualified names
+     * of fields and properties, which should not also appear on the same page.
+     *
+     * @param kind the kind of deprecated items in the section
+     *
+     * @return the id
+     */
+    static HtmlId forSummaryKind(SummaryAPIListBuilder.SummaryElementKind kind) {
+        return HtmlId.of(switch (kind) {
+            case MODULE -> "module";
+            case PACKAGE -> "package";
+            case INTERFACE -> "interface";
+            case CLASS -> "class";
+            case ENUM -> "enum-class";
+            case EXCEPTION_CLASS -> "exception-class";
+            case ANNOTATION_TYPE -> "annotation-interface";
+            case FIELD -> "field";
+            case METHOD -> "method";
+            case CONSTRUCTOR -> "constructor";
+            case ENUM_CONSTANT -> "enum-constant";
+            case ANNOTATION_TYPE_MEMBER -> "annotation-interface-member";
+            case RECORD_CLASS -> "record-class";
+        });
+    }
+
+    /**
+     * Returns an id for the member summary table of the given {@code kind} in a class page.
+     *
+     * @param kind the kind of member
+     *
+     * @return the id
+     */
+    static HtmlId forMemberSummary(VisibleMemberTable.Kind kind) {
+        return switch (kind) {
+            case NESTED_CLASSES -> NESTED_CLASS_SUMMARY;
+            case ENUM_CONSTANTS -> ENUM_CONSTANT_SUMMARY;
+            case FIELDS -> FIELD_SUMMARY;
+            case CONSTRUCTORS -> CONSTRUCTOR_SUMMARY;
+            case METHODS -> METHOD_SUMMARY;
+            // We generate separate summaries for optional and required annotation members
+            case ANNOTATION_TYPE_MEMBER -> throw new IllegalArgumentException("unsupported member kind");
+            case ANNOTATION_TYPE_MEMBER_OPTIONAL -> ANNOTATION_TYPE_OPTIONAL_ELEMENT_SUMMARY;
+            case ANNOTATION_TYPE_MEMBER_REQUIRED -> ANNOTATION_TYPE_REQUIRED_ELEMENT_SUMMARY;
+            case PROPERTIES -> PROPERTY_SUMMARY;
+        };
+    }
+
+    /**
+     * Returns an id for a "tab" in a table.
+     *
+     * @param tableId the id for the table
+     * @param tabIndex the index of the tab
+     *
+     * @return the id
+     */
+    public static HtmlId forTab(HtmlId tableId, int tabIndex) {
+        return HtmlId.of(tableId.name() + "-tab" + tabIndex);
+    }
+
+    /**
+     * Returns an id for the "tab panel" in a table.
+     *
+     * @param tableId the id for the table
+     *
+     * @return the id
+     */
+    public static HtmlId forTabPanel(HtmlId tableId) {
+        return HtmlId.of(tableId.name() + ".tabpanel");
+    }
+
+
+    /**
+     * Returns an id for the "preview" section for an element.
+     *
+     * @param el the element
+     *
+     * @return the id
+     */
+    public HtmlId forPreviewSection(Element el) {
+        return HtmlId.of("preview-" + switch (el.getKind()) {
+            case CONSTRUCTOR, METHOD -> forMember((ExecutableElement) el).name();
+            case PACKAGE -> forPackage((PackageElement) el).name();
+            default -> utils.getFullyQualifiedName(el, false);
+        });
+    }
+
+    /**
+     * Returns an id for the entry on the HELP page for a kind of generated page.
+     *
+     * @param page the kind of page
+     *
+     * @return the id
+     */
+    public HtmlId forPage(Navigation.PageMode page) {
+        return HtmlId.of(page.name().toLowerCase(Locale.ROOT).replace("_", "-"));
+    }
+
+    /**
+     * Returns an id for a heading in a doc comment. The id value is derived from the contents
+     * of the heading with additional checks to make it unique within its containing page.
+     *
+     * @param headingText the text contained by the heading
+     * @param headingIds the set of heading ids already generated for the current page
+     * @return a unique id value for the heading
+     */
+    public HtmlId forHeading(CharSequence headingText, Set<String> headingIds) {
+        String idValue = headingText.toString()
+                .toLowerCase(Locale.ROOT)
+                .trim()
+                .replaceAll("[^\\w_-]+", "-");
+        // Make id value unique
+        idValue = idValue + "-heading";
+        if (!headingIds.add(idValue)) {
+            int counter = 1;
+            while (!headingIds.add(idValue + counter)) {
+                counter++;
+            }
+            idValue = idValue + counter;
+        }
+        return HtmlId.of(idValue);
+    }
+}
