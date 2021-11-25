@@ -98,4 +98,21 @@ class ciMetadata: public ciBaseObject {
   }
   ciTypeArrayKlass*        as_type_array_klass() {
     assert(is_type_array_klass(), "bad cast");
-    ret
+    return (ciTypeArrayKlass*)this;
+  }
+
+  Metadata* constant_encoding() { return _metadata; }
+
+  bool equals(ciMetadata* obj) const { return (this == obj); }
+
+  int hash() { return ident() * 31; } // ???
+
+  void print(outputStream* st);
+  virtual void print_impl(outputStream* st) {}
+  virtual const char* type_string() { return "ciMetadata"; }
+
+  void print()  { print(tty); }
+  void print_metadata(outputStream* st = tty);
+
+};
+#endif // SHARE_CI_CIMETADATA_HPP
