@@ -433,4 +433,29 @@ class MyX509KeyManager extends X509ExtendedKeyManager {
 
     public String chooseEngineServerAlias(String keyType, Principal[] issuers,
             SSLEngine engine) {
-        throw new UnsupportedOperationExc
+        throw new UnsupportedOperationException("Servers not supported");
+    }
+
+    public X509Certificate[] getCertificateChain(String alias) {
+        return keyManager.getCertificateChain(alias);
+    }
+
+    public PrivateKey getPrivateKey(String alias) {
+        return keyManager.getPrivateKey(alias);
+    }
+
+}
+
+class DaemonThreadFactory implements ThreadFactory {
+
+    final static ThreadFactory INSTANCE = new DaemonThreadFactory();
+
+    private final static ThreadFactory DEFAULT = Executors.defaultThreadFactory();
+
+    public Thread newThread(Runnable r) {
+        Thread t = DEFAULT.newThread(r);
+        t.setDaemon(true);
+        return t;
+    }
+
+}
