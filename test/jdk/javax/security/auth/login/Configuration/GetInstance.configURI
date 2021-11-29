@@ -2,4 +2,5 @@ four {
     com.foo.Module sufficient;
     com.bar.Module required;
     com.foobar.Module optional;
-    Module re
+    Module required;
+};
