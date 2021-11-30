@@ -174,4 +174,240 @@ public class Verify {
 
         public static void verify(BinaryMethod method) {
             for (int i = 0; i < 50000; ++i) {
-                int rnd1 = rnd.nextInt(), rnd2 = rnd.nextInt
+                int rnd1 = rnd.nextInt(), rnd2 = rnd.nextInt();
+                Verify.verifyBinary(rnd1, rnd2, method);
+                Verify.verifyBinary(rnd1, rnd2 + 1, method);
+                Verify.verifyBinary(rnd1 + 1, rnd2, method);
+                Verify.verifyBinary(rnd1 - 1, rnd2, method);
+                Verify.verifyBinary(rnd1, rnd2 - 1, method);
+                Verify.verifyBinary(0, values[0], method);
+                Verify.verifyBinary(values[0], 0, method);
+                Verify.verifyBinary(0, values[1], method);
+                Verify.verifyBinary(values[1], 0, method);
+            }
+        }
+    }
+
+    public static class NonConstantLongTest {
+        public static long[] values = { Long.MIN_VALUE, Long.MAX_VALUE, 0, Long.MAX_VALUE - 1831 };
+        public static Random rnd = Utils.getRandomInstance();
+
+        public static void verify(BinaryLongMethod method) {
+            for (int i = 0; i < 50000; ++i) {
+                long rnd1 = rnd.nextLong(), rnd2 = rnd.nextLong();
+                Verify.verifyBinary(rnd1, rnd2, method);
+                Verify.verifyBinary(rnd1, rnd2 + 1, method);
+                Verify.verifyBinary(rnd1 + 1, rnd2, method);
+                Verify.verifyBinary(rnd1 - 1, rnd2, method);
+                Verify.verifyBinary(rnd1, rnd2 - 1, method);
+                Verify.verifyBinary(rnd1 + Long.MAX_VALUE - rnd2, rnd2 + 1, method);
+                Verify.verifyBinary(values[0], values[2], method);
+                Verify.verifyBinary(values[1], values[2], method);
+                Verify.verifyBinary(values[3], 74L, method);
+            }
+        }
+    }
+
+    public static class LoopDependentTest {
+        public static Random rnd = Utils.getRandomInstance();
+
+        public static void verify(BinaryMethod method) {
+            int rnd1 = rnd.nextInt(), rnd2 = rnd.nextInt();
+            runTest(rnd1, rnd2, method);
+        }
+
+        private static void runTest(int rnd1, int rnd2, BinaryMethod method) {
+            for (int i = 0; i < 50000; ++i) {
+                Verify.verifyBinary(rnd1 + i, rnd2 + i, method);
+                Verify.verifyBinary(rnd1 + i, rnd2 + (i & 0xff), method);
+                Verify.verifyBinary(rnd1 - i, rnd2 - (i & 0xff), method);
+                Verify.verifyBinary(rnd1 + i + 1, rnd2 + i + 2, method);
+                Verify.verifyBinary(rnd1 + i * 2, rnd2 + i, method);
+            }
+        }
+    }
+
+    public static class ConstantTest {
+        public static void verify(BinaryMethod method) {
+            for (int i = 0; i < 50000; ++i) {
+                Verify.verifyBinary(5, 7, method);
+                Verify.verifyBinary(Integer.MAX_VALUE, 1, method);
+                Verify.verifyBinary(Integer.MIN_VALUE, -1, method);
+                Verify.verifyBinary(Integer.MAX_VALUE, -1, method);
+                Verify.verifyBinary(Integer.MIN_VALUE, 1, method);
+                Verify.verifyBinary(Integer.MAX_VALUE / 2, Integer.MAX_VALUE / 2, method);
+                Verify.verifyBinary(Integer.MAX_VALUE / 2, (Integer.MAX_VALUE / 2) + 3, method);
+                Verify.verifyBinary(Integer.MAX_VALUE, Integer.MIN_VALUE, method);
+            }
+        }
+    }
+
+    public static class ConstantLongTest {
+        public static void verify(BinaryLongMethod method) {
+            for (int i = 0; i < 50000; ++i) {
+                Verify.verifyBinary(5, 7, method);
+                Verify.verifyBinary(Long.MAX_VALUE, 1, method);
+                Verify.verifyBinary(Long.MIN_VALUE, -1, method);
+                Verify.verifyBinary(Long.MAX_VALUE, -1, method);
+                Verify.verifyBinary(Long.MIN_VALUE, 1, method);
+                Verify.verifyBinary(Long.MAX_VALUE / 2, Long.MAX_VALUE / 2, method);
+                Verify.verifyBinary(Long.MAX_VALUE / 2, (Long.MAX_VALUE / 2) + 3, method);
+                Verify.verifyBinary(Long.MAX_VALUE, Long.MIN_VALUE, method);
+            }
+        }
+    }
+
+    public static interface BinaryMethod {
+        int safeMethod(int a, int b);
+        int checkMethod(int a, int b);
+        int unchecked(int a, int b);
+        String name();
+    }
+
+    public static interface UnaryMethod {
+        int safeMethod(int value);
+        int checkMethod(int value);
+        int unchecked(int value);
+        String name();
+    }
+
+    public static interface BinaryLongMethod {
+        long safeMethod(long a, long b);
+        long checkMethod(long a, long b);
+        long unchecked(long a, long b);
+        String name();
+    }
+
+    public static interface UnaryLongMethod {
+        long safeMethod(long value);
+        long checkMethod(long value);
+        long unchecked(long value);
+        String name();
+    }
+
+    public static class UnaryToBinary implements BinaryMethod {
+        private final UnaryMethod method;
+        public UnaryToBinary(UnaryMethod method) {
+            this.method = method;
+        }
+
+        @Override
+        public int safeMethod(int a, int b) {
+            return method.safeMethod(a);
+        }
+
+        @Override
+        public int checkMethod(int a, int b) {
+            return method.checkMethod(a);
+        }
+
+        @Override
+        public int unchecked(int a, int b) {
+            return method.unchecked(a);
+
+        }
+
+        @Override
+        public String name() {
+            return method.name();
+        }
+    }
+
+    public static class UnaryToBinaryLong implements BinaryLongMethod {
+        private final UnaryLongMethod method;
+        public UnaryToBinaryLong(UnaryLongMethod method) {
+            this.method = method;
+        }
+
+        @Override
+        public long safeMethod(long a, long b) {
+            return method.safeMethod(a);
+        }
+
+        @Override
+        public long checkMethod(long a, long b) {
+            return method.checkMethod(a);
+        }
+
+        @Override
+        public long unchecked(long a, long b) {
+            return method.unchecked(a);
+
+        }
+
+        @Override
+        public String name() {
+            return method.name();
+        }
+    }
+
+
+    public static class AddExactI implements BinaryMethod {
+        @Override
+        public int safeMethod(int x, int y) {
+            int r = x + y;
+            // HD 2-12 Overflow iff both arguments have the opposite sign of the result
+            if (((x ^ r) & (y ^ r)) < 0) {
+                throw new ArithmeticException("integer overflow");
+            }
+            return r;
+
+        }
+
+        @Override
+        public int checkMethod(int a, int b) {
+            return Math.addExact(a, b);
+        }
+
+        @Override
+        public String name() {
+            return "addExact";
+        }
+
+        @Override
+        public int unchecked(int a, int b) {
+            return a + b;
+        }
+    }
+
+    public static class AddExactL implements BinaryLongMethod {
+        @Override
+        public long safeMethod(long x, long y) {
+            long r = x + y;
+            // HD 2-12 Overflow iff both arguments have the opposite sign of the result
+            if (((x ^ r) & (y ^ r)) < 0) {
+                throw new ArithmeticException("integer overflow");
+            }
+            return r;
+
+        }
+
+        @Override
+        public long checkMethod(long a, long b) {
+            return Math.addExact(a, b);
+        }
+
+        @Override
+        public String name() {
+            return "addExactLong";
+        }
+
+        @Override
+        public long unchecked(long a, long b) {
+            return a + b;
+        }
+    }
+
+    public static class MulExactI implements BinaryMethod {
+        @Override
+        public int safeMethod(int x, int y) {
+            long r = (long)x * (long)y;
+            if ((int)r != r) {
+                throw new ArithmeticException("integer overflow");
+            }
+            return (int)r;
+
+        }
+
+        @Override
+        public int checkMethod(int 
