@@ -410,4 +410,268 @@ public class Verify {
         }
 
         @Override
-        public int checkMethod(int 
+        public int checkMethod(int a, int b) {
+            return Math.multiplyExact(a, b);
+        }
+
+        @Override
+        public int unchecked(int a, int b) {
+            return a * b;
+        }
+
+        @Override
+        public String name() {
+            return "multiplyExact";
+        }
+    }
+
+    public static class MulExactL implements BinaryLongMethod {
+        @Override
+        public long safeMethod(long x, long y) {
+            long r = x * y;
+            long ax = Math.abs(x);
+            long ay = Math.abs(y);
+            if (((ax | ay) >>> 31 != 0)) {
+                // Some bits greater than 2^31 that might cause overflow
+                // Check the result using the divide operator
+                // and check for the special case of Long.MIN_VALUE * -1
+                if (((y != 0) && (r / y != x)) ||
+                        (x == Long.MIN_VALUE && y == -1)) {
+                    throw new ArithmeticException("long overflow");
+                }
+            }
+            return r;
+        }
+
+        @Override
+        public long checkMethod(long a, long b) {
+            return Math.multiplyExact(a, b);
+        }
+
+        @Override
+        public long unchecked(long a, long b) {
+            return a * b;
+        }
+
+        @Override
+        public String name() {
+            return "multiplyExact";
+        }
+    }
+
+    public static class NegExactL implements UnaryLongMethod {
+        @Override
+        public long safeMethod(long a) {
+            if (a == Long.MIN_VALUE) {
+                throw new ArithmeticException("long overflow");
+            }
+
+            return -a;
+
+        }
+
+        @Override
+        public long checkMethod(long value) {
+            return Math.negateExact(value);
+        }
+
+        @Override
+        public long unchecked(long value) {
+            return -value;
+        }
+
+        @Override
+        public String name() {
+            return "negateExactLong";
+        }
+    }
+
+    public static class NegExactI implements UnaryMethod {
+        @Override
+        public int safeMethod(int a) {
+            if (a == Integer.MIN_VALUE) {
+                throw new ArithmeticException("integer overflow");
+            }
+
+            return -a;
+
+        }
+
+        @Override
+        public int checkMethod(int value) {
+            return Math.negateExact(value);
+        }
+
+        @Override
+        public int unchecked(int value) {
+            return -value;
+        }
+
+        @Override
+        public String name() {
+            return "negateExact";
+        }
+    }
+
+    public static class SubExactI implements BinaryMethod {
+        @Override
+        public int safeMethod(int x, int y) {
+            int r = x - y;
+            // HD 2-12 Overflow iff the arguments have different signs and
+            // the sign of the result is different than the sign of x
+            if (((x ^ y) & (x ^ r)) < 0) {
+                throw new ArithmeticException("integer overflow");
+            }
+            return r;
+        }
+
+        @Override
+        public int checkMethod(int a, int b) {
+            return Math.subtractExact(a, b);
+        }
+
+        @Override
+        public int unchecked(int a, int b) {
+            return a - b;
+        }
+
+        @Override
+        public String name() {
+            return "subtractExact";
+        }
+    }
+
+    public static class SubExactL implements BinaryLongMethod {
+        @Override
+        public long safeMethod(long x, long y) {
+            long r = x - y;
+            // HD 2-12 Overflow iff the arguments have different signs and
+            // the sign of the result is different than the sign of x
+            if (((x ^ y) & (x ^ r)) < 0) {
+                throw new ArithmeticException("integer overflow");
+            }
+            return r;
+        }
+
+        @Override
+        public long checkMethod(long a, long b) {
+            return Math.subtractExact(a, b);
+        }
+
+        @Override
+        public long unchecked(long a, long b) {
+            return a - b;
+        }
+
+        @Override
+        public String name() {
+            return "subtractExactLong";
+        }
+    }
+
+    static class IncExactL implements UnaryLongMethod {
+        @Override
+        public long safeMethod(long a) {
+            if (a == Long.MAX_VALUE) {
+                throw new ArithmeticException("long overflow");
+            }
+
+            return a + 1L;
+
+        }
+
+        @Override
+        public long checkMethod(long value) {
+            return Math.incrementExact(value);
+        }
+
+        @Override
+        public long unchecked(long value) {
+            return value + 1;
+        }
+
+        @Override
+        public String name() {
+            return "incrementExactLong";
+        }
+    }
+
+    static class IncExactI implements UnaryMethod {
+        @Override
+        public int safeMethod(int a) {
+            if (a == Integer.MAX_VALUE) {
+                throw new ArithmeticException("integer overflow");
+            }
+
+            return a + 1;
+        }
+
+        @Override
+        public int checkMethod(int value) {
+            return Math.incrementExact(value);
+        }
+
+        @Override
+        public int unchecked(int value) {
+            return value + 1;
+        }
+
+        @Override
+        public String name() {
+            return "incrementExact";
+        }
+    }
+
+    static class DecExactL implements UnaryLongMethod {
+        @Override
+        public long safeMethod(long a) {
+            if (a == Long.MIN_VALUE) {
+                throw new ArithmeticException("long overflow");
+            }
+
+            return a - 1L;
+        }
+
+        @Override
+        public long checkMethod(long value) {
+            return Math.decrementExact(value);
+        }
+
+        @Override
+        public long unchecked(long value) {
+            return value - 1;
+        }
+
+        @Override
+        public String name() {
+            return "decExactLong";
+        }
+    }
+
+    static class DecExactI implements UnaryMethod {
+        @Override
+        public int safeMethod(int a) {
+            if (a == Integer.MIN_VALUE) {
+                throw new ArithmeticException("integer overflow");
+            }
+
+            return a - 1;
+        }
+
+        @Override
+        public int checkMethod(int value) {
+            return Math.decrementExact(value);
+        }
+
+        @Override
+        public int unchecked(int value) {
+            return value - 1;
+        }
+
+        @Override
+        public String name() {
+            return "decrementExact";
+        }
+    }
+
+}
