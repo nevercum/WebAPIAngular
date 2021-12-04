@@ -225,4 +225,150 @@ import static java.lang.invoke.MethodHandles.Lookup.IMPL_LOOKUP;
  * {@code CONSTANT_InterfaceMethodref}, or {@code CONSTANT_Fieldref}
  * constant pool entry.
  * (For full details on method handle constants, see sections {@jvms
- * 4.4.8} an
+ * 4.4.8} and {@jvms 5.4.3.5} of the Java Virtual Machine
+ * Specification.)
+ * <p>
+ * Method handles produced by lookups or constant loads from methods or
+ * constructors with the variable arity modifier bit ({@code 0x0080})
+ * have a corresponding variable arity, as if they were defined with
+ * the help of {@link #asVarargsCollector asVarargsCollector}
+ * or {@link #withVarargs withVarargs}.
+ * <p>
+ * A method reference may refer either to a static or non-static method.
+ * In the non-static case, the method handle type includes an explicit
+ * receiver argument, prepended before any other arguments.
+ * In the method handle's type, the initial receiver argument is typed
+ * according to the class under which the method was initially requested.
+ * (E.g., if a non-static method handle is obtained via {@code ldc},
+ * the type of the receiver is the class named in the constant pool entry.)
+ * <p>
+ * Method handle constants are subject to the same link-time access checks
+ * their corresponding bytecode instructions, and the {@code ldc} instruction
+ * will throw corresponding linkage errors if the bytecode behaviors would
+ * throw such errors.
+ * <p>
+ * As a corollary of this, access to protected members is restricted
+ * to receivers only of the accessing class, or one of its subclasses,
+ * and the accessing class must in turn be a subclass (or package sibling)
+ * of the protected member's defining class.
+ * If a method reference refers to a protected non-static method or field
+ * of a class outside the current package, the receiver argument will
+ * be narrowed to the type of the accessing class.
+ * <p>
+ * When a method handle to a virtual method is invoked, the method is
+ * always looked up in the receiver (that is, the first argument).
+ * <p>
+ * A non-virtual method handle to a specific virtual method implementation
+ * can also be created.  These do not perform virtual lookup based on
+ * receiver type.  Such a method handle simulates the effect of
+ * an {@code invokespecial} instruction to the same method.
+ * A non-virtual method handle can also be created to simulate the effect
+ * of an {@code invokevirtual} or {@code invokeinterface} instruction on
+ * a private method (as applicable).
+ *
+ * <h2>Usage examples</h2>
+ * Here are some examples of usage:
+ * {@snippet lang="java" :
+Object x, y; String s; int i;
+MethodType mt; MethodHandle mh;
+MethodHandles.Lookup lookup = MethodHandles.lookup();
+// mt is (char,char)String
+mt = MethodType.methodType(String.class, char.class, char.class);
+mh = lookup.findVirtual(String.class, "replace", mt);
+s = (String) mh.invokeExact("daddy",'d','n');
+// invokeExact(Ljava/lang/String;CC)Ljava/lang/String;
+assertEquals(s, "nanny");
+// weakly typed invocation (using MHs.invoke)
+s = (String) mh.invokeWithArguments("sappy", 'p', 'v');
+assertEquals(s, "savvy");
+// mt is (Object[])List
+mt = MethodType.methodType(java.util.List.class, Object[].class);
+mh = lookup.findStatic(java.util.Arrays.class, "asList", mt);
+assert(mh.isVarargsCollector());
+x = mh.invoke("one", "two");
+// invoke(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+assertEquals(x, java.util.Arrays.asList("one","two"));
+// mt is (Object,Object,Object)Object
+mt = MethodType.genericMethodType(3);
+mh = mh.asType(mt);
+x = mh.invokeExact((Object)1, (Object)2, (Object)3);
+// invokeExact(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+assertEquals(x, java.util.Arrays.asList(1,2,3));
+// mt is ()int
+mt = MethodType.methodType(int.class);
+mh = lookup.findVirtual(java.util.List.class, "size", mt);
+i = (int) mh.invokeExact(java.util.Arrays.asList(1,2,3));
+// invokeExact(Ljava/util/List;)I
+assert(i == 3);
+mt = MethodType.methodType(void.class, String.class);
+mh = lookup.findVirtual(java.io.PrintStream.class, "println", mt);
+mh.invokeExact(System.out, "Hello, world.");
+// invokeExact(Ljava/io/PrintStream;Ljava/lang/String;)V
+ * }
+ * Each of the above calls to {@code invokeExact} or plain {@code invoke}
+ * generates a single invokevirtual instruction with
+ * the symbolic type descriptor indicated in the following comment.
+ * In these examples, the helper method {@code assertEquals} is assumed to
+ * be a method which calls {@link java.util.Objects#equals(Object,Object) Objects.equals}
+ * on its arguments, and asserts that the result is true.
+ *
+ * <h2>Exceptions</h2>
+ * The methods {@code invokeExact} and {@code invoke} are declared
+ * to throw {@link java.lang.Throwable Throwable},
+ * which is to say that there is no static restriction on what a method handle
+ * can throw.  Since the JVM does not distinguish between checked
+ * and unchecked exceptions (other than by their class, of course),
+ * there is no particular effect on bytecode shape from ascribing
+ * checked exceptions to method handle invocations.  But in Java source
+ * code, methods which perform method handle calls must either explicitly
+ * throw {@code Throwable}, or else must catch all
+ * throwables locally, rethrowing only those which are legal in the context,
+ * and wrapping ones which are illegal.
+ *
+ * <h2><a id="sigpoly"></a>Signature polymorphism</h2>
+ * The unusual compilation and linkage behavior of
+ * {@code invokeExact} and plain {@code invoke}
+ * is referenced by the term <em>signature polymorphism</em>.
+ * As defined in the Java Language Specification,
+ * a signature polymorphic method is one which can operate with
+ * any of a wide range of call signatures and return types.
+ * <p>
+ * In source code, a call to a signature polymorphic method will
+ * compile, regardless of the requested symbolic type descriptor.
+ * As usual, the Java compiler emits an {@code invokevirtual}
+ * instruction with the given symbolic type descriptor against the named method.
+ * The unusual part is that the symbolic type descriptor is derived from
+ * the actual argument and return types, not from the method declaration.
+ * <p>
+ * When the JVM processes bytecode containing signature polymorphic calls,
+ * it will successfully link any such call, regardless of its symbolic type descriptor.
+ * (In order to retain type safety, the JVM will guard such calls with suitable
+ * dynamic type checks, as described elsewhere.)
+ * <p>
+ * Bytecode generators, including the compiler back end, are required to emit
+ * untransformed symbolic type descriptors for these methods.
+ * Tools which determine symbolic linkage are required to accept such
+ * untransformed descriptors, without reporting linkage errors.
+ *
+ * <h2>Interoperation between method handles and the Core Reflection API</h2>
+ * Using factory methods in the {@link java.lang.invoke.MethodHandles.Lookup Lookup} API,
+ * any class member represented by a Core Reflection API object
+ * can be converted to a behaviorally equivalent method handle.
+ * For example, a reflective {@link java.lang.reflect.Method Method} can
+ * be converted to a method handle using
+ * {@link java.lang.invoke.MethodHandles.Lookup#unreflect Lookup.unreflect}.
+ * The resulting method handles generally provide more direct and efficient
+ * access to the underlying class members.
+ * <p>
+ * As a special case,
+ * when the Core Reflection API is used to view the signature polymorphic
+ * methods {@code invokeExact} or plain {@code invoke} in this class,
+ * they appear as ordinary non-polymorphic methods.
+ * Their reflective appearance, as viewed by
+ * {@link java.lang.Class#getDeclaredMethod Class.getDeclaredMethod},
+ * is unaffected by their special status in this API.
+ * For example, {@link java.lang.reflect.Method#getModifiers Method.getModifiers}
+ * will report exactly those modifier bits required for any similarly
+ * declared method, including in this case {@code native} and {@code varargs} bits.
+ * <p>
+ * As with any reflected method, these methods
