@@ -643,4 +643,145 @@ public abstract sealed class MethodHandle implements Constable
      *         cast to {@code A} or a {@code NullPointerException} if any
      *         trailing element is {@code null} and {@code A} is not a reference
      *         type. </li>
-     *     <li>Rep
+     *     <li>Replace the logical arguments gathered into the array of
+     *         type {@code A[]} with the array itself, thus shortening
+     *         the argument list to length {@code M}. This final argument
+     *         retains the static type {@code A[]}.</li>
+     *     <li>Adjust the type {@code TN} by changing the {@code N}th
+     *         parameter type from {@code Object} to {@code A[]}.
+     *     </ul>
+     * <li>Force the original target method handle {@code MH0} to the
+     *     required type, as {@code MH1 = MH0.asType(TN)}. </li>
+     * <li>Spread the argument list into {@code N} separate arguments {@code A0, ...}. </li>
+     * <li>Invoke the type-adjusted method handle on the unpacked arguments:
+     *     MH1.invokeExact(A0, ...). </li>
+     * <li>Take the return value as an {@code Object} reference. </li>
+     * </ul>
+     * <p>
+     * If the target method handle has variable arity, and the argument list is longer
+     * than that arity, the excess arguments, starting at the position of the trailing
+     * array argument, will be gathered (if possible, as if by {@code asType} conversions)
+     * into an array of the appropriate type, and invocation will proceed on the
+     * shortened argument list.
+     * In this way, <em>jumbo argument lists</em> which would spread into more
+     * than 254 slots can still be processed uniformly.
+     * <p>
+     * Unlike the {@link #invoke(Object...) generic} invocation mode, which can
+     * "recycle" an array argument, passing it directly to the target method,
+     * this invocation mode <em>always</em> creates a new array parameter, even
+     * if the original array passed to {@code invokeWithArguments} would have
+     * been acceptable as a direct argument to the target method.
+     * Even if the number {@code M} of actual arguments is the arity {@code N},
+     * and the last argument is dynamically a suitable array of type {@code A[]},
+     * it will still be boxed into a new one-element array, since the call
+     * site statically types the argument as {@code Object}, not an array type.
+     * This is not a special rule for this method, but rather a regular effect
+     * of the {@linkplain #asVarargsCollector rules for variable-arity invocation}.
+     * <p>
+     * Because of the action of the {@code asType} step, the following argument
+     * conversions are applied as necessary:
+     * <ul>
+     * <li>reference casting
+     * <li>unboxing
+     * <li>widening primitive conversions
+     * <li>variable arity conversion
+     * </ul>
+     * <p>
+     * The result returned by the call is boxed if it is a primitive,
+     * or forced to null if the return type is void.
+     * <p>
+     * Unlike the signature polymorphic methods {@code invokeExact} and {@code invoke},
+     * {@code invokeWithArguments} can be accessed normally via the Core Reflection API and JNI.
+     * It can therefore be used as a bridge between native or reflective code and method handles.
+     * @apiNote
+     * This call is approximately equivalent to the following code:
+     * {@snippet lang="java" :
+     * // for jumbo argument lists, adapt varargs explicitly:
+     * int N = (arguments == null? 0: arguments.length);
+     * int M = this.type.parameterCount();
+     * int MAX_SAFE = 127;  // 127 longs require 254 slots, which is OK
+     * if (N > MAX_SAFE && N > M && this.isVarargsCollector()) {
+     *   Class<?> arrayType = this.type().lastParameterType();
+     *   Class<?> elemType = arrayType.getComponentType();
+     *   if (elemType != null) {
+     *     Object args2 = Array.newInstance(elemType, M);
+     *     MethodHandle arraySetter = MethodHandles.arrayElementSetter(arrayType);
+     *     for (int i = 0; i < M; i++) {
+     *       arraySetter.invoke(args2, i, arguments[M-1 + i]);
+     *     }
+     *     arguments = Arrays.copyOf(arguments, M);
+     *     arguments[M-1] = args2;
+     *     return this.asFixedArity().invokeWithArguments(arguments);
+     *   }
+     * } // done with explicit varargs processing
+     *
+     * // Handle fixed arity and non-jumbo variable arity invocation.
+     * MethodHandle invoker = MethodHandles.spreadInvoker(this.type(), 0);
+     * Object result = invoker.invokeExact(this, arguments);
+     * }
+     *
+     * @param arguments the arguments to pass to the target
+     * @return the result returned by the target
+     * @throws ClassCastException if an argument cannot be converted by reference casting
+     * @throws WrongMethodTypeException if the target's type cannot be adjusted to take the given number of {@code Object} arguments
+     * @throws Throwable anything thrown by the target method invocation
+     * @see MethodHandles#spreadInvoker
+     */
+    public Object invokeWithArguments(Object... arguments) throws Throwable {
+        // Note: Jumbo argument lists are handled in the variable-arity subclass.
+        MethodType invocationType = MethodType.genericMethodType(arguments == null ? 0 : arguments.length);
+        return invocationType.invokers().spreadInvoker(0).invokeExact(asType(invocationType), arguments);
+    }
+
+    /**
+     * Performs a variable arity invocation, passing the arguments in the given list
+     * to the method handle, as if via an inexact {@link #invoke invoke} from a call site
+     * which mentions only the type {@code Object}, and whose actual argument count is the length
+     * of the argument list.
+     * <p>
+     * This method is also equivalent to the following code:
+     * {@snippet lang="java" :
+     *   invokeWithArguments(arguments.toArray())
+     * }
+     * <p>
+     * Jumbo-sized lists are acceptable if this method handle has variable arity.
+     * See {@link #invokeWithArguments(Object[])} for details.
+     *
+     * @param arguments the arguments to pass to the target
+     * @return the result returned by the target
+     * @throws NullPointerException if {@code arguments} is a null reference
+     * @throws ClassCastException if an argument cannot be converted by reference casting
+     * @throws WrongMethodTypeException if the target's type cannot be adjusted to take the given number of {@code Object} arguments
+     * @throws Throwable anything thrown by the target method invocation
+     */
+    public Object invokeWithArguments(java.util.List<?> arguments) throws Throwable {
+        return invokeWithArguments(arguments.toArray());
+    }
+
+    /**
+     * Produces an adapter method handle which adapts the type of the
+     * current method handle to a new type.
+     * The resulting method handle is guaranteed to report a type
+     * which is equal to the desired new type.
+     * <p>
+     * If the original type and new type are equal, returns {@code this}.
+     * <p>
+     * The new method handle, when invoked, will perform the following
+     * steps:
+     * <ul>
+     * <li>Convert the incoming argument list to match the original
+     *     method handle's argument list.
+     * <li>Invoke the original method handle on the converted argument list.
+     * <li>Convert any result returned by the original method handle
+     *     to the return type of new method handle.
+     * </ul>
+     * <p>
+     * This method provides the crucial behavioral difference between
+     * {@link #invokeExact invokeExact} and plain, inexact {@link #invoke invoke}.
+     * The two methods
+     * perform the same steps when the caller's type descriptor exactly matches
+     * the callee's, but when the types differ, plain {@link #invoke invoke}
+     * also calls {@code asType} (or some internal equivalent) in order
+     * to match up the caller's and callee's types.
+     * <p>
+     * If the current method is a variable arity method h
