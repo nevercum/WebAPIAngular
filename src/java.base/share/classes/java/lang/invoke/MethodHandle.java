@@ -513,4 +513,134 @@ public abstract sealed class MethodHandle implements Constable
      * adjusted by calling {@link #asType asType} to adjust this method handle
      * to the required type, and then the call proceeds as if by
      * {@link #invokeExact invokeExact} on the adjusted method handle.
-  
+     * <p>
+     * There is no guarantee that the {@code asType} call is actually made.
+     * If the JVM can predict the results of making the call, it may perform
+     * adaptations directly on the caller's arguments,
+     * and call the target method handle according to its own exact type.
+     * <p>
+     * The resolved type descriptor at the call site of {@code invoke} must
+     * be a valid argument to the receivers {@code asType} method.
+     * In particular, the caller must specify the same argument arity
+     * as the callee's type,
+     * if the callee is not a {@linkplain #asVarargsCollector variable arity collector}.
+     * <p>
+     * When this method is observed via the Core Reflection API,
+     * it will appear as a single native method, taking an object array and returning an object.
+     * If this native method is invoked directly via
+     * {@link java.lang.reflect.Method#invoke java.lang.reflect.Method.invoke}, via JNI,
+     * or indirectly via {@link java.lang.invoke.MethodHandles.Lookup#unreflect Lookup.unreflect},
+     * it will throw an {@code UnsupportedOperationException}.
+     * @param args the signature-polymorphic parameter list, statically represented using varargs
+     * @return the signature-polymorphic result, statically represented using {@code Object}
+     * @throws WrongMethodTypeException if the target's type cannot be adjusted to the caller's symbolic type descriptor
+     * @throws ClassCastException if the target's type can be adjusted to the caller, but a reference cast fails
+     * @throws Throwable anything thrown by the underlying method propagates unchanged through the method handle call
+     */
+    @IntrinsicCandidate
+    public final native @PolymorphicSignature Object invoke(Object... args) throws Throwable;
+
+    /**
+     * Private method for trusted invocation of a method handle respecting simplified signatures.
+     * Type mismatches will not throw {@code WrongMethodTypeException}, but could crash the JVM.
+     * <p>
+     * The caller signature is restricted to the following basic types:
+     * Object, int, long, float, double, and void return.
+     * <p>
+     * The caller is responsible for maintaining type correctness by ensuring
+     * that the each outgoing argument value is a member of the range of the corresponding
+     * callee argument type.
+     * (The caller should therefore issue appropriate casts and integer narrowing
+     * operations on outgoing argument values.)
+     * The caller can assume that the incoming result value is part of the range
+     * of the callee's return type.
+     * @param args the signature-polymorphic parameter list, statically represented using varargs
+     * @return the signature-polymorphic result, statically represented using {@code Object}
+     */
+    @IntrinsicCandidate
+    /*non-public*/
+    final native @PolymorphicSignature Object invokeBasic(Object... args) throws Throwable;
+
+    /**
+     * Private method for trusted invocation of a MemberName of kind {@code REF_invokeVirtual}.
+     * The caller signature is restricted to basic types as with {@code invokeBasic}.
+     * The trailing (not leading) argument must be a MemberName.
+     * @param args the signature-polymorphic parameter list, statically represented using varargs
+     * @return the signature-polymorphic result, statically represented using {@code Object}
+     */
+    @IntrinsicCandidate
+    /*non-public*/
+    static native @PolymorphicSignature Object linkToVirtual(Object... args) throws Throwable;
+
+    /**
+     * Private method for trusted invocation of a MemberName of kind {@code REF_invokeStatic}.
+     * The caller signature is restricted to basic types as with {@code invokeBasic}.
+     * The trailing (not leading) argument must be a MemberName.
+     * @param args the signature-polymorphic parameter list, statically represented using varargs
+     * @return the signature-polymorphic result, statically represented using {@code Object}
+     */
+    @IntrinsicCandidate
+    /*non-public*/
+    static native @PolymorphicSignature Object linkToStatic(Object... args) throws Throwable;
+
+    /**
+     * Private method for trusted invocation of a MemberName of kind {@code REF_invokeSpecial}.
+     * The caller signature is restricted to basic types as with {@code invokeBasic}.
+     * The trailing (not leading) argument must be a MemberName.
+     * @param args the signature-polymorphic parameter list, statically represented using varargs
+     * @return the signature-polymorphic result, statically represented using {@code Object}
+     */
+    @IntrinsicCandidate
+    /*non-public*/
+    static native @PolymorphicSignature Object linkToSpecial(Object... args) throws Throwable;
+
+    /**
+     * Private method for trusted invocation of a MemberName of kind {@code REF_invokeInterface}.
+     * The caller signature is restricted to basic types as with {@code invokeBasic}.
+     * The trailing (not leading) argument must be a MemberName.
+     * @param args the signature-polymorphic parameter list, statically represented using varargs
+     * @return the signature-polymorphic result, statically represented using {@code Object}
+     */
+    @IntrinsicCandidate
+    /*non-public*/
+    static native @PolymorphicSignature Object linkToInterface(Object... args) throws Throwable;
+
+    /** TODO */
+    @IntrinsicCandidate
+    /*non-public*/ static native @PolymorphicSignature Object linkToNative(Object... args) throws Throwable;
+
+    /**
+     * Performs a variable arity invocation, passing the arguments in the given array
+     * to the method handle, as if via an inexact {@link #invoke invoke} from a call site
+     * which mentions only the type {@code Object}, and whose actual argument count is the length
+     * of the argument array.
+     * <p>
+     * Specifically, execution proceeds as if by the following steps,
+     * although the methods are not guaranteed to be called if the JVM
+     * can predict their effects.
+     * <ul>
+     * <li>Determine the length of the argument array as {@code N}.
+     *     For a null reference, {@code N=0}. </li>
+     * <li>Collect the {@code N} elements of the array as a logical
+     *     argument list, each argument statically typed as an {@code Object}. </li>
+     * <li>Determine, as {@code M}, the parameter count of the type of this
+     *     method handle. </li>
+     * <li>Determine the general type {@code TN} of {@code N} arguments or
+     *     {@code M} arguments, if smaller than {@code N}, as
+     *     {@code TN=MethodType.genericMethodType(Math.min(N, M))}.</li>
+     * <li>If {@code N} is greater than {@code M}, perform the following
+     *     checks and actions to shorten the logical argument list: <ul>
+     *     <li>Check that this method handle has variable arity with a
+     *         {@linkplain MethodType#lastParameterType trailing parameter}
+     *         of some array type {@code A[]}.  If not, fail with a
+     *         {@code WrongMethodTypeException}. </li>
+     *     <li>Collect the trailing elements (there are {@code N-M+1} of them)
+     *         from the logical argument list into a single array of
+     *         type {@code A[]}, using {@code asType} conversions to
+     *         convert each trailing argument to type {@code A}. </li>
+     *     <li>If any of these conversions proves impossible, fail with either
+     *         a {@code ClassCastException} if any trailing element cannot be
+     *         cast to {@code A} or a {@code NullPointerException} if any
+     *         trailing element is {@code null} and {@code A} is not a reference
+     *         type. </li>
+     *     <li>Rep
