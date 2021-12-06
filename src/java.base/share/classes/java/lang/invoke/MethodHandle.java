@@ -784,4 +784,146 @@ public abstract sealed class MethodHandle implements Constable
      * also calls {@code asType} (or some internal equivalent) in order
      * to match up the caller's and callee's types.
      * <p>
-     * If the current method is a variable arity method h
+     * If the current method is a variable arity method handle
+     * argument list conversion may involve the conversion and collection
+     * of several arguments into an array, as
+     * {@linkplain #asVarargsCollector described elsewhere}.
+     * In every other case, all conversions are applied <em>pairwise</em>,
+     * which means that each argument or return value is converted to
+     * exactly one argument or return value (or no return value).
+     * The applied conversions are defined by consulting
+     * the corresponding component types of the old and new
+     * method handle types.
+     * <p>
+     * Let <em>T0</em> and <em>T1</em> be corresponding new and old parameter types,
+     * or old and new return types.  Specifically, for some valid index {@code i}, let
+     * <em>T0</em>{@code =newType.parameterType(i)} and <em>T1</em>{@code =this.type().parameterType(i)}.
+     * Or else, going the other way for return values, let
+     * <em>T0</em>{@code =this.type().returnType()} and <em>T1</em>{@code =newType.returnType()}.
+     * If the types are the same, the new method handle makes no change
+     * to the corresponding argument or return value (if any).
+     * Otherwise, one of the following conversions is applied
+     * if possible:
+     * <ul>
+     * <li>If <em>T0</em> and <em>T1</em> are references, then a cast to <em>T1</em> is applied.
+     *     (The types do not need to be related in any particular way.
+     *     This is because a dynamic value of null can convert to any reference type.)
+     * <li>If <em>T0</em> and <em>T1</em> are primitives, then a Java method invocation
+     *     conversion (JLS {@jls 5.3}) is applied, if one exists.
+     *     (Specifically, <em>T0</em> must convert to <em>T1</em> by a widening primitive conversion.)
+     * <li>If <em>T0</em> is a primitive and <em>T1</em> a reference,
+     *     a Java casting conversion (JLS {@jls 5.5}) is applied if one exists.
+     *     (Specifically, the value is boxed from <em>T0</em> to its wrapper class,
+     *     which is then widened as needed to <em>T1</em>.)
+     * <li>If <em>T0</em> is a reference and <em>T1</em> a primitive, an unboxing
+     *     conversion will be applied at runtime, possibly followed
+     *     by a Java method invocation conversion (JLS {@jls 5.3})
+     *     on the primitive value.  (These are the primitive widening conversions.)
+     *     <em>T0</em> must be a wrapper class or a supertype of one.
+     *     (In the case where <em>T0</em> is Object, these are the conversions
+     *     allowed by {@link java.lang.reflect.Method#invoke java.lang.reflect.Method.invoke}.)
+     *     The unboxing conversion must have a possibility of success, which means that
+     *     if <em>T0</em> is not itself a wrapper class, there must exist at least one
+     *     wrapper class <em>TW</em> which is a subtype of <em>T0</em> and whose unboxed
+     *     primitive value can be widened to <em>T1</em>.
+     * <li>If the return type <em>T1</em> is marked as void, any returned value is discarded
+     * <li>If the return type <em>T0</em> is void and <em>T1</em> a reference, a null value is introduced.
+     * <li>If the return type <em>T0</em> is void and <em>T1</em> a primitive,
+     *     a zero value is introduced.
+     * </ul>
+     * (<em>Note:</em> Both <em>T0</em> and <em>T1</em> may be regarded as static types,
+     * because neither corresponds specifically to the <em>dynamic type</em> of any
+     * actual argument or return value.)
+     * <p>
+     * The method handle conversion cannot be made if any one of the required
+     * pairwise conversions cannot be made.
+     * <p>
+     * At runtime, the conversions applied to reference arguments
+     * or return values may require additional runtime checks which can fail.
+     * An unboxing operation may fail because the original reference is null,
+     * causing a {@link java.lang.NullPointerException NullPointerException}.
+     * An unboxing operation or a reference cast may also fail on a reference
+     * to an object of the wrong type,
+     * causing a {@link java.lang.ClassCastException ClassCastException}.
+     * Although an unboxing operation may accept several kinds of wrappers,
+     * if none are available, a {@code ClassCastException} will be thrown.
+     *
+     * @param newType the expected type of the new method handle
+     * @return a method handle which delegates to {@code this} after performing
+     *           any necessary argument conversions, and arranges for any
+     *           necessary return value conversions
+     * @throws NullPointerException if {@code newType} is a null reference
+     * @throws WrongMethodTypeException if the conversion cannot be made
+     * @see MethodHandles#explicitCastArguments
+     */
+    public final MethodHandle asType(MethodType newType) {
+        // Fast path alternative to a heavyweight {@code asType} call.
+        // Return 'this' if the conversion will be a no-op.
+        if (newType == type) {
+            return this;
+        }
+        // Return 'this.asTypeCache' if the conversion is already memoized.
+        MethodHandle at = asTypeCached(newType);
+        if (at != null) {
+            return at;
+        }
+        return setAsTypeCache(asTypeUncached(newType));
+    }
+
+    private MethodHandle asTypeCached(MethodType newType) {
+        MethodHandle atc = asTypeCache;
+        if (atc != null && newType == atc.type) {
+            return atc; // cache hit
+        }
+        SoftReference<MethodHandle> softCache = asTypeSoftCache;
+        if (softCache != null) {
+            atc = softCache.get();
+            if (atc != null && newType == atc.type) {
+                return atc; // soft cache hit
+            }
+        }
+        return null;
+    }
+
+    private MethodHandle setAsTypeCache(MethodHandle at) {
+        // Don't introduce a strong reference in the cache if newType depends on any class loader other than
+        // current method handle already does to avoid class loader leaks.
+        if (isSafeToCache(at.type)) {
+            asTypeCache = at;
+        } else {
+            asTypeSoftCache = new SoftReference<>(at);
+        }
+        return at;
+    }
+
+    /** Override this to change asType behavior. */
+    /*non-public*/
+    MethodHandle asTypeUncached(MethodType newType) {
+        if (!type.isConvertibleTo(newType)) {
+            throw new WrongMethodTypeException("cannot convert " + this + " to " + newType);
+        }
+        return MethodHandleImpl.makePairwiseConvert(this, newType, true);
+    }
+
+    /**
+     * Returns true if {@code newType} does not depend on any class loader other than current method handle already does.
+     * May conservatively return false in order to be efficient.
+     */
+    private boolean isSafeToCache(MethodType newType) {
+        ClassLoader loader = getApproximateCommonClassLoader(type);
+        return keepsAlive(newType, loader);
+    }
+
+    /**
+     * Tries to find the most specific {@code ClassLoader} which keeps all the classes mentioned in {@code mt} alive.
+     * In the worst case, returns a {@code ClassLoader} which relates to some of the classes mentioned in {@code mt}.
+     */
+    private static ClassLoader getApproximateCommonClassLoader(MethodType mt) {
+        ClassLoader loader = mt.rtype().getClassLoader();
+        for (Class<?> ptype : mt.ptypes()) {
+            ClassLoader ploader = ptype.getClassLoader();
+            if (isAncestorLoaderOf(loader, ploader)) {
+                loader = ploader; // pick more specific loader
+            } else {
+                // Either loader is a descendant of ploader or loaders are unrelated. Ignore both cases.
+                // When loaders are not related, just pick one and proceed. It reduces the prec
