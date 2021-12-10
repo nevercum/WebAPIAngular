@@ -1071,4 +1071,150 @@ assertEquals("[A, B, C]", (String) caToString2.invokeExact('A', "BC".toCharArray
 
     /**
      * Makes an <em>array-spreading</em> method handle, which accepts an array argument at a given position and spreads
-     * its elements as positional arguments in place of the array. The new method handle adapts, as its
+     * its elements as positional arguments in place of the array. The new method handle adapts, as its <i>target</i>,
+     * the current method handle. The type of the adapter will be the same as the type of the target, except that the
+     * {@code arrayLength} parameters of the target's type, starting at the zero-based position {@code spreadArgPos},
+     * are replaced by a single array parameter of type {@code arrayType}.
+     * <p>
+     * This method behaves very much like {@link #asSpreader(Class, int)}, but accepts an additional {@code spreadArgPos}
+     * argument to indicate at which position in the parameter list the spreading should take place.
+     *
+     * @apiNote Example:
+     * {@snippet lang="java" :
+    MethodHandle compare = LOOKUP.findStatic(Objects.class, "compare", methodType(int.class, Object.class, Object.class, Comparator.class));
+    MethodHandle compare2FromArray = compare.asSpreader(0, Object[].class, 2);
+    Object[] ints = new Object[]{3, 9, 7, 7};
+    Comparator<Integer> cmp = (a, b) -> a - b;
+    assertTrue((int) compare2FromArray.invoke(Arrays.copyOfRange(ints, 0, 2), cmp) < 0);
+    assertTrue((int) compare2FromArray.invoke(Arrays.copyOfRange(ints, 1, 3), cmp) > 0);
+    assertTrue((int) compare2FromArray.invoke(Arrays.copyOfRange(ints, 2, 4), cmp) == 0);
+     * }
+     * @param spreadArgPos the position (zero-based index) in the argument list at which spreading should start.
+     * @param arrayType usually {@code Object[]}, the type of the array argument from which to extract the spread arguments
+     * @param arrayLength the number of arguments to spread from an incoming array argument
+     * @return a new method handle which spreads an array argument at a given position,
+     *         before calling the original method handle
+     * @throws NullPointerException if {@code arrayType} is a null reference
+     * @throws IllegalArgumentException if {@code arrayType} is not an array type,
+     *         or if target does not have at least
+     *         {@code arrayLength} parameter types,
+     *         or if {@code arrayLength} is negative,
+     *         or if {@code spreadArgPos} has an illegal value (negative, or together with arrayLength exceeding the
+     *         number of arguments),
+     *         or if the resulting method handle's type would have
+     *         <a href="MethodHandle.html#maxarity">too many parameters</a>
+     * @throws WrongMethodTypeException if the implied {@code asType} call fails
+     *
+     * @see #asSpreader(Class, int)
+     * @since 9
+     */
+    public MethodHandle asSpreader(int spreadArgPos, Class<?> arrayType, int arrayLength) {
+        MethodType postSpreadType = asSpreaderChecks(arrayType, spreadArgPos, arrayLength);
+        MethodHandle afterSpread = this.asType(postSpreadType);
+        BoundMethodHandle mh = afterSpread.rebind();
+        LambdaForm lform = mh.editor().spreadArgumentsForm(1 + spreadArgPos, arrayType, arrayLength);
+        MethodType preSpreadType = postSpreadType.replaceParameterTypes(spreadArgPos, spreadArgPos + arrayLength, arrayType);
+        return mh.copyWith(preSpreadType, lform);
+    }
+
+    /**
+     * See if {@code asSpreader} can be validly called with the given arguments.
+     * Return the type of the method handle call after spreading but before conversions.
+     */
+    private MethodType asSpreaderChecks(Class<?> arrayType, int pos, int arrayLength) {
+        spreadArrayChecks(arrayType, arrayLength);
+        int nargs = type().parameterCount();
+        if (nargs < arrayLength || arrayLength < 0)
+            throw newIllegalArgumentException("bad spread array length");
+        if (pos < 0 || pos + arrayLength > nargs) {
+            throw newIllegalArgumentException("bad spread position");
+        }
+        Class<?> arrayElement = arrayType.getComponentType();
+        MethodType mtype = type();
+        boolean match = true, fail = false;
+        for (int i = pos; i < pos + arrayLength; i++) {
+            Class<?> ptype = mtype.parameterType(i);
+            if (ptype != arrayElement) {
+                match = false;
+                if (!MethodType.canConvert(arrayElement, ptype)) {
+                    fail = true;
+                    break;
+                }
+            }
+        }
+        if (match)  return mtype;
+        MethodType needType = mtype.asSpreaderType(arrayType, pos, arrayLength);
+        if (!fail)  return needType;
+        // elicit an error:
+        this.asType(needType);
+        throw newInternalError("should not return");
+    }
+
+    private void spreadArrayChecks(Class<?> arrayType, int arrayLength) {
+        Class<?> arrayElement = arrayType.getComponentType();
+        if (arrayElement == null)
+            throw newIllegalArgumentException("not an array type", arrayType);
+        if ((arrayLength & 0x7F) != arrayLength) {
+            if ((arrayLength & 0xFF) != arrayLength)
+                throw newIllegalArgumentException("array length is not legal", arrayLength);
+            assert(arrayLength >= 128);
+            if (arrayElement == long.class ||
+                arrayElement == double.class)
+                throw newIllegalArgumentException("array length is not legal for long[] or double[]", arrayLength);
+        }
+    }
+
+    /**
+     * Adapts this method handle to be {@linkplain #asVarargsCollector variable arity}
+     * if the boolean flag is true, else {@linkplain #asFixedArity fixed arity}.
+     * If the method handle is already of the proper arity mode, it is returned
+     * unchanged.
+     * @apiNote
+     * <p>This method is sometimes useful when adapting a method handle that
+     * may be variable arity, to ensure that the resulting adapter is also
+     * variable arity if and only if the original handle was.  For example,
+     * this code changes the first argument of a handle {@code mh} to {@code int} without
+     * disturbing its variable arity property:
+     * {@code mh.asType(mh.type().changeParameterType(0,int.class))
+     *     .withVarargs(mh.isVarargsCollector())}
+     * <p>
+     * This call is approximately equivalent to the following code:
+     * {@snippet lang="java" :
+     * if (makeVarargs == isVarargsCollector())
+     *   return this;
+     * else if (makeVarargs)
+     *   return asVarargsCollector(type().lastParameterType());
+     * else
+     *   return asFixedArity();
+     * }
+     * @param makeVarargs true if the return method handle should have variable arity behavior
+     * @return a method handle of the same type, with possibly adjusted variable arity behavior
+     * @throws IllegalArgumentException if {@code makeVarargs} is true and
+     *         this method handle does not have a trailing array parameter
+     * @since 9
+     * @see #asVarargsCollector
+     * @see #asFixedArity
+     */
+    public MethodHandle withVarargs(boolean makeVarargs) {
+        assert(!isVarargsCollector());  // subclass responsibility
+        if (makeVarargs) {
+           return asVarargsCollector(type().lastParameterType());
+        } else {
+            return this;
+        }
+    }
+
+    /**
+     * Makes an <em>array-collecting</em> method handle, which accepts a given number of trailing
+     * positional arguments and collects them into an array argument.
+     * The new method handle adapts, as its <i>target</i>,
+     * the current method handle.  The type of the adapter will be
+     * the same as the type of the target, except that a single trailing
+     * parameter (usually of type {@code arrayType}) is replaced by
+     * {@code arrayLength} parameters whose type is element type of {@code arrayType}.
+     * <p>
+     * If the array type differs from the final argument type on the original target,
+     * the original target is adapted to take the array type directly,
+     * as if by a call to {@link #asType asType}.
+     * <p>
+     * When called, th
