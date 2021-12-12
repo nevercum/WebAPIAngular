@@ -1217,4 +1217,128 @@ assertEquals("[A, B, C]", (String) caToString2.invokeExact('A', "BC".toCharArray
      * the original target is adapted to take the array type directly,
      * as if by a call to {@link #asType asType}.
      * <p>
-     * When called, th
+     * When called, the adapter replaces its trailing {@code arrayLength}
+     * arguments by a single new array of type {@code arrayType}, whose elements
+     * comprise (in order) the replaced arguments.
+     * Finally the target is called.
+     * What the target eventually returns is returned unchanged by the adapter.
+     * <p>
+     * (The array may also be a shared constant when {@code arrayLength} is zero.)
+     * <p>
+     * (<em>Note:</em> The {@code arrayType} is often identical to the
+     * {@linkplain MethodType#lastParameterType last parameter type}
+     * of the original target.
+     * It is an explicit argument for symmetry with {@code asSpreader}, and also
+     * to allow the target to use a simple {@code Object} as its last parameter type.)
+     * <p>
+     * In order to create a collecting adapter which is not restricted to a particular
+     * number of collected arguments, use {@link #asVarargsCollector asVarargsCollector}
+     * or {@link #withVarargs withVarargs} instead.
+     * <p>
+     * Here are some examples of array-collecting method handles:
+     * {@snippet lang="java" :
+MethodHandle deepToString = publicLookup()
+  .findStatic(Arrays.class, "deepToString", methodType(String.class, Object[].class));
+assertEquals("[won]",   (String) deepToString.invokeExact(new Object[]{"won"}));
+MethodHandle ts1 = deepToString.asCollector(Object[].class, 1);
+assertEquals(methodType(String.class, Object.class), ts1.type());
+//assertEquals("[won]", (String) ts1.invokeExact(         new Object[]{"won"})); //FAIL
+assertEquals("[[won]]", (String) ts1.invokeExact((Object) new Object[]{"won"}));
+// arrayType can be a subtype of Object[]
+MethodHandle ts2 = deepToString.asCollector(String[].class, 2);
+assertEquals(methodType(String.class, String.class, String.class), ts2.type());
+assertEquals("[two, too]", (String) ts2.invokeExact("two", "too"));
+MethodHandle ts0 = deepToString.asCollector(Object[].class, 0);
+assertEquals("[]", (String) ts0.invokeExact());
+// collectors can be nested, Lisp-style
+MethodHandle ts22 = deepToString.asCollector(Object[].class, 3).asCollector(String[].class, 2);
+assertEquals("[A, B, [C, D]]", ((String) ts22.invokeExact((Object)'A', (Object)"B", "C", "D")));
+// arrayType can be any primitive array type
+MethodHandle bytesToString = publicLookup()
+  .findStatic(Arrays.class, "toString", methodType(String.class, byte[].class))
+  .asCollector(byte[].class, 3);
+assertEquals("[1, 2, 3]", (String) bytesToString.invokeExact((byte)1, (byte)2, (byte)3));
+MethodHandle longsToString = publicLookup()
+  .findStatic(Arrays.class, "toString", methodType(String.class, long[].class))
+  .asCollector(long[].class, 1);
+assertEquals("[123]", (String) longsToString.invokeExact((long)123));
+     * }
+     * <p>
+     * <em>Note:</em> The resulting adapter is never a {@linkplain MethodHandle#asVarargsCollector
+     * variable-arity method handle}, even if the original target method handle was.
+     * @param arrayType often {@code Object[]}, the type of the array argument which will collect the arguments
+     * @param arrayLength the number of arguments to collect into a new array argument
+     * @return a new method handle which collects some trailing argument
+     *         into an array, before calling the original method handle
+     * @throws NullPointerException if {@code arrayType} is a null reference
+     * @throws IllegalArgumentException if {@code arrayType} is not an array type
+     *         or {@code arrayType} is not assignable to this method handle's trailing parameter type,
+     *         or {@code arrayLength} is not a legal array size,
+     *         or the resulting method handle's type would have
+     *         <a href="MethodHandle.html#maxarity">too many parameters</a>
+     * @throws WrongMethodTypeException if the implied {@code asType} call fails
+     * @see #asSpreader
+     * @see #asVarargsCollector
+     */
+    public MethodHandle asCollector(Class<?> arrayType, int arrayLength) {
+        return asCollector(type().parameterCount() - 1, arrayType, arrayLength);
+    }
+
+    /**
+     * Makes an <em>array-collecting</em> method handle, which accepts a given number of positional arguments starting
+     * at a given position, and collects them into an array argument. The new method handle adapts, as its
+     * <i>target</i>, the current method handle. The type of the adapter will be the same as the type of the target,
+     * except that the parameter at the position indicated by {@code collectArgPos} (usually of type {@code arrayType})
+     * is replaced by {@code arrayLength} parameters whose type is element type of {@code arrayType}.
+     * <p>
+     * This method behaves very much like {@link #asCollector(Class, int)}, but differs in that its {@code
+     * collectArgPos} argument indicates at which position in the parameter list arguments should be collected. This
+     * index is zero-based.
+     *
+     * @apiNote Examples:
+     * {@snippet lang="java" :
+    StringWriter swr = new StringWriter();
+    MethodHandle swWrite = LOOKUP.findVirtual(StringWriter.class, "write", methodType(void.class, char[].class, int.class, int.class)).bindTo(swr);
+    MethodHandle swWrite4 = swWrite.asCollector(0, char[].class, 4);
+    swWrite4.invoke('A', 'B', 'C', 'D', 1, 2);
+    assertEquals("BC", swr.toString());
+    swWrite4.invoke('P', 'Q', 'R', 'S', 0, 4);
+    assertEquals("BCPQRS", swr.toString());
+    swWrite4.invoke('W', 'X', 'Y', 'Z', 3, 1);
+    assertEquals("BCPQRSZ", swr.toString());
+     * }
+     * <p>
+     * <em>Note:</em> The resulting adapter is never a {@linkplain MethodHandle#asVarargsCollector
+     * variable-arity method handle}, even if the original target method handle was.
+     * @param collectArgPos the zero-based position in the parameter list at which to start collecting.
+     * @param arrayType often {@code Object[]}, the type of the array argument which will collect the arguments
+     * @param arrayLength the number of arguments to collect into a new array argument
+     * @return a new method handle which collects some arguments
+     *         into an array, before calling the original method handle
+     * @throws NullPointerException if {@code arrayType} is a null reference
+     * @throws IllegalArgumentException if {@code arrayType} is not an array type
+     *         or {@code arrayType} is not assignable to this method handle's array parameter type,
+     *         or {@code arrayLength} is not a legal array size,
+     *         or {@code collectArgPos} has an illegal value (negative, or greater than the number of arguments),
+     *         or the resulting method handle's type would have
+     *         <a href="MethodHandle.html#maxarity">too many parameters</a>
+     * @throws WrongMethodTypeException if the implied {@code asType} call fails
+     *
+     * @see #asCollector(Class, int)
+     * @since 9
+     */
+    public MethodHandle asCollector(int collectArgPos, Class<?> arrayType, int arrayLength) {
+        asCollectorChecks(arrayType, collectArgPos, arrayLength);
+        BoundMethodHandle mh = rebind();
+        MethodType resultType = type().asCollectorType(arrayType, collectArgPos, arrayLength);
+        MethodHandle collector = MethodHandleImpl.varargsArray(arrayType, arrayLength);
+        LambdaForm lform = mh.editor().collectArgumentsForm(1 + collectArgPos, collector.type().basicType());
+        return mh.copyWithExtendL(resultType, lform, collector);
+    }
+
+    /**
+     * See if {@code asCollector} can be validly called with the given arguments.
+     * Return false if the last parameter is not an exact match to arrayType.
+     */
+    /*non-public*/
+    boolean asCol
