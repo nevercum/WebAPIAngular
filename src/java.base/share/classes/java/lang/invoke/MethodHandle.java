@@ -1481,3 +1481,168 @@ assertEquals("[three, thee, tee]", asList.invoke((Object[])argv).toString());
 List ls = (List) asList.invoke((Object)argv);
 assertEquals(1, ls.size());
 assertEquals("[three, thee, tee]", Arrays.toString((Object[])ls.get(0)));
+     * }
+     * <p style="font-size:smaller;">
+     * <em>Discussion:</em>
+     * These rules are designed as a dynamically-typed variation
+     * of the Java rules for variable arity methods.
+     * In both cases, callers to a variable arity method or method handle
+     * can either pass zero or more positional arguments, or else pass
+     * pre-collected arrays of any length.  Users should be aware of the
+     * special role of the final argument, and of the effect of a
+     * type match on that final argument, which determines whether
+     * or not a single trailing argument is interpreted as a whole
+     * array or a single element of an array to be collected.
+     * Note that the dynamic type of the trailing argument has no
+     * effect on this decision, only a comparison between the symbolic
+     * type descriptor of the call site and the type descriptor of the method handle.
+     *
+     * @param arrayType often {@code Object[]}, the type of the array argument which will collect the arguments
+     * @return a new method handle which can collect any number of trailing arguments
+     *         into an array, before calling the original method handle
+     * @throws NullPointerException if {@code arrayType} is a null reference
+     * @throws IllegalArgumentException if {@code arrayType} is not an array type
+     *         or {@code arrayType} is not assignable to this method handle's trailing parameter type
+     * @see #asCollector
+     * @see #isVarargsCollector
+     * @see #withVarargs
+     * @see #asFixedArity
+     */
+    public MethodHandle asVarargsCollector(Class<?> arrayType) {
+        Objects.requireNonNull(arrayType);
+        boolean lastMatch = asCollectorChecks(arrayType, type().parameterCount() - 1, 0);
+        if (isVarargsCollector() && lastMatch)
+            return this;
+        return MethodHandleImpl.makeVarargsCollector(this, arrayType);
+    }
+
+    /**
+     * Determines if this method handle
+     * supports {@linkplain #asVarargsCollector variable arity} calls.
+     * Such method handles arise from the following sources:
+     * <ul>
+     * <li>a call to {@linkplain #asVarargsCollector asVarargsCollector}
+     * <li>a call to a {@linkplain java.lang.invoke.MethodHandles.Lookup lookup method}
+     *     which resolves to a variable arity Java method or constructor
+     * <li>an {@code ldc} instruction of a {@code CONSTANT_MethodHandle}
+     *     which resolves to a variable arity Java method or constructor
+     * </ul>
+     * @return true if this method handle accepts more than one arity of plain, inexact {@code invoke} calls
+     * @see #asVarargsCollector
+     * @see #asFixedArity
+     */
+    public boolean isVarargsCollector() {
+        return false;
+    }
+
+    /**
+     * Makes a <em>fixed arity</em> method handle which is otherwise
+     * equivalent to the current method handle.
+     * <p>
+     * If the current method handle is not of
+     * {@linkplain #asVarargsCollector variable arity},
+     * the current method handle is returned.
+     * This is true even if the current method handle
+     * could not be a valid input to {@code asVarargsCollector}.
+     * <p>
+     * Otherwise, the resulting fixed-arity method handle has the same
+     * type and behavior of the current method handle,
+     * except that {@link #isVarargsCollector isVarargsCollector}
+     * will be false.
+     * The fixed-arity method handle may (or may not) be the
+     * previous argument to {@code asVarargsCollector}.
+     * <p>
+     * Here is an example, of a list-making variable arity method handle:
+     * {@snippet lang="java" :
+MethodHandle asListVar = publicLookup()
+  .findStatic(Arrays.class, "asList", methodType(List.class, Object[].class))
+  .asVarargsCollector(Object[].class);
+MethodHandle asListFix = asListVar.asFixedArity();
+assertEquals("[1]", asListVar.invoke(1).toString());
+Exception caught = null;
+try { asListFix.invoke((Object)1); }
+catch (Exception ex) { caught = ex; }
+assert(caught instanceof ClassCastException);
+assertEquals("[two, too]", asListVar.invoke("two", "too").toString());
+try { asListFix.invoke("two", "too"); }
+catch (Exception ex) { caught = ex; }
+assert(caught instanceof WrongMethodTypeException);
+Object[] argv = { "three", "thee", "tee" };
+assertEquals("[three, thee, tee]", asListVar.invoke(argv).toString());
+assertEquals("[three, thee, tee]", asListFix.invoke(argv).toString());
+assertEquals(1, ((List) asListVar.invoke((Object)argv)).size());
+assertEquals("[three, thee, tee]", asListFix.invoke((Object)argv).toString());
+     * }
+     *
+     * @return a new method handle which accepts only a fixed number of arguments
+     * @see #asVarargsCollector
+     * @see #isVarargsCollector
+     * @see #withVarargs
+     */
+    public MethodHandle asFixedArity() {
+        assert(!isVarargsCollector());
+        return this;
+    }
+
+    /**
+     * Binds a value {@code x} to the first argument of a method handle, without invoking it.
+     * The new method handle adapts, as its <i>target</i>,
+     * the current method handle by binding it to the given argument.
+     * The type of the bound handle will be
+     * the same as the type of the target, except that a single leading
+     * reference parameter will be omitted.
+     * <p>
+     * When called, the bound handle inserts the given value {@code x}
+     * as a new leading argument to the target.  The other arguments are
+     * also passed unchanged.
+     * What the target eventually returns is returned unchanged by the bound handle.
+     * <p>
+     * The reference {@code x} must be convertible to the first parameter
+     * type of the target.
+     * <p>
+     * <em>Note:</em>  Because method handles are immutable, the target method handle
+     * retains its original type and behavior.
+     * <p>
+     * <em>Note:</em> The resulting adapter is never a {@linkplain MethodHandle#asVarargsCollector
+     * variable-arity method handle}, even if the original target method handle was.
+     * @param x  the value to bind to the first argument of the target
+     * @return a new method handle which prepends the given value to the incoming
+     *         argument list, before calling the original method handle
+     * @throws IllegalArgumentException if the target does not have a
+     *         leading parameter type that is a reference type
+     * @throws ClassCastException if {@code x} cannot be converted
+     *         to the leading parameter type of the target
+     * @see MethodHandles#insertArguments
+     */
+    public MethodHandle bindTo(Object x) {
+        x = type.leadingReferenceParameter().cast(x);  // throw CCE if needed
+        return bindArgumentL(0, x);
+    }
+
+    /**
+     * Return a nominal descriptor for this instance, if one can be
+     * constructed, or an empty {@link Optional} if one cannot be.
+     *
+     * @return An {@link Optional} containing the resulting nominal descriptor,
+     * or an empty {@link Optional} if one cannot be constructed.
+     * @since 12
+     */
+    @Override
+    public Optional<MethodHandleDesc> describeConstable() {
+        MethodHandleInfo info;
+        ClassDesc owner;
+        String name;
+        MethodTypeDesc type;
+        boolean isInterface;
+        try {
+            info = IMPL_LOOKUP.revealDirect(this);
+            isInterface = info.getDeclaringClass().isInterface();
+            owner = info.getDeclaringClass().describeConstable().orElseThrow();
+            type = info.getMethodType().describeConstable().orElseThrow();
+            name = info.getName();
+        }
+        catch (Exception e) {
+            return Optional.empty();
+        }
+
+        return switch (info.getRe
