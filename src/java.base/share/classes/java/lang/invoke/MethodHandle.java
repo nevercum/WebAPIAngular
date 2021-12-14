@@ -1341,4 +1341,143 @@ assertEquals("[123]", (String) longsToString.invokeExact((long)123));
      * Return false if the last parameter is not an exact match to arrayType.
      */
     /*non-public*/
-    boolean asCol
+    boolean asCollectorChecks(Class<?> arrayType, int pos, int arrayLength) {
+        spreadArrayChecks(arrayType, arrayLength);
+        int nargs = type().parameterCount();
+        if (pos < 0 || pos >= nargs) {
+            throw newIllegalArgumentException("bad collect position");
+        }
+        if (nargs != 0) {
+            Class<?> param = type().parameterType(pos);
+            if (param == arrayType)  return true;
+            if (param.isAssignableFrom(arrayType))  return false;
+        }
+        throw newIllegalArgumentException("array type not assignable to argument", this, arrayType);
+    }
+
+    /**
+     * Makes a <em>variable arity</em> adapter which is able to accept
+     * any number of trailing positional arguments and collect them
+     * into an array argument.
+     * <p>
+     * The type and behavior of the adapter will be the same as
+     * the type and behavior of the target, except that certain
+     * {@code invoke} and {@code asType} requests can lead to
+     * trailing positional arguments being collected into target's
+     * trailing parameter.
+     * Also, the
+     * {@linkplain MethodType#lastParameterType last parameter type}
+     * of the adapter will be
+     * {@code arrayType}, even if the target has a different
+     * last parameter type.
+     * <p>
+     * This transformation may return {@code this} if the method handle is
+     * already of variable arity and its trailing parameter type
+     * is identical to {@code arrayType}.
+     * <p>
+     * When called with {@link #invokeExact invokeExact}, the adapter invokes
+     * the target with no argument changes.
+     * (<em>Note:</em> This behavior is different from a
+     * {@linkplain #asCollector fixed arity collector},
+     * since it accepts a whole array of indeterminate length,
+     * rather than a fixed number of arguments.)
+     * <p>
+     * When called with plain, inexact {@link #invoke invoke}, if the caller
+     * type is the same as the adapter, the adapter invokes the target as with
+     * {@code invokeExact}.
+     * (This is the normal behavior for {@code invoke} when types match.)
+     * <p>
+     * Otherwise, if the caller and adapter arity are the same, and the
+     * trailing parameter type of the caller is a reference type identical to
+     * or assignable to the trailing parameter type of the adapter,
+     * the arguments and return values are converted pairwise,
+     * as if by {@link #asType asType} on a fixed arity
+     * method handle.
+     * <p>
+     * Otherwise, the arities differ, or the adapter's trailing parameter
+     * type is not assignable from the corresponding caller type.
+     * In this case, the adapter replaces all trailing arguments from
+     * the original trailing argument position onward, by
+     * a new array of type {@code arrayType}, whose elements
+     * comprise (in order) the replaced arguments.
+     * <p>
+     * The caller type must provide at least enough arguments,
+     * and of the correct type, to satisfy the target's requirement for
+     * positional arguments before the trailing array argument.
+     * Thus, the caller must supply, at a minimum, {@code N-1} arguments,
+     * where {@code N} is the arity of the target.
+     * Also, there must exist conversions from the incoming arguments
+     * to the target's arguments.
+     * As with other uses of plain {@code invoke}, if these basic
+     * requirements are not fulfilled, a {@code WrongMethodTypeException}
+     * may be thrown.
+     * <p>
+     * In all cases, what the target eventually returns is returned unchanged by the adapter.
+     * <p>
+     * In the final case, it is exactly as if the target method handle were
+     * temporarily adapted with a {@linkplain #asCollector fixed arity collector}
+     * to the arity required by the caller type.
+     * (As with {@code asCollector}, if the array length is zero,
+     * a shared constant may be used instead of a new array.
+     * If the implied call to {@code asCollector} would throw
+     * an {@code IllegalArgumentException} or {@code WrongMethodTypeException},
+     * the call to the variable arity adapter must throw
+     * {@code WrongMethodTypeException}.)
+     * <p>
+     * The behavior of {@link #asType asType} is also specialized for
+     * variable arity adapters, to maintain the invariant that
+     * plain, inexact {@code invoke} is always equivalent to an {@code asType}
+     * call to adjust the target type, followed by {@code invokeExact}.
+     * Therefore, a variable arity adapter responds
+     * to an {@code asType} request by building a fixed arity collector,
+     * if and only if the adapter and requested type differ either
+     * in arity or trailing argument type.
+     * The resulting fixed arity collector has its type further adjusted
+     * (if necessary) to the requested type by pairwise conversion,
+     * as if by another application of {@code asType}.
+     * <p>
+     * When a method handle is obtained by executing an {@code ldc} instruction
+     * of a {@code CONSTANT_MethodHandle} constant, and the target method is marked
+     * as a variable arity method (with the modifier bit {@code 0x0080}),
+     * the method handle will accept multiple arities, as if the method handle
+     * constant were created by means of a call to {@code asVarargsCollector}.
+     * <p>
+     * In order to create a collecting adapter which collects a predetermined
+     * number of arguments, and whose type reflects this predetermined number,
+     * use {@link #asCollector asCollector} instead.
+     * <p>
+     * No method handle transformations produce new method handles with
+     * variable arity, unless they are documented as doing so.
+     * Therefore, besides {@code asVarargsCollector} and {@code withVarargs},
+     * all methods in {@code MethodHandle} and {@code MethodHandles}
+     * will return a method handle with fixed arity,
+     * except in the cases where they are specified to return their original
+     * operand (e.g., {@code asType} of the method handle's own type).
+     * <p>
+     * Calling {@code asVarargsCollector} on a method handle which is already
+     * of variable arity will produce a method handle with the same type and behavior.
+     * It may (or may not) return the original variable arity method handle.
+     * <p>
+     * Here is an example, of a list-making variable arity method handle:
+     * {@snippet lang="java" :
+MethodHandle deepToString = publicLookup()
+  .findStatic(Arrays.class, "deepToString", methodType(String.class, Object[].class));
+MethodHandle ts1 = deepToString.asVarargsCollector(Object[].class);
+assertEquals("[won]",   (String) ts1.invokeExact(    new Object[]{"won"}));
+assertEquals("[won]",   (String) ts1.invoke(         new Object[]{"won"}));
+assertEquals("[won]",   (String) ts1.invoke(                      "won" ));
+assertEquals("[[won]]", (String) ts1.invoke((Object) new Object[]{"won"}));
+// findStatic of Arrays.asList(...) produces a variable arity method handle:
+MethodHandle asList = publicLookup()
+  .findStatic(Arrays.class, "asList", methodType(List.class, Object[].class));
+assertEquals(methodType(List.class, Object[].class), asList.type());
+assert(asList.isVarargsCollector());
+assertEquals("[]", asList.invoke().toString());
+assertEquals("[1]", asList.invoke(1).toString());
+assertEquals("[two, too]", asList.invoke("two", "too").toString());
+String[] argv = { "three", "thee", "tee" };
+assertEquals("[three, thee, tee]", asList.invoke(argv).toString());
+assertEquals("[three, thee, tee]", asList.invoke((Object[])argv).toString());
+List ls = (List) asList.invoke((Object)argv);
+assertEquals(1, ls.size());
+assertEquals("[three, thee, tee]", Arrays.toString((Object[])ls.get(0)));
