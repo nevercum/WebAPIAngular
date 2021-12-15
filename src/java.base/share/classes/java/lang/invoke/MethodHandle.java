@@ -1645,4 +1645,191 @@ assertEquals("[three, thee, tee]", asListFix.invoke((Object)argv).toString());
             return Optional.empty();
         }
 
-        return switch (info.getRe
+        return switch (info.getReferenceKind()) {
+            case REF_getField         -> Optional.of(MethodHandleDesc.ofField(DirectMethodHandleDesc.Kind.GETTER, owner, name, type.returnType()));
+            case REF_putField         -> Optional.of(MethodHandleDesc.ofField(DirectMethodHandleDesc.Kind.SETTER, owner, name, type.parameterType(0)));
+            case REF_getStatic        -> Optional.of(MethodHandleDesc.ofField(DirectMethodHandleDesc.Kind.STATIC_GETTER, owner, name, type.returnType()));
+            case REF_putStatic        -> Optional.of(MethodHandleDesc.ofField(DirectMethodHandleDesc.Kind.STATIC_SETTER, owner, name, type.parameterType(0)));
+            case REF_invokeVirtual    -> Optional.of(MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.VIRTUAL, owner, name, type));
+            case REF_invokeStatic     -> isInterface ?
+                                          Optional.of(MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.INTERFACE_STATIC, owner, name, type)) :
+                                          Optional.of(MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.STATIC, owner, name, type));
+            case REF_invokeSpecial    -> isInterface ?
+                                          Optional.of(MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.INTERFACE_SPECIAL, owner, name, type)) :
+                                          Optional.of(MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.SPECIAL, owner, name, type));
+            case REF_invokeInterface  -> Optional.of(MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.INTERFACE_VIRTUAL, owner, name, type));
+            case REF_newInvokeSpecial -> Optional.of(MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.CONSTRUCTOR, owner, name, type));
+            default -> Optional.empty();
+        };
+    }
+
+    /**
+     * Returns a string representation of the method handle,
+     * starting with the string {@code "MethodHandle"} and
+     * ending with the string representation of the method handle's type.
+     * In other words, this method returns a string equal to the value of:
+     * {@snippet lang="java" :
+     * "MethodHandle" + type().toString()
+     * }
+     * <p>
+     * (<em>Note:</em>  Future releases of this API may add further information
+     * to the string representation.
+     * Therefore, the present syntax should not be parsed by applications.)
+     *
+     * @return a string representation of the method handle
+     */
+    @Override
+    public String toString() {
+        if (DEBUG_METHOD_HANDLE_NAMES)  return "MethodHandle"+debugString();
+        return standardString();
+    }
+    String standardString() {
+        return "MethodHandle"+type;
+    }
+    /** Return a string with a several lines describing the method handle structure.
+     *  This string would be suitable for display in an IDE debugger.
+     * @param indentLevel If negative, return only information about this MethodHandle.
+     *  Otherwise, return information about this MethodHandle and (recursively) all other
+     *  MethodHandles, if any, that are invoked directly or indirectly by this MethodHandle.
+     *  During the recursion, `indentLevel` is incremented (see
+     *  BoundMethodHandle.internalValues()) to improve readability of
+     *  the nested structure.
+     */
+    String debugString(int indentLevel) {
+        return type + " : " + internalForm().debugString(indentLevel) +
+               internalProperties(indentLevel);
+    }
+    String debugString() {
+        return debugString(-1);
+    }
+
+    //// Implementation methods.
+    //// Sub-classes can override these default implementations.
+    //// All these methods assume arguments are already validated.
+
+    // Other transforms to do:  convert, explicitCast, permute, drop, filter, fold, GWT, catch
+
+    BoundMethodHandle bindArgumentL(int pos, Object value) {
+        return rebind().bindArgumentL(pos, value);
+    }
+
+    /*non-public*/
+    MethodHandle setVarargs(MemberName member) throws IllegalAccessException {
+        if (!member.isVarargs())  return this;
+        try {
+            return this.withVarargs(true);
+        } catch (IllegalArgumentException ex) {
+            throw member.makeAccessException("cannot make variable arity", null);
+        }
+    }
+
+    /*non-public*/
+    MethodHandle viewAsType(MethodType newType, boolean strict) {
+        // No actual conversions, just a new view of the same method.
+        // Overridden in DMH, which has special rules
+        assert(viewAsTypeChecks(newType, strict));
+        return copyWith(newType, form);
+    }
+
+    /*non-public*/
+    boolean viewAsTypeChecks(MethodType newType, boolean strict) {
+        if (strict) {
+            assert(type().isViewableAs(newType, true))
+                : Arrays.asList(this, newType);
+        } else {
+            assert(type().basicType().isViewableAs(newType.basicType(), true))
+                : Arrays.asList(this, newType);
+        }
+        return true;
+    }
+
+    // Decoding
+
+    /*non-public*/
+    LambdaForm internalForm() {
+        return form;
+    }
+
+    /*non-public*/
+    MemberName internalMemberName() {
+        return null;  // DMH returns DMH.member
+    }
+
+    /*non-public*/
+    Class<?> internalCallerClass() {
+        return null;  // caller-bound MH for @CallerSensitive method returns caller
+    }
+
+    /*non-public*/
+    MethodHandleImpl.Intrinsic intrinsicName() {
+        // no special intrinsic meaning to most MHs
+        return MethodHandleImpl.Intrinsic.NONE;
+    }
+
+    /*non-public*/
+    Object intrinsicData() {
+        return null;
+    }
+
+    /*non-public*/
+    MethodHandle withInternalMemberName(MemberName member, boolean isInvokeSpecial) {
+        if (member != null) {
+            return MethodHandleImpl.makeWrappedMember(this, member, isInvokeSpecial);
+        } else if (internalMemberName() == null) {
+            // The required internalMemberName is null, and this MH (like most) doesn't have one.
+            return this;
+        } else {
+            // The following case is rare. Mask the internalMemberName by wrapping the MH in a BMH.
+            MethodHandle result = rebind();
+            assert(result.internalMemberName() == null);
+            return result;
+        }
+    }
+
+    /*non-public*/
+    boolean isInvokeSpecial() {
+        return false;  // DMH.Special returns true
+    }
+
+    /*non-public*/
+    boolean isCrackable() {
+        return false;
+    }
+
+    /*non-public*/
+    Object internalValues(int indentLevel) {
+        return null;
+    }
+
+    /**
+     * Various debugging methods in MethodHandle (and subclasses thereof) and LambdaForm
+     * take an `indentLevel` argument, so that {@link java.lang.invoke.MethodHandle.debugString(int)}
+     * can return nested structures in a readable fashion. This method returns a string to be
+     * prepended to each line at the specified level.
+     */
+    static String debugPrefix(int indentLevel) {
+        if (indentLevel <= 0) {
+            return "";
+        }
+        return "    ".repeat(indentLevel);
+    }
+
+    /*non-public*/
+    Object internalProperties() {
+        return internalProperties(-1);
+    }
+
+    Object internalProperties(int indentLevel) {
+        // Override to something to follow this.form, like "\n& FOO=bar"
+        return "";
+    }
+
+    //// Method handle implementation methods.
+    //// Sub-classes can override these default implementations.
+    //// All these methods assume arguments are already validated.
+
+    /*non-public*/
+    abstract MethodHandle copyWith(MethodType mt, LambdaForm lf);
+
+    /** Require this method handle to be a BMH, or else replace it with a "wrapper" BMH.
+     *  Many transforms are implemented only for BMHs.
