@@ -144,4 +144,59 @@ public class SelectOneKeyOutOfMany {
         resultsDsa = km.chooseClientAlias(dsa, null, null);
         if (resultsDsa == null) {
             throw new Exception(
-  
+                "km.chooseClientAlias(dsa, null, null) != null");
+        }
+        System.out.println("km.chooseClientAlias(dsa) passed");
+
+        /*
+         * There should be both an rsa and a dsa entry in the
+         * keystore.
+         *
+         * Check chooseClientAlias for RSA/DSA keys and be sure
+         * the ordering is correct.
+         */
+        resultsRsaDsa = km.chooseClientAlias(rsaDsa, null, null);
+        if ((resultsRsaDsa == null) || (resultsRsaDsa != resultsRsa)) {
+            throw new Exception("km.chooseClientAlias(rsaDsa) failed");
+        }
+        System.out.println("km.chooseClientAlias(rsaDsa) passed");
+
+        resultsDsaRsa = km.chooseClientAlias(dsaRsa, null, null);
+        if ((resultsDsaRsa == null) || (resultsDsaRsa != resultsDsa)) {
+            throw new Exception("km.chooseClientAlias(DsaRsa) failed");
+        }
+        System.out.println("km.chooseClientAlias(DsaRsa) passed");
+
+        System.out.println("=====");
+
+        /*
+         * Check chooseServerAliases for null returns
+         */
+        resultsNone = km.chooseServerAlias("nothing", null, null);
+        if (resultsNone != null) {
+            throw new Exception("km.chooseServerAlias(\"nothing\") != null");
+        }
+        System.out.println("km.ChooseServerAlias(\"nothing\") passed");
+
+        /*
+         * Check chooseServerAlias for RSA keys.
+         */
+        resultsRsa = km.chooseServerAlias("RSA", null, null);
+        if (resultsRsa == null)  {
+            throw new Exception(
+                "km.chooseServerAlias(\"RSA\", null, null) != null");
+        }
+        System.out.println("km.chooseServerAlias(\"RSA\") passed");
+
+        /*
+         * Check chooseServerAlias for DSA keys.
+         */
+        resultsDsa = km.chooseServerAlias("DSA", null, null);
+        if (resultsDsa == null) {
+            throw new Exception(
+                "km.chooseServerAlias(\"DSA\", null, null) != null");
+        }
+        System.out.println("km.chooseServerAlias(\"DSA\") passed");
+
+    }
+}
