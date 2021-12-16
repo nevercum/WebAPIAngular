@@ -1833,3 +1833,62 @@ assertEquals("[three, thee, tee]", asListFix.invoke((Object)argv).toString());
 
     /** Require this method handle to be a BMH, or else replace it with a "wrapper" BMH.
      *  Many transforms are implemented only for BMHs.
+     *  @return a behaviorally equivalent BMH
+     */
+    abstract BoundMethodHandle rebind();
+
+    /* non-public */
+    void maybeCustomize() {
+        if (form.customized == null) {
+            byte count = customizationCount;
+            if (count >= CUSTOMIZE_THRESHOLD) {
+                customize();
+            } else {
+                customizationCount = (byte) (count + 1);
+            }
+        }
+    }
+
+    /** Craft a LambdaForm customized for this particular MethodHandle. */
+    /*non-public*/
+    void customize() {
+        updateForm(new Function<>() {
+                public LambdaForm apply(LambdaForm oldForm) {
+                    return oldForm.customize(MethodHandle.this);
+                }
+            });
+    }
+
+    private volatile boolean updateInProgress; // = false;
+
+    /**
+     * Replace the old lambda form of this method handle with a new one.
+     * The new one must be functionally equivalent to the old one.
+     * Threads may continue running the old form indefinitely,
+     * but it is likely that the new one will be preferred for new executions.
+     * Use with discretion.
+     */
+    /*non-public*/
+    void updateForm(Function<LambdaForm, LambdaForm> updater) {
+        if (UNSAFE.compareAndSetBoolean(this, UPDATE_OFFSET, false, true)) { // updateInProgress = true
+            // Only 1 thread wins the race and updates MH.form field.
+            try {
+                LambdaForm oldForm = form;
+                LambdaForm newForm = updater.apply(oldForm);
+                if (oldForm != newForm) {
+                    assert (newForm.customized == null || newForm.customized == this);
+                    newForm.prepare(); // as in MethodHandle.<init>
+                    UNSAFE.putReference(this, FORM_OFFSET, newForm);
+                    UNSAFE.fullFence();
+                }
+            } finally {
+                updateInProgress = false;
+            }
+        } else {
+            // Update got lost due to concurrent update. But callers don't care.
+        }
+    }
+
+    private static final long   FORM_OFFSET = UNSAFE.objectFieldOffset(MethodHandle.class, "form");
+    private static final long UPDATE_OFFSET = UNSAFE.objectFieldOffset(MethodHandle.class, "updateInProgress");
+}
