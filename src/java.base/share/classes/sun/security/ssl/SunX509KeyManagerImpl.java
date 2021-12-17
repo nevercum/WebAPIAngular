@@ -335,4 +335,95 @@ final class SunX509KeyManagerImpl extends X509ExtendedKeyManager {
             issuers = new X500Principal[0];
         }
         if (!(issuers instanceof X500Principal[])) {
-            // normally, this will never happen but try to recover if it
+            // normally, this will never happen but try to recover if it does
+            issuers = convertPrincipals(issuers);
+        }
+        String sigType;
+        if (keyType.contains("_")) {
+            int k = keyType.indexOf('_');
+            sigType = keyType.substring(k + 1);
+            keyType = keyType.substring(0, k);
+        } else {
+            sigType = null;
+        }
+
+        X500Principal[] x500Issuers = (X500Principal[])issuers;
+        // the algorithm below does not produce duplicates, so avoid Set
+        List<String> aliases = new ArrayList<>();
+
+        for (Map.Entry<String,X509Credentials> entry :
+                                                credentialsMap.entrySet()) {
+
+            String alias = entry.getKey();
+            X509Credentials credentials = entry.getValue();
+            X509Certificate[] certs = credentials.certificates;
+
+            if (!keyType.equals(certs[0].getPublicKey().getAlgorithm())) {
+                continue;
+            }
+            if (sigType != null) {
+                if (certs.length > 1) {
+                    // if possible, check the public key in the issuer cert
+                    if (!sigType.equals(
+                            certs[1].getPublicKey().getAlgorithm())) {
+                        continue;
+                    }
+                } else {
+                    // Check the signature algorithm of the certificate itself.
+                    // Look for the "withRSA" in "SHA1withRSA", etc.
+                    String sigAlgName =
+                        certs[0].getSigAlgName().toUpperCase(Locale.ENGLISH);
+                    String pattern = "WITH" +
+                        sigType.toUpperCase(Locale.ENGLISH);
+                    if (!sigAlgName.contains(pattern)) {
+                        continue;
+                    }
+                }
+            }
+
+            if (issuers.length == 0) {
+                // no issuer specified, match all
+                aliases.add(alias);
+                if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+                    SSLLogger.fine("matching alias: " + alias);
+                }
+            } else {
+                Set<X500Principal> certIssuers =
+                                        credentials.getIssuerX500Principals();
+                for (int i = 0; i < x500Issuers.length; i++) {
+                    if (certIssuers.contains(issuers[i])) {
+                        aliases.add(alias);
+                        if (SSLLogger.isOn && SSLLogger.isOn("keymanager")) {
+                            SSLLogger.fine("matching alias: " + alias);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        String[] aliasStrings = aliases.toArray(STRING0);
+        return ((aliasStrings.length == 0) ? null : aliasStrings);
+    }
+
+    /*
+     * Convert an array of Principals to an array of X500Principals, if
+     * possible. Principals that cannot be converted are ignored.
+     */
+    private static X500Principal[] convertPrincipals(Principal[] principals) {
+        List<X500Principal> list = new ArrayList<>(principals.length);
+        for (int i = 0; i < principals.length; i++) {
+            Principal p = principals[i];
+            if (p instanceof X500Principal) {
+                list.add((X500Principal)p);
+            } else {
+                try {
+                    list.add(new X500Principal(p.getName()));
+                } catch (IllegalArgumentException e) {
+                    // ignore
+                }
+            }
+        }
+        return list.toArray(new X500Principal[0]);
+    }
+}
