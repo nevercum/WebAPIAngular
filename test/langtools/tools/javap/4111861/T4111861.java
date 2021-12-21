@@ -70,4 +70,33 @@ public class T4111861 {
     String read(File f) throws IOException {
         StringBuilder sb = new StringBuilder();
         BufferedReader in = new BufferedReader(new FileReader(f));
-        t
+        try {
+            String line;
+            while ((line = in.readLine()) != null) {
+                sb.append(line);
+                sb.append('\n');
+            }
+        } finally {
+            in.close();
+        }
+        return sb.toString();
+    }
+
+    // return those lines beginning "public static final"
+    String filter(String s) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        BufferedReader in = new BufferedReader(new StringReader(s));
+        try {
+            String line;
+            while ((line = in.readLine()) != null) {
+                if (line.indexOf("public static final") > 0) {
+                    sb.append(line.trim());
+                    sb.append('\n');
+                }
+            }
+        } finally {
+            in.close();
+        }
+        return sb.toString();
+    }
+}
