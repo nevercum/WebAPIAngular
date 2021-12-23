@@ -329,4 +329,83 @@ public class TIFFTag {
 
     /**
      * Returns {@code true} if this tag is used to point to an IFD
-     * str
+     * structure containing additional tags. A {@code TIFFTag} represents
+     * an IFD pointer if and only if its {@code TIFFTagSet} is
+     * non-{@code null} or the data type {@code TIFF_IFD_POINTER} is
+     * legal. This condition will be satisfied if and only if either
+     * {@code getTagSet() != null} or
+     * {@code isDataTypeOK(TIFF_IFD_POINTER) == true}.
+     *
+     * <p>Many TIFF extensions use the IFD mechanism in order to limit the
+     * number of new tags that may appear in the root IFD.</p>
+     *
+     * @return {@code true} if this tag points to an IFD.
+     */
+    public boolean isIFDPointer() {
+        return tagSet != null || isDataTypeOK(TIFF_IFD_POINTER);
+    }
+
+    /**
+     * Returns {@code true} if there are mnemonic names associated with
+     * the set of legal values for the data associated with this tag.  Mnemonic
+     * names apply only to tags which have integral data type.
+     *
+     * @return {@code true} if mnemonic value names are available.
+     */
+    public boolean hasValueNames() {
+        return valueNames != null;
+    }
+
+    /**
+     * Adds a mnemonic name for a particular value that this tag's data may take
+     * on.  Mnemonic names apply only to tags which have integral data type.
+     *
+     * @param value the data value.
+     * @param name the name to associate with the value.
+     */
+    protected void addValueName(int value, String name) {
+        if (valueNames == null) {
+            valueNames = new TreeMap<Integer,String>();
+        }
+        valueNames.put(Integer.valueOf(value), name);
+    }
+
+    /**
+     * Returns the mnemonic name associated with a particular value
+     * that this tag's data may take on, or {@code null} if
+     * no name is present.  Mnemonic names apply only to tags which have
+     * integral data type.
+     *
+     * @param value the data value.
+     *
+     * @return the mnemonic name associated with the value, as a
+     * {@code String}.
+     */
+    public String getValueName(int value) {
+        if (valueNames == null) {
+            return null;
+        }
+        return valueNames.get(Integer.valueOf(value));
+    }
+
+    /**
+     * Returns an array of values for which mnemonic names are defined.  The
+     * method {@link #getValueName(int) getValueName()} will return
+     * non-{@code null} only for values contained in the returned array.
+     * Mnemonic names apply only to tags which have integral data type.
+     *
+     * @return the values for which there is a mnemonic name.
+     */
+    public int[] getNamedValues() {
+        int[] intValues = null;
+        if (valueNames != null) {
+            Set<Integer> values = valueNames.keySet();
+            intValues = new int[values.size()];
+            int i = 0;
+            for (int value : values) {
+                intValues[i++] = value;
+            }
+        }
+        return intValues;
+    }
+}
