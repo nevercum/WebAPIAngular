@@ -115,4 +115,218 @@ public class TIFFTag {
 
     private static final int[] SIZE_OF_TYPE = {
         0, //  0 = n/a
-   
+        1, //  1 = byte
+        1, //  2 = ascii
+        2, //  3 = short
+        4, //  4 = long
+        8, //  5 = rational
+        1, //  6 = sbyte
+        1, //  7 = undefined
+        2, //  8 = sshort
+        4, //  9 = slong
+        8, // 10 = srational
+        4, // 11 = float
+        8, // 12 = double
+        4, // 13 = IFD_POINTER
+    };
+
+    private int number;
+    private String name;
+    private int dataTypes;
+    private int count;
+    private TIFFTagSet tagSet = null;
+
+    // Mnemonic names for integral enumerated constants
+    private SortedMap<Integer,String> valueNames = null;
+
+    /**
+     * Constructs a {@code TIFFTag} with a given name, tag number, set
+     * of legal data types, and value count. A negative value count signifies
+     * that either an arbitrary number of values is legal or the required count
+     * is determined by the values of other fields in the IFD. A non-negative
+     * count specifies the number of values which an associated field must
+     * contain. The tag will have no associated {@code TIFFTagSet}.
+     *
+     * <p> If there are mnemonic names to be associated with the legal
+     * data values for the tag, {@link #addValueName(int, String)
+     * addValueName()} should be called on the new instance for each name.
+     * Mnemonic names apply only to tags which have integral data type.</p>
+     *
+     * <p> See the documentation for {@link #getDataTypes()
+     * getDataTypes()} for an explanation of how the set
+     * of data types is to be converted into a bit mask.</p>
+     *
+     * @param name the name of the tag.
+     * @param number the number used to represent the tag.
+     * @param dataTypes a bit mask indicating the set of legal data
+     * types for this tag.
+     * @param count the value count for this tag.
+     * @throws NullPointerException if name is null.
+     * @throws IllegalArgumentException if number is negative or dataTypes
+     * is negative or specifies an out of range type.
+     */
+    public TIFFTag(String name, int number, int dataTypes, int count) {
+        if (name == null) {
+            throw new NullPointerException("name == null");
+        } else if (number < 0) {
+            throw new IllegalArgumentException("number (" + number + ") < 0");
+        } else if (dataTypes < 0
+            || (dataTypes & DISALLOWED_DATATYPES_MASK) != 0) {
+            throw new IllegalArgumentException("dataTypes out of range");
+        }
+
+        this.name = name;
+        this.number = number;
+        this.dataTypes = dataTypes;
+        this.count = count;
+    }
+
+    /**
+     * Constructs a {@code TIFFTag} with a given name, tag number and
+     * {@code TIFFTagSet} to which it refers. The legal data types are
+     * set to include {@link #TIFF_LONG} and {@link #TIFF_IFD_POINTER} and the
+     * value count is unity. The {@code TIFFTagSet} will
+     * represent the set of {@code TIFFTag}s which appear in the IFD
+     * pointed to. A {@code TIFFTag} represents an IFD pointer if and
+     * only if {@code tagSet} is non-{@code null} or the data
+     * type {@code TIFF_IFD_POINTER} is legal.
+     *
+     * @param name the name of the tag.
+     * @param number the number used to represent the tag.
+     * @param tagSet the {@code TIFFTagSet} to which this tag belongs.
+     * @throws NullPointerException if name or tagSet is null.
+     * @throws IllegalArgumentException if number is negative.
+     *
+     * @see #TIFFTag(String, int, int, int)
+     */
+    public TIFFTag(String name, int number, TIFFTagSet tagSet) {
+        this(name, number,
+            1 << TIFFTag.TIFF_LONG | 1 << TIFFTag.TIFF_IFD_POINTER, 1);
+        if (tagSet == null) {
+            throw new NullPointerException("tagSet == null");
+        }
+        this.tagSet = tagSet;
+    }
+
+    /**
+     * Constructs  a  {@code TIFFTag}  with  a  given  name,  tag number,
+     * and set  of  legal  data  types.  The value count of the tag will be
+     * undefined and it will  have  no associated {@code TIFFTagSet}.
+     *
+     * @param name the name of the tag.
+     * @param number the number used to represent the tag.
+     * @param dataTypes a bit mask indicating the set of legal data
+     * types for this tag.
+     * @throws NullPointerException if name is null.
+     * @throws IllegalArgumentException if number is negative or dataTypes
+     * is negative or specifies an out of range type.
+     *
+     * @see #TIFFTag(String, int, int, int)
+     */
+    public TIFFTag(String name, int number, int dataTypes) {
+        this(name, number, dataTypes, -1);
+    }
+
+    /**
+     * Returns the number of bytes used to store a value of the given
+     * data type.
+     *
+     * @param dataType the data type to be queried.
+     *
+     * @return the number of bytes used to store the given data type.
+     *
+     * @throws IllegalArgumentException if {@code datatype} is
+     * less than {@code MIN_DATATYPE} or greater than
+     * {@code MAX_DATATYPE}.
+     */
+    public static int getSizeOfType(int dataType) {
+        if (dataType < MIN_DATATYPE ||dataType > MAX_DATATYPE) {
+            throw new IllegalArgumentException("dataType out of range!");
+        }
+
+        return SIZE_OF_TYPE[dataType];
+    }
+
+    /**
+     * Returns the name of the tag, as it will appear in image metadata.
+     *
+     * @return the tag name, as a {@code String}.
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Returns the integer used to represent the tag.
+     *
+     * @return the tag number, as an {@code int}.
+     */
+    public int getNumber() {
+        return number;
+    }
+
+    /**
+     * Returns a bit mask indicating the set of data types that may
+     * be used to store the data associated with the tag.
+     * For example, a tag that can store both SHORT and LONG values
+     * would return a value of:
+     *
+     * <pre>
+     * (1 &lt;&lt; TIFFTag.TIFF_SHORT) | (1 &lt;&lt; TIFFTag.TIFF_LONG)
+     * </pre>
+     *
+     * @return an {@code int} containing a bitmask encoding the
+     * set of valid data types.
+     */
+    public int getDataTypes() {
+        return dataTypes;
+    }
+
+    /**
+     * Returns the value count of this tag. If this value is positive, it
+     * represents the required number of values for a {@code TIFFField}
+     * which has this tag. If the value is negative, the count is undefined.
+     * In the latter case the count may be derived, e.g., the number of values
+     * of the {@code BitsPerSample} field is {@code SamplesPerPixel},
+     * or it may be variable as in the case of most {@code US-ASCII}
+     * fields.
+     *
+     * @return the value count of this tag.
+     */
+    public int getCount() {
+        return count;
+    }
+
+    /**
+     * Returns {@code true} if the given data type
+     * may be used for the data associated with this tag.
+     *
+     * @param dataType the data type to be queried, one of
+     * {@code TIFF_BYTE}, {@code TIFF_SHORT}, etc.
+     *
+     * @return a {@code boolean} indicating whether the given
+     * data type may be used with this tag.
+     *
+     * @throws IllegalArgumentException if {@code datatype} is
+     * less than {@code MIN_DATATYPE} or greater than
+     * {@code MAX_DATATYPE}.
+     */
+    public boolean isDataTypeOK(int dataType) {
+        if (dataType < MIN_DATATYPE || dataType > MAX_DATATYPE) {
+            throw new IllegalArgumentException("datatype not in range!");
+        }
+        return (dataTypes & (1 << dataType)) != 0;
+    }
+
+    /**
+     * Returns the {@code TIFFTagSet} of which this tag is a part.
+     *
+     * @return the containing {@code TIFFTagSet}.
+     */
+    public TIFFTagSet getTagSet() {
+        return tagSet;
+    }
+
+    /**
+     * Returns {@code true} if this tag is used to point to an IFD
+     * str
