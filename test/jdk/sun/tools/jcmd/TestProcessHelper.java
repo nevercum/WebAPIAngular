@@ -214,4 +214,113 @@ public class TestProcessHelper {
         String mainClass = callGetMainClass(p);
         // getMainClass() may return null, e.g. due to timing issues.
         // Attempt some limited retries.
-        i
+        if (mainClass == null) {
+            System.err.println("Main class returned by ProcessHelper was null.");
+            // sleep time doubles each round, altogether, wait no longer than 1 sec
+            final int MAX_RETRIES = 10;
+            int retrycount = 0;
+            long sleepms = 1;
+            while (retrycount < MAX_RETRIES && mainClass == null) {
+                System.err.println("Retry " + retrycount + ", sleeping for " + sleepms + "ms.");
+                try {
+                    Thread.sleep(sleepms);
+                } catch (InterruptedException e) {
+                    // ignore
+                }
+                mainClass = callGetMainClass(p);
+                retrycount++;
+                sleepms *= 2;
+            }
+        }
+        p.destroyForcibly();
+        if (!expectedMainClass.equals(mainClass)) {
+            throw new RuntimeException("Main class is wrong: " + mainClass);
+        }
+    }
+
+    private void testProcessHelper(List<String> args, String expectedValue) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(args);
+        String cmd = pb.command().stream().collect(Collectors.joining(" "));
+        System.out.println("Starting the process:" + cmd);
+        Process p = ProcessTools.startProcess("test", pb);
+        if (!p.isAlive()) {
+            throw new RuntimeException("Cannot start the process: " + cmd);
+        }
+        checkMainClass(p, expectedValue);
+    }
+
+    private File prepareJar() throws Exception {
+        Path jarFile = USER_DIR.resolve("testprocess.jar");
+        Manifest manifest = createManifest();
+        JarUtils.createJarFile(jarFile, manifest, TEST_CLASSES, TEST_CLASS);
+        return jarFile.toFile();
+    }
+
+    private void prepareModule() throws Exception {
+        TEST_MODULES.toFile().mkdirs();
+        Path moduleJar = TEST_MODULES.resolve("mod1.jar");
+        ModuleDescriptor md = createModuleDescriptor();
+        createModuleJarFile(moduleJar, md, TEST_CLASSES, TEST_CLASS);
+    }
+
+    private Manifest createManifest() {
+        Manifest manifest = new Manifest();
+        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, TEST_PROCESS_MAIN_CLASS);
+        return manifest;
+    }
+
+    private ModuleDescriptor createModuleDescriptor() {
+        ModuleDescriptor.Builder builder
+                = ModuleDescriptor.newModule(MODULE_NAME).requires("java.base");
+        return builder.build();
+    }
+
+    private static void createModuleJarFile(Path jarfile, ModuleDescriptor md, Path dir, Path... files)
+            throws IOException {
+
+        Path parent = jarfile.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+
+        List<Path> entries = findAllRegularFiles(dir, files);
+
+        try (OutputStream out = Files.newOutputStream(jarfile);
+             JarOutputStream jos = new JarOutputStream(out)) {
+            if (md != null) {
+                JarEntry je = new JarEntry("module-info.class");
+                jos.putNextEntry(je);
+                ModuleInfoWriter.write(md, jos);
+                jos.closeEntry();
+            }
+
+            for (Path entry : entries) {
+                String name = toJarEntryName(entry);
+                jos.putNextEntry(new JarEntry(name));
+                Files.copy(dir.resolve(entry), jos);
+                jos.closeEntry();
+            }
+        }
+    }
+
+    private static String toJarEntryName(Path file) {
+        Path normalized = file.normalize();
+        return normalized.subpath(0, normalized.getNameCount())
+                .toString()
+                .replace(File.separatorChar, '/');
+    }
+
+    private static List<Path> findAllRegularFiles(Path dir, Path[] files) throws IOException {
+        List<Path> entries = new ArrayList<>();
+        for (Path file : files) {
+            try (Stream<Path> stream = Files.find(dir.resolve(file), Integer.MAX_VALUE,
+                    (p, attrs) -> attrs.isRegularFile())) {
+                stream.map(dir::relativize)
+                        .forEach(entries::add);
+            }
+        }
+        return entries;
+    }
+
+}
