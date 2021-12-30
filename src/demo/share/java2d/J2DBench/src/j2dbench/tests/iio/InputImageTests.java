@@ -352,3 +352,174 @@ abstract class InputImageTests extends InputTests {
                 do {
                     try {
                         Image img = tk.createImage((byte[])input);
+                        mt.addImage(img, 0);
+                        mt.waitForID(0, 0);
+                        mt.removeImage(img, 0);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } while (--numReps >= 0);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid input type");
+            }
+        }
+    }
+
+    private static class ImageIORead extends InputImageTests {
+        public ImageIORead() {
+            super(imageioTestRoot,
+                  "imageioRead",
+                  "ImageIO.read()");
+            addDependency(generalSourceRoot,
+                new Modifier.Filter() {
+                    public boolean isCompatible(Object val) {
+                        // ImageIO.read() handles FILE, URL, and ARRAY, but
+                        // not FILECHANNEL (well, I suppose we could create
+                        // an ImageInputStream from a FileChannel source,
+                        // but that's not a common use case; FileChannel is
+                        // better handled by the ImageReader tests below)
+                        InputType t = (InputType)val;
+                        return (t.getType() != INPUT_FILECHANNEL);
+                    }
+                });
+            addDependencies(imageioOptRoot, true);
+        }
+
+        public Object initTest(TestEnvironment env, Result result) {
+            return new Context(env, result, TEST_IMAGEIO);
+        }
+
+        public void runTest(Object ctx, int numReps) {
+            final Context ictx = (Context)ctx;
+            final Object input = ictx.input;
+            final int inputType = ictx.inputType;
+            switch (inputType) {
+            case INPUT_FILE:
+                do {
+                    try {
+                        ImageIO.read((File)input);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } while (--numReps >= 0);
+                break;
+            case INPUT_URL:
+                do {
+                    try {
+                        ImageIO.read((URL)input);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } while (--numReps >= 0);
+                break;
+            case INPUT_ARRAY:
+                do {
+                    try {
+                        ByteArrayInputStream bais =
+                            new ByteArrayInputStream((byte[])input);
+                        BufferedInputStream bis =
+                            new BufferedInputStream(bais);
+                        ImageIO.read(bis);
+                        bais.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } while (--numReps >= 0);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid input type");
+            }
+        }
+    }
+
+    private static class ImageReaderRead extends InputImageTests {
+        public ImageReaderRead() {
+            super(imageReaderTestRoot,
+                  "read",
+                  "ImageReader.read()");
+            addDependency(generalSourceRoot);
+            addDependencies(imageioGeneralOptRoot, true);
+            addDependencies(imageioOptRoot, true);
+            addDependencies(imageReaderOptRoot, true);
+        }
+
+        public Object initTest(TestEnvironment env, Result result) {
+            return new Context(env, result, TEST_IMAGEREADER);
+        }
+
+        public void runTest(Object ctx, int numReps) {
+            final Context ictx = (Context)ctx;
+            final ImageReader reader = ictx.reader;
+            final boolean seekForwardOnly = ictx.seekForwardOnly;
+            final boolean ignoreMetadata = ictx.ignoreMetadata;
+            do {
+                try {
+                    ImageInputStream iis = ictx.createImageInputStream();
+                    reader.setInput(iis, seekForwardOnly, ignoreMetadata);
+                    reader.read(0);
+                    reader.reset();
+                    iis.close();
+                    ictx.closeOriginalStream();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } while (--numReps >= 0);
+        }
+    }
+
+    private static class ImageReaderGetImageMetadata extends InputImageTests {
+        public ImageReaderGetImageMetadata() {
+            super(imageReaderTestRoot,
+                  "getImageMetadata",
+                  "ImageReader.getImageMetadata()");
+            addDependency(generalSourceRoot);
+            addDependencies(imageioGeneralOptRoot, true);
+            addDependencies(imageioOptRoot, true);
+            addDependencies(imageReaderOptRoot, true);
+        }
+
+        public Object initTest(TestEnvironment env, Result result) {
+            Context ctx = new Context(env, result, TEST_IMAGEREADER);
+            // override units since this test doesn't read "pixels"
+            result.setUnits(1);
+            result.setUnitName("image");
+            return ctx;
+        }
+
+        public void runTest(Object ctx, int numReps) {
+            final Context ictx = (Context)ctx;
+            final ImageReader reader = ictx.reader;
+            final boolean seekForwardOnly = ictx.seekForwardOnly;
+            final boolean ignoreMetadata = ictx.ignoreMetadata;
+            do {
+                try {
+                    ImageInputStream iis = ictx.createImageInputStream();
+                    reader.setInput(iis, seekForwardOnly, ignoreMetadata);
+                    reader.getImageMetadata(0);
+                    reader.reset();
+                    iis.close();
+                    ictx.closeOriginalStream();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } while (--numReps >= 0);
+        }
+    }
+
+    private static class ReadProgressListener
+        implements IIOReadProgressListener
+    {
+        public void sequenceStarted(ImageReader source, int minIndex) {}
+        public void sequenceComplete(ImageReader source) {}
+        public void imageStarted(ImageReader source, int imageIndex) {}
+        public void imageProgress(ImageReader source, float percentageDone) {}
+        public void imageComplete(ImageReader source) {}
+        public void thumbnailStarted(ImageReader source,
+                                     int imageIndex, int thumbnailIndex) {}
+        public void thumbnailProgress(ImageReader source,
+                                      float percentageDone) {}
+        public void thumbnailComplete(ImageReader source) {}
+        public void readAborted(ImageReader source) {}
+    }
+}
