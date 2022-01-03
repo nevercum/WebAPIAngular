@@ -251,4 +251,92 @@ public class Utils {
                 throws ClassNotFoundException
         {
             // First, check if the class has already been loaded
-            C
+            Class<?> c = findLoadedClass(name);
+            if (c == null) {
+                try {
+                    c = getParent().loadClass(name);
+                    if (name.endsWith("ObjectToStringHelper")) {
+                        ClassWriter cw = new ClassWriter(COMPUTE_MAXS | COMPUTE_FRAMES);
+                        cw.visit(52, ACC_PUBLIC | ACC_SUPER, intl(name), null, "java/lang/Object", null);
+
+                        {
+                            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "testHelper", "(Ljava/lang/Object;)Ljava/lang/Object;", null, null);
+                            mv.visitCode();
+                            mv.visitVarInsn(ALOAD, 0);
+                            mv.visitMethodInsn(INVOKEINTERFACE, intl(test.getName()) + "$I", "toString", "()Ljava/lang/String;", true);
+                            mv.visitInsn(ARETURN);
+                            mv.visitMaxs(0, 0);
+                            mv.visitEnd();
+                        }
+
+                        byte[] classFile = cw.toByteArray();
+                        return defineClass(name, classFile, 0, classFile.length);
+                    } else if (name.endsWith("ObjectHashCodeHelper")) {
+                        ClassWriter cw = new ClassWriter(COMPUTE_MAXS | COMPUTE_FRAMES);
+                        cw.visit(52, ACC_PUBLIC | ACC_SUPER, intl(name), null, "java/lang/Object", null);
+
+                        {
+                            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "testHelper", "(Ljava/lang/Object;)I", null, null);
+                            mv.visitCode();
+                            mv.visitVarInsn(ALOAD, 0);
+                            mv.visitMethodInsn(INVOKEINTERFACE, intl(test.getName()) + "$I", "hashCode", "()I", true);
+                            mv.visitInsn(IRETURN);
+                            mv.visitMaxs(0, 0);
+                            mv.visitEnd();
+                        }
+
+                        byte[] classFile = cw.toByteArray();
+                        return defineClass(name, classFile, 0, classFile.length);
+                    } else if (c == test || name.startsWith(test.getName())) {
+                        try {
+                            String path = name.replace('.', '/') + ".class";
+                            byte[] classFile = getParent().getResourceAsStream(path).readAllBytes();
+                            return defineClass(name, classFile, 0, classFile.length);
+                        } catch (IOException e) {
+                            throw new Error(e);
+                        }
+                    }
+                } catch (ClassNotFoundException e) {
+                    // ClassNotFoundException thrown if class not found
+                    // from the non-null parent class loader
+                }
+
+                if (c == null) {
+                    // If still not found, then invoke findClass in order
+                    // to find the class.
+                    c = findClass(name);
+                }
+            }
+            if (resolve) {
+                resolveClass(c);
+            }
+            return c;
+        }
+    }
+
+    public interface RunnableWithException {
+        void run() throws Throwable;
+    }
+
+    public static void shouldThrow(Class<? extends Throwable> expectedException, RunnableWithException r) {
+        try {
+            r.run();
+            throw new AssertionError("Exception not thrown: " + expectedException.getName());
+        } catch (Throwable e) {
+            if (expectedException == e.getClass()) {
+                // success: proper exception is thrown
+            } else {
+                throw new Error(expectedException.getName() + " is expected", e);
+            }
+        }
+    }
+
+    public static MethodHandle unsafeCastMH(Class<?> cls) {
+        try {
+            MethodHandle mh = MethodHandles.identity(Object.class);
+            return MethodHandles.explicitCastArguments(mh, mh.type().changeReturnType(cls));
+        } catch (Throwable e) {
+            throw new Error(e);
+        }
+    }
+}
