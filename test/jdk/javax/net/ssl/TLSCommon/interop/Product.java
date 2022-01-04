@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2002, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,20 +22,13 @@
  * questions.
  */
 
-package nsk.jdi.VirtualMachine.redefineClasses;
+import java.nio.file.Path;
 
-import nsk.share.*;
-import nsk.share.jpda.*;
-import nsk.share.jdi.*;
-
-/**
- *  <code>redefineclasses034b</code> is deugee's part of the redefineclasses034.
+/*
+ * The basic definitions for a product on SSL/TLS implementation.
  */
+public interface Product {
 
-public class redefineclasses034c {
-
-    void justMethod() {
-        int local = 0;
-        return;
-    }
+    public String getName();
+    public Path getPath();
 }
