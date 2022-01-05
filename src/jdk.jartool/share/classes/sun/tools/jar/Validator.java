@@ -265,4 +265,93 @@ final class Validator {
                 }
                 if (!base.requires().equals(md.requires())) {
                     Set<Requires> baseRequires = base.requires();
-                    for (
+                    for (Requires r : md.requires()) {
+                        if (baseRequires.contains(r))
+                            continue;
+                        if (r.modifiers().contains(Requires.Modifier.TRANSITIVE)) {
+                            errorAndInvalid(getMsg("error.validator.info.requires.transitive"));
+                        } else if (!isPlatformModule(r.name())) {
+                            errorAndInvalid(getMsg("error.validator.info.requires.added"));
+                        }
+                    }
+                    for (Requires r : baseRequires) {
+                        Set<Requires> mdRequires = md.requires();
+                        if (mdRequires.contains(r))
+                            continue;
+                        if (!isPlatformModule(r.name())) {
+                            errorAndInvalid(getMsg("error.validator.info.requires.dropped"));
+                        }
+                    }
+                }
+                if (!base.exports().equals(md.exports())) {
+                    errorAndInvalid(getMsg("error.validator.info.exports.notequal"));
+                }
+                if (!base.opens().equals(md.opens())) {
+                    errorAndInvalid(getMsg("error.validator.info.opens.notequal"));
+                }
+                if (!base.provides().equals(md.provides())) {
+                    errorAndInvalid(getMsg("error.validator.info.provides.notequal"));
+                }
+                if (!base.mainClass().equals(md.mainClass())) {
+                    errorAndInvalid(formatMsg("error.validator.info.manclass.notequal",
+                                              ze.getName()));
+                }
+                if (!base.version().equals(md.version())) {
+                    errorAndInvalid(formatMsg("error.validator.info.version.notequal",
+                                              ze.getName()));
+                }
+            } catch (Exception x) {
+                errorAndInvalid(x.getMessage() + " : " + miName);
+            }
+        }
+    }
+
+    private boolean checkClassName(FingerPrint fp) {
+        if (fp.className().equals(className(fp.basename()))) {
+            return true;
+        }
+        error(formatMsg2("error.validator.names.mismatch",
+                         fp.entryName(), fp.className().replace("/", ".")));
+        return isValid = false;
+    }
+
+    private boolean checkNestedClass(FingerPrint fp, Map<String, FingerPrint> outerClasses) {
+        if (outerClasses.containsKey(fp.outerClassName())) {
+            return true;
+        }
+        // outer class was not available
+
+        error(formatMsg("error.validator.isolated.nested.class", fp.entryName()));
+        return isValid = false;
+    }
+
+    private boolean isConcealed(String className) {
+        if (concealedPkgs.isEmpty()) {
+            return false;
+        }
+        int idx = className.lastIndexOf('/');
+        String pkgName = idx != -1 ? className.substring(0, idx).replace('/', '.') : "";
+        return concealedPkgs.contains(pkgName);
+    }
+
+    private static boolean isPlatformModule(String name) {
+        return name.startsWith("java.") || name.startsWith("jdk.");
+    }
+
+    private static String className(String entryName) {
+        return entryName.endsWith(".class") ? entryName.substring(0, entryName.length() - 6) : null;
+    }
+
+    private void error(String msg) {
+        main.error(msg);
+    }
+
+    private void errorAndInvalid(String msg) {
+        main.error(msg);
+        isValid = false;
+    }
+
+    private void warn(String msg) {
+        main.warn(msg);
+    }
+}
