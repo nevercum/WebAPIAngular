@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,31 +23,28 @@
 
 /*
  * @test
- * @bug     7028071
- * @summary Basic unit test of OperatingSystemMXBean.getProcessCpuLoad()
- *
- * @run main GetSystemCpuLoad
+ * @bug 8225559
+ * @summary assertion error at TransTypes.visitApply
+ * @compile ProtectedConstructorTest.java
  */
 
-import java.lang.management.*;
-import com.sun.management.OperatingSystemMXBean;
+import pkg.Bar;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
-public class GetSystemCpuLoad {
-    public static void main(String[] argv) throws Exception {
-        OperatingSystemMXBean mbean = (com.sun.management.OperatingSystemMXBean)
-            ManagementFactory.getOperatingSystemMXBean();
-        double load;
-        for(int i=0; i<10; i++) {
-            load = mbean.getSystemCpuLoad();
-            if((load<0.0 || load>1.0) && load != -1.0) {
-                throw new RuntimeException("getSystemCpuLoad() returns " + load
-                       +  " which is not in the [0.0,1.0] interval");
-            }
-            try {
-                Thread.sleep(200);
-            } catch(InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+class ProtectedConstructorTest {
+    public void foo() {
+        supply(getSupplier(new Bar<>(){}));
+        CompletableFuture<List<String>> completableFuture = getCompletableFuture(getSupplier(new Bar<>(){}));
+        completableFuture = getCompletableFuture(() -> getList(null, new Bar<>() {}));
     }
+
+    static <U> Supplier<U> getSupplier(Bar<U> t) {
+        return null;
+    }
+
+    static <U> void supply(Supplier<U> supplier) {}
+    static <U> CompletableFuture<U> getCompletableFuture(Supplier<U> supplier) { return null; }
+    <T> List<T> getList(final Supplier<List<T>> supplier, Bar<T> t) { return null; }
 }
