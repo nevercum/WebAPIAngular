@@ -94,4 +94,142 @@
 /***************************************************************/
 #ifdef MLIB_USE_FTOI_CLAMPING
 
-#define SA
+#define SATmlib_u8(DST, val0)                                   \
+  DST = ((mlib_s32)(val0 - sat) >> 24) ^ 0x80
+
+#define SATmlib_s16(DST, val0)                                  \
+  DST = ((mlib_s32)val0) >> 16
+
+#define SATmlib_u16(DST, val0)                                  \
+  DST = ((mlib_s32)(val0 - sat) >> 16) ^ 0x8000
+
+#define SATmlib_s32(DST, val0)                                  \
+  DST = val0
+
+#else
+
+#define SATmlib_u8(DST, val0)                                   \
+  val0 -= sat;                                                  \
+  if (val0 >= MLIB_S32_MAX)                                     \
+    val0 = MLIB_S32_MAX;                                        \
+  if (val0 <= MLIB_S32_MIN)                                     \
+    val0 = MLIB_S32_MIN;                                        \
+  DST = ((mlib_s32) val0 >> 24) ^ 0x80
+
+#define SATmlib_s16(DST, val0)                                  \
+  if (val0 >= MLIB_S32_MAX)                                     \
+    val0 = MLIB_S32_MAX;                                        \
+  if (val0 <= MLIB_S32_MIN)                                     \
+    val0 = MLIB_S32_MIN;                                        \
+  DST = (mlib_s32)val0 >> 16
+
+#define SATmlib_u16(DST, val0)                                  \
+  val0 -= sat;                                                  \
+  if (val0 >= MLIB_S32_MAX)                                     \
+    val0 = MLIB_S32_MAX;                                        \
+  if (val0 <= MLIB_S32_MIN)                                     \
+    val0 = MLIB_S32_MIN;                                        \
+  DST = ((mlib_s32)val0 >> 16) ^ 0x8000
+
+#define SATmlib_s32(DST, val0)                                  \
+  if (val0 >= MLIB_S32_MAX)                                     \
+    val0 = MLIB_S32_MAX;                                        \
+  if (val0 <= MLIB_S32_MIN)                                     \
+    val0 = MLIB_S32_MIN;                                        \
+  DST = (mlib_s32)val0
+
+#endif
+
+/***************************************************************/
+#define SATmlib_f32(DST, val0)                                  \
+  DST = (mlib_f32)val0
+
+/***************************************************************/
+#define SATmlib_d64(DST, val0)                                  \
+  DST = val0
+
+/***************************************************************/
+#define MLIB_EDGE_ZERO_LINE(TYPE, Left, Right)                  \
+  dp = (TYPE*)data + channels * Left;                           \
+  dstLineEnd  = (TYPE*)data + channels * Right;                 \
+                                                                \
+  for (; dp < dstLineEnd; dp++) {                               \
+    *dp = zero;                                                 \
+  }
+
+/***************************************************************/
+#define MLIB_EDGE_NEAREST_LINE(TYPE, Left, Right)               \
+  dp = (TYPE*)data + channels * Left;                           \
+  size = Right - Left;                                          \
+                                                                \
+  for (j = 0; j < size; j++) {                                  \
+    ySrc = Y >> MLIB_SHIFT;                                     \
+    xSrc = X >> MLIB_SHIFT;                                     \
+    sp = (TYPE*)lineAddr[ySrc] + xSrc * channels;               \
+                                                                \
+    for (k = 0; k < channels; k++) dp[k] = sp[k];               \
+                                                                \
+    Y += dY;                                                    \
+    X += dX;                                                    \
+    dp += channels;                                             \
+  }
+
+/***************************************************************/
+#define MLIB_EDGE_BL(TYPE, Left, Right)                                 \
+  dp = (TYPE*)data + channels * Left;                                   \
+  size = Right - Left;                                                  \
+                                                                        \
+  for (j = 0; j < size; j++) {                                          \
+    ySrc = ((Y - 32768) >> MLIB_SHIFT);                                 \
+    xSrc = ((X - 32768) >> MLIB_SHIFT);                                 \
+                                                                        \
+    t = ((X - 32768) & MLIB_MASK) * scale;                              \
+    u = ((Y - 32768) & MLIB_MASK) * scale;                              \
+                                                                        \
+    xDelta = (((xSrc + 1 - srcWidth )) >> MLIB_SIGN_SHIFT) & channels;  \
+    yDelta = (((ySrc + 1 - srcHeight)) >> MLIB_SIGN_SHIFT) & srcStride; \
+                                                                        \
+    xFlag = (xSrc >> (MLIB_SIGN_SHIFT - MLIB_SHIFT));                   \
+    xSrc = xSrc + (1 & xFlag);                                          \
+    xDelta = xDelta &~ xFlag;                                           \
+                                                                        \
+    yFlag = (ySrc >> (MLIB_SIGN_SHIFT - MLIB_SHIFT));                   \
+    ySrc = ySrc + (1 & yFlag);                                          \
+    yDelta = yDelta &~ yFlag;                                           \
+                                                                        \
+    sp = (TYPE*)lineAddr[ySrc] + xSrc * channels;                       \
+                                                                        \
+    for (k = 0; k < channels; k++) {                                    \
+      a00  = D64##TYPE(sp[0]);                                          \
+      a01  = D64##TYPE(sp[xDelta]);                                     \
+      a10  = D64##TYPE(sp[yDelta]);                                     \
+      a11  = D64##TYPE(sp[yDelta + xDelta]);                            \
+      pix0 = (a00 * (1 - t) + a01 * t) * (1 - u) +                      \
+             (a10 * (1 - t) + a11 * t) * u;                             \
+                                                                        \
+      dp[k] = (TYPE)pix0;                                               \
+      sp++;                                                             \
+    }                                                                   \
+                                                                        \
+    X += dX;                                                            \
+    Y += dY;                                                            \
+    dp += channels;                                                     \
+  }
+
+/***************************************************************/
+#define GET_FLT_TBL(X, xf0, xf1, xf2, xf3)                      \
+  filterpos = ((X - 32768) >> flt_shift) & flt_mask;            \
+  fptr = (mlib_f32 *) ((mlib_u8 *)flt_tbl + filterpos);         \
+                                                                \
+  xf0 = fptr[0];                                                \
+  xf1 = fptr[1];                                                \
+  xf2 = fptr[2];                                                \
+  xf3 = fptr[3]
+
+/***************************************************************/
+#define GET_FLT_BC(X, xf0, xf1, xf2, xf3)                       \
+  dx = ((X - 32768) & MLIB_MASK) * scale;                       \
+  dx_2  = 0.5 * dx;                                             \
+  dx2   = dx * dx;                                              \
+  dx3_2 = dx_2 * dx2;                                           \
+  dx3_
