@@ -232,4 +232,126 @@
   dx_2  = 0.5 * dx;                                             \
   dx2   = dx * dx;                                              \
   dx3_2 = dx_2 * dx2;                                           \
-  dx3_
+  dx3_3 = 3.0 * dx3_2;                                          \
+                                                                \
+  xf0 = dx2 - dx3_2 - dx_2;                                     \
+  xf1 = dx3_3 - 2.5 * dx2 + 1.0;                                \
+  xf2 = 2.0 * dx2 - dx3_3 + dx_2;                               \
+  xf3 = dx3_2 - 0.5 * dx2
+
+/***************************************************************/
+#define GET_FLT_BC2(X, xf0, xf1, xf2, xf3)                      \
+  dx =  ((X - 32768) & MLIB_MASK) * scale;                      \
+  dx2   = dx  * dx;                                             \
+  dx3_2 = dx  * dx2;                                            \
+  dx3_3 = 2.0 * dx2;                                            \
+                                                                \
+  xf0 = - dx3_2 + dx3_3 - dx;                                   \
+  xf1 =   dx3_2 - dx3_3 + 1.0;                                  \
+  xf2 = - dx3_2 + dx2   + dx;                                   \
+  xf3 =   dx3_2 - dx2
+
+/***************************************************************/
+#define CALC_SRC_POS(X, Y, channels, srcStride)                                    \
+  xSrc = ((X - 32768) >> MLIB_SHIFT);                                              \
+  ySrc = ((Y - 32768) >> MLIB_SHIFT);                                              \
+                                                                                   \
+  xDelta0 = ((~((xSrc - 1) >> MLIB_SIGN_SHIFT)) & (- channels));                   \
+  yDelta0 = ((~((ySrc - 1) >> MLIB_SIGN_SHIFT)) & (- srcStride));                  \
+  xDelta1 = ((xSrc + 1 - srcWidth) >> MLIB_SIGN_SHIFT) & (channels);               \
+  yDelta1 = ((ySrc + 1 - srcHeight) >> MLIB_SIGN_SHIFT) & (srcStride);             \
+  xDelta2 = xDelta1 + (((xSrc + 2 - srcWidth) >> MLIB_SIGN_SHIFT) & (channels));   \
+  yDelta2 = yDelta1 + (((ySrc + 2 - srcHeight) >> MLIB_SIGN_SHIFT) & (srcStride)); \
+                                                                                   \
+  xFlag = (xSrc >> (MLIB_SIGN_SHIFT - MLIB_SHIFT));                                \
+  xSrc = xSrc + (1 & xFlag);                                                       \
+  xDelta2 -= (xDelta1 & xFlag);                                                    \
+  xDelta1 = (xDelta1 &~ xFlag);                                                    \
+                                                                                   \
+  yFlag = (ySrc >> (MLIB_SIGN_SHIFT - MLIB_SHIFT));                                \
+  ySrc = ySrc + (1 & yFlag);                                                       \
+  yDelta2  -= (yDelta1 & yFlag);                                                   \
+  yDelta1 = yDelta1 &~ yFlag
+
+/***************************************************************/
+#define MLIB_EDGE_BC_LINE(TYPE, Left, Right, GET_FILTER)        \
+  dp = (TYPE*)data + channels * Left;                           \
+  size = Right - Left;                                          \
+                                                                \
+  for (j = 0; j < size; j++) {                                  \
+    GET_FILTER(X, xf0, xf1, xf2, xf3);                          \
+    GET_FILTER(Y, yf0, yf1, yf2, yf3);                          \
+                                                                \
+    CALC_SRC_POS(X, Y, channels, srcStride);                    \
+                                                                \
+    sp = (TYPE*)lineAddr[ySrc] + channels*xSrc;                 \
+                                                                \
+    for (k = 0; k < channels; k++) {                            \
+      c0 = D64##TYPE(sp[yDelta0 + xDelta0]) * xf0 +             \
+           D64##TYPE(sp[yDelta0          ]) * xf1 +             \
+           D64##TYPE(sp[yDelta0 + xDelta1]) * xf2 +             \
+           D64##TYPE(sp[yDelta0 + xDelta2]) * xf3;              \
+                                                                \
+      c1 = D64##TYPE(sp[xDelta0]) * xf0 +                       \
+           D64##TYPE(sp[      0]) * xf1 +                       \
+           D64##TYPE(sp[xDelta1]) * xf2 +                       \
+           D64##TYPE(sp[xDelta2]) * xf3;                        \
+                                                                \
+      c2 = D64##TYPE(sp[yDelta1 + xDelta0]) * xf0 +             \
+           D64##TYPE(sp[yDelta1          ]) * xf1 +             \
+           D64##TYPE(sp[yDelta1 + xDelta1]) * xf2 +             \
+           D64##TYPE(sp[yDelta1 + xDelta2]) * xf3;              \
+                                                                \
+      c3 = D64##TYPE(sp[yDelta2 + xDelta0]) * xf0 +             \
+           D64##TYPE(sp[yDelta2          ]) * xf1 +             \
+           D64##TYPE(sp[yDelta2 + xDelta1]) * xf2 +             \
+           D64##TYPE(sp[yDelta2 + xDelta2]) * xf3;              \
+                                                                \
+      val0 = c0*yf0 + c1*yf1 + c2*yf2 + c3*yf3;                 \
+                                                                \
+      SAT##TYPE(dp[k], val0);                                   \
+                                                                \
+      sp++;                                                     \
+    }                                                           \
+                                                                \
+    X += dX;                                                    \
+    Y += dY;                                                    \
+    dp += channels;                                             \
+  }
+
+/***************************************************************/
+#define MLIB_EDGE_BC_TBL(TYPE, Left, Right)                     \
+  MLIB_EDGE_BC_LINE(TYPE, Left, Right, GET_FLT_TBL)
+
+/***************************************************************/
+#define MLIB_EDGE_BC(TYPE, Left, Right)                         \
+  MLIB_EDGE_BC_LINE(TYPE, Left, Right, GET_FLT_BC)
+
+/***************************************************************/
+#define MLIB_EDGE_BC2(TYPE, Left, Right)                        \
+  MLIB_EDGE_BC_LINE(TYPE, Left, Right, GET_FLT_BC2)
+
+/***************************************************************/
+#define MLIB_PROCESS_EDGES_ZERO(TYPE) {                         \
+  TYPE *dp, *dstLineEnd;                                        \
+                                                                \
+  for (i = yStartE; i < yStart; i++) {                          \
+    xLeftE  = leftEdgesE[i];                                    \
+    xRightE = rightEdgesE[i] + 1;                               \
+    data   += dstStride;                                        \
+                                                                \
+    MLIB_EDGE_ZERO_LINE(TYPE, xLeftE, xRightE);                 \
+  }                                                             \
+                                                                \
+  for (; i <= yFinish; i++) {                                   \
+    xLeftE  = leftEdgesE[i];                                    \
+    xRightE = rightEdgesE[i] + 1;                               \
+    xLeft   = leftEdges[i];                                     \
+    xRight  = rightEdges[i] + 1;                                \
+    data   += dstStride;                                        \
+                                                                \
+    if (xLeft < xRight) {                                       \
+      MLIB_EDGE_ZERO_LINE(TYPE, xLeftE, xLeft);                 \
+    } else {                                                    \
+      xRight = xLeftE;                                          \
+    }                 
