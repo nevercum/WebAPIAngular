@@ -522,4 +522,136 @@ mlib_status mlib_ImageAffineEdgeExtend_BL(mlib_affine_param *param,
   mlib_d64 scale = 1.0 / (mlib_d64) MLIB_PREC;
   mlib_s32 xDelta, yDelta, xFlag, yFlag;
   mlib_d64 t, u, pix0;
-  mlib_d64 a00, a01,
+  mlib_d64 a00, a01, a10, a11;
+
+  switch (type) {
+    case MLIB_BYTE:
+      MLIB_PROCESS_EDGES(MLIB_EDGE_BL, mlib_u8);
+      break;
+
+    case MLIB_SHORT:
+      srcStride >>= 1;
+      MLIB_PROCESS_EDGES(MLIB_EDGE_BL, mlib_s16);
+      break;
+
+    case MLIB_USHORT:
+      srcStride >>= 1;
+      MLIB_PROCESS_EDGES(MLIB_EDGE_BL, mlib_u16);
+      break;
+
+    case MLIB_INT:
+      srcStride >>= 2;
+      MLIB_PROCESS_EDGES(MLIB_EDGE_BL, mlib_s32);
+      break;
+
+    case MLIB_FLOAT:
+      srcStride >>= 2;
+      MLIB_PROCESS_EDGES(MLIB_EDGE_BL, mlib_f32);
+      break;
+
+    case MLIB_DOUBLE:
+      srcStride >>= 3;
+      MLIB_PROCESS_EDGES(MLIB_EDGE_BL, mlib_d64);
+      break;
+
+  default:
+    /* Image type MLIB_BIT is not supported, ignore it. */
+    break;
+  }
+
+  return MLIB_SUCCESS;
+}
+
+/***************************************************************/
+mlib_status mlib_ImageAffineEdgeExtend_BC(mlib_affine_param *param,
+                                          mlib_affine_param *param_e)
+{
+  GET_EDGE_PARAMS();
+  mlib_d64 scale = 1.0 / (mlib_d64) MLIB_PREC;
+  mlib_s32 xFlag, yFlag;
+  mlib_d64 dx, dx_2, dx2, dx3_2, dx3_3;
+  mlib_d64 xf0, xf1, xf2, xf3;
+  mlib_d64 yf0, yf1, yf2, yf3;
+  mlib_d64 c0, c1, c2, c3, val0;
+  mlib_filter filter = param->filter;
+  mlib_f32 *fptr;
+  mlib_f32 const *flt_tbl;
+  mlib_s32 filterpos, flt_shift, flt_mask;
+  mlib_s32 xDelta0, xDelta1, xDelta2;
+  mlib_s32 yDelta0, yDelta1, yDelta2;
+  mlib_d64 sat;
+
+  if (type == MLIB_BYTE) {
+    flt_shift = FLT_SHIFT_U8;
+    flt_mask = FLT_MASK_U8;
+    flt_tbl = (filter == MLIB_BICUBIC) ? mlib_filters_u8f_bc : mlib_filters_u8f_bc2;
+    sat = (mlib_d64) 0x7F800000;                           /* saturation for U8 */
+  }
+  else {
+    flt_shift = FLT_SHIFT_S16;
+    flt_mask = FLT_MASK_S16;
+    flt_tbl = (filter == MLIB_BICUBIC) ? mlib_filters_s16f_bc : mlib_filters_s16f_bc2;
+    sat = (mlib_d64) 0x7FFF8000;                           /* saturation for U16 */
+  }
+
+
+  switch (type) {
+    case MLIB_BYTE:
+      MLIB_PROCESS_EDGES(MLIB_EDGE_BC_TBL, mlib_u8);
+      break;
+
+    case MLIB_SHORT:
+      srcStride >>= 1;
+      MLIB_PROCESS_EDGES(MLIB_EDGE_BC_TBL, mlib_s16);
+      break;
+
+    case MLIB_USHORT:
+      srcStride >>= 1;
+      MLIB_PROCESS_EDGES(MLIB_EDGE_BC_TBL, mlib_u16);
+      break;
+
+    case MLIB_INT:
+      srcStride >>= 2;
+
+      if (filter == MLIB_BICUBIC) {
+        MLIB_PROCESS_EDGES(MLIB_EDGE_BC, mlib_s32);
+      }
+      else {
+        MLIB_PROCESS_EDGES(MLIB_EDGE_BC2, mlib_s32);
+      }
+
+      break;
+
+    case MLIB_FLOAT:
+      srcStride >>= 2;
+
+      if (filter == MLIB_BICUBIC) {
+        MLIB_PROCESS_EDGES(MLIB_EDGE_BC, mlib_f32);
+      }
+      else {
+        MLIB_PROCESS_EDGES(MLIB_EDGE_BC2, mlib_f32);
+      }
+
+      break;
+
+    case MLIB_DOUBLE:
+      srcStride >>= 3;
+
+      if (filter == MLIB_BICUBIC) {
+        MLIB_PROCESS_EDGES(MLIB_EDGE_BC, mlib_d64);
+      }
+      else {
+        MLIB_PROCESS_EDGES(MLIB_EDGE_BC2, mlib_d64);
+      }
+
+      break;
+
+  default:
+    /* Ignore unsupported image type MLIB_BIT */
+    break;
+  }
+
+  return MLIB_SUCCESS;
+}
+
+/***************************************************************/
