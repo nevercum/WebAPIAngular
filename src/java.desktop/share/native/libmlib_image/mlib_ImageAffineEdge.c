@@ -354,4 +354,172 @@
       MLIB_EDGE_ZERO_LINE(TYPE, xLeftE, xLeft);                 \
     } else {                                                    \
       xRight = xLeftE;                                          \
-    }                 
+    }                                                           \
+                                                                \
+    MLIB_EDGE_ZERO_LINE(TYPE, xRight, xRightE);                 \
+  }                                                             \
+                                                                \
+  for (; i <= yFinishE; i++) {                                  \
+    xLeftE  = leftEdgesE[i];                                    \
+    xRightE = rightEdgesE[i] + 1;                               \
+    data   += dstStride;                                        \
+                                                                \
+    MLIB_EDGE_ZERO_LINE(TYPE, xLeftE, xRightE);                 \
+  }                                                             \
+}
+
+/***************************************************************/
+#define MLIB_PROCESS_EDGES(PROCESS_LINE, TYPE) {                \
+  TYPE *sp, *dp;                                                \
+  mlib_s32 k, size;                                             \
+                                                                \
+  for (i = yStartE; i < yStart; i++) {                          \
+    xLeftE  = leftEdgesE[i];                                    \
+    xRightE = rightEdgesE[i] + 1;                               \
+    X       = xStartsE[i];                                      \
+    Y       = yStartsE[i];                                      \
+    data   += dstStride;                                        \
+                                                                \
+    PROCESS_LINE(TYPE, xLeftE, xRightE);                        \
+  }                                                             \
+                                                                \
+  for (; i <= yFinish; i++) {                                   \
+    xLeftE  = leftEdgesE[i];                                    \
+    xRightE = rightEdgesE[i] + 1;                               \
+    xLeft   = leftEdges[i];                                     \
+    xRight  = rightEdges[i] + 1;                                \
+    X       = xStartsE[i];                                      \
+    Y       = yStartsE[i];                                      \
+    data   += dstStride;                                        \
+                                                                \
+    if (xLeft < xRight) {                                       \
+      PROCESS_LINE(TYPE, xLeftE, xLeft);                        \
+    } else {                                                    \
+      xRight = xLeftE;                                          \
+    }                                                           \
+                                                                \
+    X = xStartsE[i] + dX * (xRight - xLeftE);                   \
+    Y = yStartsE[i] + dY * (xRight - xLeftE);                   \
+    PROCESS_LINE(TYPE, xRight, xRightE);                        \
+  }                                                             \
+                                                                \
+  for (; i <= yFinishE; i++) {                                  \
+    xLeftE  = leftEdgesE[i];                                    \
+    xRightE = rightEdgesE[i] + 1;                               \
+    X       = xStartsE[i];                                      \
+    Y       = yStartsE[i];                                      \
+    data   += dstStride;                                        \
+                                                                \
+    PROCESS_LINE(TYPE, xLeftE, xRightE);                        \
+  }                                                             \
+}
+
+/***************************************************************/
+#define GET_EDGE_PARAMS_ZERO()                                  \
+  mlib_image *dst = param -> dst;                               \
+  mlib_s32  *leftEdges  = param -> leftEdges;                   \
+  mlib_s32  *rightEdges = param -> rightEdges;                  \
+  mlib_s32  *leftEdgesE  = param_e -> leftEdges;                \
+  mlib_s32  *rightEdgesE = param_e -> rightEdges;               \
+  mlib_type type      = mlib_ImageGetType(dst);                 \
+  mlib_s32  channels  = mlib_ImageGetChannels(dst);             \
+  mlib_s32  dstStride = mlib_ImageGetStride(dst);               \
+  mlib_s32  yStart    = param -> yStart;                        \
+  mlib_s32  yFinish   = param -> yFinish;                       \
+  mlib_s32  yStartE   = param_e -> yStart;                      \
+  mlib_s32  yFinishE  = param_e -> yFinish;                     \
+  mlib_u8   *data     = param_e -> dstData;                     \
+  mlib_s32  xLeft, xRight, xLeftE, xRightE;                     \
+  mlib_s32  i
+
+/***************************************************************/
+#define GET_EDGE_PARAMS_NN()                                    \
+  GET_EDGE_PARAMS_ZERO();                                       \
+  mlib_s32  *xStartsE = param_e -> xStarts;                     \
+  mlib_s32  *yStartsE = param_e -> yStarts;                     \
+  mlib_u8   **lineAddr = param -> lineAddr;                     \
+  mlib_s32  dX = param_e -> dX;                                 \
+  mlib_s32  dY = param_e -> dY;                                 \
+  mlib_s32  xSrc, ySrc, X, Y;                                   \
+  mlib_s32  j
+
+/***************************************************************/
+#define GET_EDGE_PARAMS()                                       \
+  GET_EDGE_PARAMS_NN();                                         \
+  mlib_image *src = param -> src;                               \
+  mlib_s32  srcWidth  = mlib_ImageGetWidth(src);                \
+  mlib_s32  srcHeight = mlib_ImageGetHeight(src);               \
+  mlib_s32  srcStride = mlib_ImageGetStride(src)
+
+/***************************************************************/
+void mlib_ImageAffineEdgeZero(mlib_affine_param *param,
+                              mlib_affine_param *param_e)
+{
+  GET_EDGE_PARAMS_ZERO();
+  mlib_s32 zero = 0;
+
+  switch (type) {
+    case MLIB_BYTE:
+      MLIB_PROCESS_EDGES_ZERO(mlib_u8);
+      break;
+
+    case MLIB_SHORT:
+    case MLIB_USHORT:
+      MLIB_PROCESS_EDGES_ZERO(mlib_s16);
+      break;
+
+    case MLIB_INT:
+    case MLIB_FLOAT:
+      MLIB_PROCESS_EDGES_ZERO(mlib_s32);
+      break;
+
+    case MLIB_DOUBLE:{
+        mlib_d64 zero = 0;
+        MLIB_PROCESS_EDGES_ZERO(mlib_d64);
+        break;
+      }
+  default:
+    /* Image type MLIB_BIT is not used in java, so we can ignore it. */
+    break;
+  }
+}
+
+/***************************************************************/
+void mlib_ImageAffineEdgeNearest(mlib_affine_param *param,
+                                 mlib_affine_param *param_e)
+{
+  GET_EDGE_PARAMS_NN();
+
+  switch (type) {
+    case MLIB_BYTE:
+      MLIB_PROCESS_EDGES(MLIB_EDGE_NEAREST_LINE, mlib_u8);
+      break;
+
+    case MLIB_SHORT:
+    case MLIB_USHORT:
+      MLIB_PROCESS_EDGES(MLIB_EDGE_NEAREST_LINE, mlib_s16);
+      break;
+
+    case MLIB_INT:
+    case MLIB_FLOAT:
+      MLIB_PROCESS_EDGES(MLIB_EDGE_NEAREST_LINE, mlib_s32);
+      break;
+
+    case MLIB_DOUBLE:
+      MLIB_PROCESS_EDGES(MLIB_EDGE_NEAREST_LINE, mlib_d64);
+      break;
+  default:
+    /* Image type MLIB_BIT is not used in java, so we can ignore it. */
+    break;
+  }
+}
+
+/***************************************************************/
+mlib_status mlib_ImageAffineEdgeExtend_BL(mlib_affine_param *param,
+                                          mlib_affine_param *param_e)
+{
+  GET_EDGE_PARAMS();
+  mlib_d64 scale = 1.0 / (mlib_d64) MLIB_PREC;
+  mlib_s32 xDelta, yDelta, xFlag, yFlag;
+  mlib_d64 t, u, pix0;
+  mlib_d64 a00, a01,
