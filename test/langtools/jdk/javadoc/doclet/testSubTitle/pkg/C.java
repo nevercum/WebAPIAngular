@@ -1,12 +1,11 @@
+
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,27 +22,10 @@
  * questions.
  */
 
-#import <jawt_md.h>
+package pkg;
 
-/*
- * The CALayer-based rendering model returns an object conforming
- * to the JAWT_SurfaceLayers protocol
- *
- * @protocol JAWT_SurfaceLayers
- * @property (readwrite, retain) CALayer *layer;
- * @property (readonly) CALayer *windowLayer;
- * @end
+/**
+ * Source file for C
  */
-
-@interface AWTSurfaceLayers : NSObject<JAWT_SurfaceLayers> {
-@private
-    CALayer *layer;
-    CALayer *windowLayer;
+public class C {
 }
-
-@property (atomic, retain) CALayer *windowLayer;
-
-- (id) initWithWindowLayer: (CALayer *)windowLayer;
-- (void) setBounds: (CGRect)rect;
-
-@end

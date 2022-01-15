@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,27 +23,33 @@
  * questions.
  */
 
-#import <jawt_md.h>
+//
+// SunJSSE does not support dynamic system properties, no way to re-use
+// system properties in samevm/agentvm mode.
+//
 
 /*
- * The CALayer-based rendering model returns an object conforming
- * to the JAWT_SurfaceLayers protocol
- *
- * @protocol JAWT_SurfaceLayers
- * @property (readwrite, retain) CALayer *layer;
- * @property (readonly) CALayer *windowLayer;
- * @end
+ * @test
+ * @bug 8242141
+ * @summary New System Properties to configure the default signature schemes
+ * @library /javax/net/ssl/templates
+ * @run main/othervm CustomizedClientSchemes
  */
 
-@interface AWTSurfaceLayers : NSObject<JAWT_SurfaceLayers> {
-@private
-    CALayer *layer;
-    CALayer *windowLayer;
+import javax.net.ssl.SSLException;
+
+public class CustomizedClientSchemes extends SSLSocketTemplate {
+
+    public static void main(String[] args) throws Exception {
+        System.setProperty("jdk.tls.client.SignatureSchemes", "rsa_pkcs1_sha1");
+
+        try {
+            new CustomizedClientSchemes().run();
+            throw new Exception(
+                "The jdk.tls.client.SignatureSchemes System Property " +
+                "does not work");
+        } catch (SSLException e) {
+            // Got the expected exception.
+        }
+    }
 }
-
-@property (atomic, retain) CALayer *windowLayer;
-
-- (id) initWithWindowLayer: (CALayer *)windowLayer;
-- (void) setBounds: (CGRect)rect;
-
-@end
