@@ -1381,3 +1381,1155 @@ public class SwingEventMonitor extends AWTEventMonitor {
                 //  Look for components which support the getDocument method
                 //  (e.g. JTextComponent)
                 //
+                try {
+                    getDocumentMethod = c.getClass().getMethod(
+                        "getDocument", nullClass);
+                    try {
+                        Object o = getDocumentMethod.invoke(c, nullArgs);
+                        if (o != null && o instanceof Document) {
+                            ((Document) o).removeUndoableEditListener(this);
+                            ((Document) o).addUndoableEditListener(this);
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+
+                //  Look for components which support UndoableEdit listeners
+                //  (no current example)
+                //
+                try {
+                    removeUndoableEditMethod = c.getClass().getMethod(
+                        "removeUndoableEditListener", undoableEditListeners);
+                    addUndoableEditMethod = c.getClass().getMethod(
+                        "addUndoableEditListener", undoableEditListeners);
+                    try {
+                        removeUndoableEditMethod.invoke(c, undoableEditArgs);
+                        addUndoableEditMethod.invoke(c, undoableEditArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.INTERNALFRAME:
+                //  Look for components which support InternalFrame listeners
+                //  (e.g. JInternalFrame)
+                //
+              try {
+                    removeInternalFrameMethod = c.getClass().getMethod(
+                        "removeInternalFrameListener", internalFrameListeners);
+                    addInternalFrameMethod = c.getClass().getMethod(
+                        "addInternalFrameListener", internalFrameListeners);
+                    try {
+                        removeInternalFrameMethod.invoke(c, internalFrameArgs);
+                        addInternalFrameMethod.invoke(c, internalFrameArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.PROPERTYCHANGE:
+                //  Look for components which support PropertyChange listeners
+                //  (e.g. JComponent)
+                //
+                try {
+                    removePropertyChangeMethod = c.getClass().getMethod(
+                        "removePropertyChangeListener", propertyChangeListeners);
+                    addPropertyChangeMethod = c.getClass().getMethod(
+                        "addPropertyChangeListener", propertyChangeListeners);
+                    try {
+                        removePropertyChangeMethod.invoke(c, propertyChangeArgs);
+                        addPropertyChangeMethod.invoke(c, propertyChangeArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+
+                //  Look for components which support the getSelectionModel method
+                //  (e.g. JTextComponent)
+                //
+                try {
+                    getSelectionModelMethod = c.getClass().getMethod(
+                        "getSelectionModel", nullClass);
+                    try {
+                        Object o = getSelectionModelMethod.invoke(c, nullArgs);
+                        if (o != null && o instanceof TreeSelectionModel) {
+                            ((TreeSelectionModel) o).removePropertyChangeListener(this);
+                            ((TreeSelectionModel) o).addPropertyChangeListener(this);
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.VETOABLECHANGE:
+                if (c instanceof JComponent) {
+                    ((JComponent) c).removeVetoableChangeListener(this);
+                    ((JComponent) c).addVetoableChangeListener(this);
+                }
+                break;
+
+            // Don't bother recursing the children if this isn't going to
+            // accomplish anything.
+            //
+            default:
+                return;
+            }
+
+            if (c instanceof Container) {
+                int count = ((Container) c).getComponentCount();
+                for (int i = 0; i < count; i++) {
+                    installListeners(((Container) c).getComponent(i), eventID);
+                }
+            }
+        }
+
+        /**
+         * Removes all listeners for the given component and all its children.
+         * @param c the component
+         */
+        protected void removeListeners(Component c) {
+
+            // conditionaly remove the Swing listeners
+            //
+            if (SwingEventMonitor.listenerList.getListenerCount(AncestorListener.class) > 0) {
+                removeListeners(c,EventID.ANCESTOR);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(CaretListener.class) > 0) {
+                removeListeners(c,EventID.CARET);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(CellEditorListener.class) > 0) {
+                removeListeners(c,EventID.CELLEDITOR);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(ChangeListener.class) > 0) {
+                removeListeners(c,EventID.CHANGE);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(TableColumnModelListener.class) > 0) {
+                removeListeners(c,EventID.COLUMNMODEL);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(DocumentListener.class) > 0) {
+                removeListeners(c,EventID.DOCUMENT);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(ListDataListener.class) > 0) {
+                removeListeners(c,EventID.LISTDATA);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(ListSelectionListener.class) > 0) {
+                removeListeners(c,EventID.LISTSELECTION);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(MenuListener.class) > 0) {
+                removeListeners(c,EventID.MENU);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(PopupMenuListener.class) > 0) {
+                removeListeners(c,EventID.POPUPMENU);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(TableModelListener.class) > 0) {
+                removeListeners(c,EventID.TABLEMODEL);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(TreeExpansionListener.class) > 0) {
+                removeListeners(c,EventID.TREEEXPANSION);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(TreeModelListener.class) > 0) {
+                removeListeners(c,EventID.TREEMODEL);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(TreeSelectionListener.class) > 0) {
+                removeListeners(c,EventID.TREESELECTION);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(UndoableEditListener.class) > 0) {
+                removeListeners(c,EventID.UNDOABLEEDIT);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(InternalFrameListener.class) > 0) {
+                removeListeners(c,EventID.INTERNALFRAME);
+            }
+
+            // conditionaly remove the beans listeners
+            //
+            if (SwingEventMonitor.listenerList.getListenerCount(PropertyChangeListener.class) > 0) {
+                removeListeners(c,EventID.PROPERTYCHANGE);
+            }
+            if (SwingEventMonitor.listenerList.getListenerCount(VetoableChangeListener.class) > 0) {
+                removeListeners(c,EventID.VETOABLECHANGE);
+            }
+
+            // Now remove the AWT listeners if needed.
+            //
+            super.removeListeners(c);
+        }
+
+        /**
+         * Removes all Swing listeners for the event ID from the component and
+         * all of its children.
+         * @param c the component to remove listeners from
+         */
+        protected void removeListeners(Component c, int eventID) {
+
+            // remove the appropriate listener hook into this component
+            //
+            switch (eventID) {
+
+            case EventID.CONTAINER:
+                //Never remove these because we're always interested in them
+                // for our own use.
+                break;
+
+            case EventID.ANCESTOR:
+                if (c instanceof JComponent) {
+                    ((JComponent) c).removeAncestorListener(this);
+                }
+                break;
+
+            case EventID.CARET:
+                try {
+                    removeCaretMethod = c.getClass().getMethod(
+                        "removeCaretListener", caretListeners);
+                    try {
+                        removeCaretMethod.invoke(c, caretArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.CELLEDITOR:
+                //  Look for components which support the getCellEditor method
+                //  (e.g. JTable, JTree)
+                //
+                try {
+                    getCellEditorMethod = c.getClass().getMethod(
+                        "getCellEditor", nullClass);
+                    try {
+                        Object o = getCellEditorMethod.invoke(c, nullArgs);
+                        if (o != null && o instanceof CellEditor) {
+                            ((CellEditor) o).removeCellEditorListener(this);
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+
+                //  Look for components which support CellEditor listeners
+                //  (no current example)
+                //
+                try {
+                    removeCellEditorMethod = c.getClass().getMethod(
+                        "removeCellEditorListener", cellEditorListeners);
+                    try {
+                        removeCellEditorMethod.invoke(c, cellEditorArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.CHANGE:
+    //  [[[FIXME:  Need to add support for Style, StyleContext -pk ]]]
+
+                //  Look for components which support Change listeners
+                //  (e.g. AbstractButton, Caret, JProgressBar, JSlider,
+                //   JTabbedpane, JTextComponent, JViewport)
+                //
+                try {
+                    removeChangeMethod = c.getClass().getMethod(
+                        "removeChangeListener", changeListeners);
+                    try {
+                        removeChangeMethod.invoke(c, changeArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+
+                //  Look for components which support the getModel method
+                //  whose model supports Change listeners
+                //  (e.g. BoundedRangeModel, ButtonModel, SingleSelectionModel)
+                //
+                try {
+                    getModelMethod = c.getClass().getMethod(
+                        "getModel", nullClass);
+                    try {
+                        Object o = getModelMethod.invoke(c, nullArgs);
+                        if (o != null) {
+                            removeChangeMethod = o.getClass().getMethod(
+                                "removeChangeListener", changeListeners);
+                            removeChangeMethod.invoke(o, changeArgs);
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.COLUMNMODEL:
+                try {
+                    getColumnModelMethod = c.getClass().getMethod(
+                        "getTableColumnModel", nullClass);
+                    try {
+                        Object o = getColumnModelMethod.invoke(c, nullArgs);
+                        if (o != null && o instanceof TableColumnModel) {
+                            ((TableColumnModel) o).removeColumnModelListener(this);
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.DOCUMENT:
+                //  Look for components which support the getDocument method
+                //  (e.g. JTextComponent)
+                //
+                try {
+                    getDocumentMethod = c.getClass().getMethod(
+                        "getDocument", nullClass);
+                    try {
+                        Object o = getDocumentMethod.invoke(c, nullArgs);
+                        if (o != null && o instanceof Document) {
+                            ((Document) o).removeDocumentListener(this);
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+
+                //  Look for components which support Document listeners
+                //  (no current example)
+                //
+                try {
+                    removeDocumentMethod = c.getClass().getMethod(
+                        "removeDocumentListener", documentListeners);
+                    try {
+                        removeDocumentMethod.invoke(c, documentArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.LISTDATA:
+            case EventID.TABLEMODEL:
+            case EventID.TREEMODEL:
+                try {
+                    getModelMethod = c.getClass().getMethod(
+                        "getModel", nullClass);
+                    try {
+                        Object o = getModelMethod.invoke(c, nullArgs);
+                        if (o != null) {
+                            if (eventID == EventID.LISTDATA &&
+                                o instanceof ListModel) {
+                                ((ListModel) o).removeListDataListener(this);
+                            } else if (eventID == EventID.TABLEMODEL &&
+                                o instanceof TableModel) {
+                                ((TableModel) o).removeTableModelListener(this);
+                            } else if (
+                                o instanceof TreeModel) {
+                                ((TreeModel) o).removeTreeModelListener(this);
+                            }
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.LISTSELECTION:
+                //  Look for components which support ListSelectionListeners
+                //  (e.g. JList)
+                //
+                try {
+                    removeListSelectionMethod = c.getClass().getMethod(
+                        "removeListSelectionListener", listSelectionListeners);
+                    try {
+                        removeListSelectionMethod.invoke(c, listSelectionArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+
+                // Look for selection models which support
+                // ListSelectionListeners (e.g. JTable's selection model)
+                //
+                try {
+                    getSelectionModelMethod = c.getClass().getMethod(
+                        "getSelectionModel", nullClass);
+                    try {
+                        Object o = getSelectionModelMethod.invoke(c, nullArgs);
+                        if (o != null && o instanceof ListSelectionModel) {
+                            ((ListSelectionModel) o).removeListSelectionListener(this);
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.MENU:
+                try {
+                    removeMenuMethod = c.getClass().getMethod(
+                        "removeMenuListener", menuListeners);
+                    try {
+                        removeMenuMethod.invoke(c, menuArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.POPUPMENU:
+                //  Look for components which support PopupMenuListeners
+                //  (e.g. JPopupMenu)
+                //
+                try {
+                    removePopupMenuMethod = c.getClass().getMethod(
+                        "removePopupMenuListener", popupMenuListeners);
+                    try {
+                        removePopupMenuMethod.invoke(c, popupMenuArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+
+                //  Look for components which support getPopupMenu
+                //  (e.g. JMenu)
+                //
+                try {
+                    getPopupMenuMethod = c.getClass().getMethod(
+                        "getPopupMenu", nullClass);
+                    try {
+                        Object o = getPopupMenuMethod.invoke(c, nullArgs);
+                        if (o != null) {
+                            removePopupMenuMethod = o.getClass().getMethod(
+                                "removePopupMenuListener", popupMenuListeners);
+                            removePopupMenuMethod.invoke(o, popupMenuArgs);
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.TREEEXPANSION:
+                try {
+                    removeTreeExpansionMethod = c.getClass().getMethod(
+                        "removeTreeExpansionListener", treeExpansionListeners);
+                    try {
+                        removeTreeExpansionMethod.invoke(c, treeExpansionArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.TREESELECTION:
+                try {
+                    removeTreeSelectionMethod = c.getClass().getMethod(
+                        "removeTreeSelectionListener", treeSelectionListeners);
+                    try {
+                        removeTreeSelectionMethod.invoke(c, treeSelectionArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.UNDOABLEEDIT:
+                //  Look for components which support the getDocument method
+                //  (e.g. JTextComponent)
+                //
+                try {
+                    getDocumentMethod = c.getClass().getMethod(
+                        "getDocument", nullClass);
+                    try {
+                        Object o = getDocumentMethod.invoke(c, nullArgs);
+                        if (o != null && o instanceof Document) {
+                            ((Document) o).removeUndoableEditListener(this);
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+
+                //  Look for components which support UndoableEdit listeners
+                //  (no current example)
+                //
+                try {
+                    removeUndoableEditMethod = c.getClass().getMethod(
+                        "removeUndoableEditListener", undoableEditListeners);
+                    try {
+                        removeUndoableEditMethod.invoke(c, undoableEditArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.INTERNALFRAME:
+              try {
+                    removeInternalFrameMethod = c.getClass().getMethod(
+                        "removeInternalFrameListener", internalFrameListeners);
+                    try {
+                        removeInternalFrameMethod.invoke(c, internalFrameArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.PROPERTYCHANGE:
+                //  Look for components which support PropertyChange listeners
+                //  (e.g. JComponent)
+                //
+                try {
+                    removePropertyChangeMethod = c.getClass().getMethod(
+                        "removePropertyChangeListener", propertyChangeListeners);
+                    try {
+                        removePropertyChangeMethod.invoke(c, propertyChangeArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+
+                // Look for components which support the getSelectionModel
+                // method (e.g. JTextComponent)
+                //
+                try {
+                    getSelectionModelMethod = c.getClass().getMethod(
+                        "getSelectionModel", nullClass);
+                    try {
+                        Object o = getSelectionModelMethod.invoke(c, nullArgs);
+                        if (o != null && o instanceof TreeSelectionModel) {
+                            ((TreeSelectionModel) o).removePropertyChangeListener(this);
+                        }
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("Exception: " + e.toString());
+                    } catch (IllegalAccessException e) {
+                        System.out.println("Exception: " + e.toString());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // System.out.println("Exception: " + e.toString());
+                } catch (SecurityException e) {
+                    System.out.println("Exception: " + e.toString());
+                }
+                break;
+
+            case EventID.VETOABLECHANGE:
+                if (c instanceof JComponent) {
+                    ((JComponent) c).removeVetoableChangeListener(this);
+                }
+                break;
+
+            default:
+                return;
+            }
+
+            if (c instanceof Container) {
+                int count = ((Container) c).getComponentCount();
+                for (int i = 0; i < count; i++) {
+                    removeListeners(((Container) c).getComponent(i), eventID);
+                }
+            }
+        }
+
+        /********************************************************************/
+        /*                                                                  */
+        /* Listener Interface Methods                                       */
+        /*                                                                  */
+        /********************************************************************/
+
+        /* ContainerListener Methods ************************************/
+
+        public void componentAdded(ContainerEvent e) {
+            installListeners(e.getChild());
+        }
+        public void componentRemoved(ContainerEvent e) {
+            removeListeners(e.getChild());
+        }
+
+        /* AncestorListener Methods ******************************************/
+
+        public void ancestorAdded(AncestorEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==AncestorListener.class) {
+                    ((AncestorListener)listeners[i+1]).ancestorAdded(e);
+                }
+            }
+        }
+
+        public void ancestorRemoved(AncestorEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==AncestorListener.class) {
+                    ((AncestorListener)listeners[i+1]).ancestorRemoved(e);
+                }
+            }
+        }
+
+        public void ancestorMoved(AncestorEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==AncestorListener.class) {
+                    ((AncestorListener)listeners[i+1]).ancestorMoved(e);
+                }
+            }
+        }
+
+        /* CaretListener Methods ******************************************/
+
+        public void caretUpdate(CaretEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==CaretListener.class) {
+                    ((CaretListener)listeners[i+1]).caretUpdate(e);
+                }
+            }
+        }
+
+        /* CellEditorListener Methods *****************************************/
+
+        public void editingStopped(ChangeEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==CellEditorListener.class) {
+                    ((CellEditorListener)listeners[i+1]).editingStopped(e);
+                }
+            }
+        }
+
+        public void editingCanceled(ChangeEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==CellEditorListener.class) {
+                    ((CellEditorListener)listeners[i+1]).editingCanceled(e);
+                }
+            }
+        }
+
+        /* ChangeListener Methods *****************************************/
+
+        public void stateChanged(ChangeEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==ChangeListener.class) {
+                    ((ChangeListener)listeners[i+1]).stateChanged(e);
+                }
+            }
+        }
+
+        /* TableColumnModelListener Methods *******************************/
+
+        public void columnAdded(TableColumnModelEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TableColumnModelListener.class) {
+                    ((TableColumnModelListener)listeners[i+1]).columnAdded(e);
+                }
+            }
+        }
+        public void columnMarginChanged(ChangeEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TableColumnModelListener.class) {
+                    ((TableColumnModelListener)listeners[i+1]).columnMarginChanged(e);
+                }
+            }
+        }
+        public void columnMoved(TableColumnModelEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TableColumnModelListener.class) {
+                    ((TableColumnModelListener)listeners[i+1]).columnMoved(e);
+                }
+            }
+        }
+        public void columnRemoved(TableColumnModelEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TableColumnModelListener.class) {
+                    ((TableColumnModelListener)listeners[i+1]).columnRemoved(e);
+                }
+            }
+        }
+        public void columnSelectionChanged(ListSelectionEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TableColumnModelListener.class) {
+                    ((TableColumnModelListener)listeners[i+1]).columnSelectionChanged(e);
+                }
+            }
+        }
+
+        /* DocumentListener Methods **************************************/
+
+        public void changedUpdate(DocumentEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==DocumentListener.class) {
+                    ((DocumentListener)listeners[i+1]).changedUpdate(e);
+                }
+            }
+        }
+        public void insertUpdate(DocumentEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==DocumentListener.class) {
+                    ((DocumentListener)listeners[i+1]).insertUpdate(e);
+                }
+            }
+        }
+        public void removeUpdate(DocumentEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==DocumentListener.class) {
+                    ((DocumentListener)listeners[i+1]).removeUpdate(e);
+                }
+            }
+        }
+
+        /* ListDataListener Methods *****************************************/
+
+        public void contentsChanged(ListDataEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==ListDataListener.class) {
+                    ((ListDataListener)listeners[i+1]).contentsChanged(e);
+                }
+            }
+        }
+        public void intervalAdded(ListDataEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==ListDataListener.class) {
+                    ((ListDataListener)listeners[i+1]).intervalAdded(e);
+                }
+            }
+        }
+        public void intervalRemoved(ListDataEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==ListDataListener.class) {
+                    ((ListDataListener)listeners[i+1]).intervalRemoved(e);
+                }
+            }
+        }
+
+        /* ListSelectionListener Methods ***********************************/
+
+        public void valueChanged(ListSelectionEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==ListSelectionListener.class) {
+                    ((ListSelectionListener)listeners[i+1]).valueChanged(e);
+                }
+            }
+        }
+
+        /* MenuListener Methods *****************************************/
+
+        public void menuCanceled(MenuEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==MenuListener.class) {
+                    ((MenuListener)listeners[i+1]).menuCanceled(e);
+                }
+            }
+        }
+        public void menuDeselected(MenuEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==MenuListener.class) {
+                    ((MenuListener)listeners[i+1]).menuDeselected(e);
+                }
+            }
+        }
+        public void menuSelected(MenuEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==MenuListener.class) {
+                    ((MenuListener)listeners[i+1]).menuSelected(e);
+                }
+            }
+        }
+
+        /* PopupMenuListener Methods **************************************/
+
+        public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==PopupMenuListener.class) {
+                    ((PopupMenuListener)listeners[i+1]).popupMenuWillBecomeVisible(e);
+                }
+            }
+        }
+
+        public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==PopupMenuListener.class) {
+                    ((PopupMenuListener)listeners[i+1]).popupMenuWillBecomeInvisible(e);
+                }
+            }
+        }
+
+        public void popupMenuCanceled(PopupMenuEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==PopupMenuListener.class) {
+                    ((PopupMenuListener)listeners[i+1]).popupMenuCanceled(e);
+                }
+            }
+        }
+
+        /* TableModelListener Methods **************************************/
+
+        public void tableChanged(TableModelEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TableModelListener.class) {
+                    ((TableModelListener)listeners[i+1]).tableChanged(e);
+                }
+            }
+        }
+
+        /* TreeExpansionListener Methods **********************************/
+
+        public void treeCollapsed(TreeExpansionEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TreeExpansionListener.class) {
+                    ((TreeExpansionListener)listeners[i+1]).treeCollapsed(e);
+                }
+            }
+        }
+        public void treeExpanded(TreeExpansionEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TreeExpansionListener.class) {
+                    ((TreeExpansionListener)listeners[i+1]).treeExpanded(e);
+                }
+            }
+        }
+
+        /* TreeModelListener Methods **********************************/
+
+        public void treeNodesChanged(TreeModelEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TreeModelListener.class) {
+                    ((TreeModelListener)listeners[i+1]).treeNodesChanged(e);
+                }
+            }
+        }
+        public void treeNodesInserted(TreeModelEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TreeModelListener.class) {
+                    ((TreeModelListener)listeners[i+1]).treeNodesInserted(e);
+                }
+            }
+        }
+        public void treeNodesRemoved(TreeModelEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TreeModelListener.class) {
+                    ((TreeModelListener)listeners[i+1]).treeNodesRemoved(e);
+                }
+            }
+        }
+        public void treeStructureChanged(TreeModelEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TreeModelListener.class) {
+                    ((TreeModelListener)listeners[i+1]).treeStructureChanged(e);
+                }
+            }
+        }
+
+        /* TreeSelectionListener Methods ***********************************/
+
+        public void valueChanged(TreeSelectionEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==TreeSelectionListener.class) {
+                    ((TreeSelectionListener)listeners[i+1]).valueChanged(e);
+                }
+            }
+        }
+
+        /* UndoableEditListener Methods **************************************/
+
+        public void undoableEditHappened(UndoableEditEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==UndoableEditListener.class) {
+                    ((UndoableEditListener)listeners[i+1]).undoableEditHappened(e);
+                }
+            }
+        }
+
+        /* InternalFrame Methods **********************************/
+
+        public void internalFrameOpened(InternalFrameEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==InternalFrameListener.class) {
+                    ((InternalFrameListener)listeners[i+1]).internalFrameOpened(e);
+                }
+            }
+        }
+
+        public void internalFrameActivated(InternalFrameEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==InternalFrameListener.class) {
+                    ((InternalFrameListener)listeners[i+1]).internalFrameActivated(e);
+                }
+            }
+        }
+
+        public void internalFrameDeactivated(InternalFrameEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==InternalFrameListener.class) {
+                    ((InternalFrameListener)listeners[i+1]).internalFrameDeactivated(e);
+                }
+            }
+        }
+
+        public void internalFrameIconified(InternalFrameEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==InternalFrameListener.class) {
+                    ((InternalFrameListener)listeners[i+1]).internalFrameIconified(e);
+                }
+            }
+        }
+
+        public void internalFrameDeiconified(InternalFrameEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==InternalFrameListener.class) {
+                    ((InternalFrameListener)listeners[i+1]).internalFrameDeiconified(e);
+                }
+            }
+        }
+
+        public void internalFrameClosing(InternalFrameEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==InternalFrameListener.class) {
+                    ((InternalFrameListener)listeners[i+1]).internalFrameClosing(e);
+                }
+            }
+        }
+
+        public void internalFrameClosed(InternalFrameEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==InternalFrameListener.class) {
+                    ((InternalFrameListener)listeners[i+1]).internalFrameClosed(e);
+                }
+            }
+        }
+
+        /* PropertyChangeListener Methods **********************************/
+
+        public void propertyChange(PropertyChangeEvent e) {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==PropertyChangeListener.class) {
+                ((PropertyChangeListener)listeners[i+1]).propertyChange(e);
+                }
+            }
+            // Re-add the monitor as a DocumentChangeListener if
+            // the document changed in the text component.
+            if (e.getSource() instanceof JTextComponent) {
+                Document c = ((JTextComponent)e.getSource()).getDocument();
+                if (c == null) {
+                    return;
+                }
+                try {
+                    removeDocumentMethod = c.getClass().getMethod(
+                        "removeDocumentListener", documentListeners);
+                    addDocumentMethod = c.getClass().getMethod(
+                        "addDocumentListener", documentListeners);
+                    try {
+                        removeDocumentMethod.invoke(c, documentArgs);
+                        addDocumentMethod.invoke(c, documentArgs);
+                    } catch (java.lang.reflect.InvocationTargetException e2) {
+                        System.out.println("Exception: " + e2.toString());
+                    } catch (IllegalAccessException e2) {
+                        System.out.println("Exception: " + e2.toString());
+                    }
+                } catch (NoSuchMethodException e2) {
+                    // System.out.println("Exception: " + e2.toString());
+                } catch (SecurityException e2) {
+                    System.out.println("Exception: " + e2.toString());
+                }
+            }
+
+        }
+
+        /* VetoableChangeListener Methods **********************************/
+
+        public void vetoableChange(PropertyChangeEvent e)
+                throws PropertyVetoException {
+            Object[] listeners = SwingEventMonitor.listenerList.getListenerList();
+            for (int i = listeners.length-2; i>=0; i-=2) {
+                if (listeners[i]==VetoableChangeListener.class) {
+                    ((VetoableChangeListener)listeners[i+1]).vetoableChange(e);
+                }
+            }
+        }
+    }
+}
