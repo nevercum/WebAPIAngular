@@ -526,4 +526,198 @@ enum CompileCommand CompilerOracle::parse_option_name(const char* line) {
 enum OptionType CompilerOracle::parse_option_type(const char* type_str) {
   for (uint i = 0; i < ARRAY_SIZE(optiontype_names); i++) {
     if (strcasecmp(type_str, optiontype_names[i]) == 0) {
-      return static_ca
+      return static_cast<enum OptionType>(i);
+    }
+  }
+  return OptionType::Unknown;
+}
+
+void print_tip() { // CMH Update info
+  tty->cr();
+  tty->print_cr("Usage: '-XX:CompileCommand=<option>,<method pattern>' - to set boolean option to true");
+  tty->print_cr("Usage: '-XX:CompileCommand=<option>,<method pattern>,<value>'");
+  tty->print_cr("Use:   '-XX:CompileCommand=help' for more information and to list all option.");
+  tty->cr();
+}
+
+void print_option(enum CompileCommand option, const char* name, enum OptionType type) {
+  if (type != OptionType::Unknown) {
+    tty->print_cr("    %s (%s)", name, optiontype2name(type));
+  }
+}
+
+void print_commands() {
+  tty->cr();
+  tty->print_cr("All available options:");
+#define enum_of_options(option, name, ctype) print_option(CompileCommand::option, name, OptionType::ctype);
+  COMPILECOMMAND_OPTIONS(enum_of_options)
+#undef enum_of_options
+  tty->cr();
+}
+
+static void usage() {
+  tty->cr();
+  tty->print_cr("The CompileCommand option enables the user of the JVM to control specific");
+  tty->print_cr("behavior of the dynamic compilers.");
+  tty->cr();
+  tty->print_cr("Compile commands has this general form:");
+  tty->print_cr("-XX:CompileCommand=<option><method pattern><value>");
+  tty->print_cr("    Sets <option> to the specified value for methods matching <method pattern>");
+  tty->print_cr("    All options are typed");
+  tty->cr();
+  tty->print_cr("-XX:CompileCommand=<option><method pattern>");
+  tty->print_cr("    Sets <option> to true for methods matching <method pattern>");
+  tty->print_cr("    Only applies to boolean options.");
+  tty->cr();
+  tty->print_cr("-XX:CompileCommand=quiet");
+  tty->print_cr("    Silence the compile command output");
+  tty->cr();
+  tty->print_cr("-XX:CompileCommand=help");
+  tty->print_cr("    Prints this help text");
+  tty->cr();
+  print_commands();
+  tty->cr();
+    tty->print_cr("Method patterns has the format:");
+  tty->print_cr("  package/Class.method()");
+  tty->cr();
+  tty->print_cr("For backward compatibility this form is also allowed:");
+  tty->print_cr("  package.Class::method()");
+  tty->cr();
+  tty->print_cr("The signature can be separated by an optional whitespace or comma:");
+  tty->print_cr("  package/Class.method ()");
+  tty->cr();
+  tty->print_cr("The class and method identifier can be used together with leading or");
+  tty->print_cr("trailing *'s for wildcard matching:");
+  tty->print_cr("  *ackage/Clas*.*etho*()");
+  tty->cr();
+  tty->print_cr("It is possible to use more than one CompileCommand on the command line:");
+  tty->print_cr("  -XX:CompileCommand=exclude,java/*.* -XX:CompileCommand=log,java*.*");
+  tty->cr();
+  tty->print_cr("The CompileCommands can be loaded from a file with the flag");
+  tty->print_cr("-XX:CompileCommandFile=<file> or be added to the file '.hotspot_compiler'");
+  tty->print_cr("Use the same format in the file as the argument to the CompileCommand flag.");
+  tty->print_cr("Add one command on each line.");
+  tty->print_cr("  exclude java/*.*");
+  tty->print_cr("  option java/*.* ReplayInline");
+  tty->cr();
+  tty->print_cr("The following commands have conflicting behavior: 'exclude', 'inline', 'dontinline',");
+  tty->print_cr("and 'compileonly'. There is no priority of commands. Applying (a subset of) these");
+  tty->print_cr("commands to the same method results in undefined behavior.");
+  tty->cr();
+};
+
+int skip_whitespace(char* &line) {
+  // Skip any leading spaces
+  int whitespace_read = 0;
+  sscanf(line, "%*[ \t]%n", &whitespace_read);
+  line += whitespace_read;
+  return whitespace_read;
+}
+
+void skip_comma(char* &line) {
+  // Skip any leading spaces
+  if (*line == ',') {
+    line++;
+  }
+}
+
+static void scan_value(enum OptionType type, char* line, int& total_bytes_read,
+        TypedMethodOptionMatcher* matcher, enum CompileCommand option, char* errorbuf, const int buf_size) {
+  int bytes_read = 0;
+  const char* ccname = option2name(option);
+  const char* type_str = optiontype2name(type);
+  int skipped = skip_whitespace(line);
+  total_bytes_read += skipped;
+  if (type == OptionType::Intx) {
+    intx value;
+    if (sscanf(line, "" INTX_FORMAT "%n", &value, &bytes_read) == 1) {
+      total_bytes_read += bytes_read;
+      line += bytes_read;
+      register_command(matcher, option, value);
+      return;
+    } else {
+      jio_snprintf(errorbuf, buf_size, "Value cannot be read for option '%s' of type '%s'", ccname, type_str);
+    }
+  } else if (type == OptionType::Uintx) {
+    uintx value;
+    if (sscanf(line, "" UINTX_FORMAT "%n", &value, &bytes_read) == 1) {
+      total_bytes_read += bytes_read;
+      line += bytes_read;
+      register_command(matcher, option, value);
+      return;
+    } else {
+      jio_snprintf(errorbuf, buf_size, "Value cannot be read for option '%s' of type '%s'", ccname, type_str);
+    }
+  } else if (type == OptionType::Ccstr) {
+    ResourceMark rm;
+    char* value = NEW_RESOURCE_ARRAY(char, strlen(line) + 1);
+    if (sscanf(line, "%255[_a-zA-Z0-9]%n", value, &bytes_read) == 1) {
+      total_bytes_read += bytes_read;
+      line += bytes_read;
+      register_command(matcher, option, (ccstr) value);
+      return;
+    } else {
+      jio_snprintf(errorbuf, buf_size, "Value cannot be read for option '%s' of type '%s'", ccname, type_str);
+    }
+  } else if (type == OptionType::Ccstrlist) {
+    // Accumulates several strings into one. The internal type is ccstr.
+    ResourceMark rm;
+    char* value = NEW_RESOURCE_ARRAY(char, strlen(line) + 1);
+    char* next_value = value;
+    if (sscanf(line, "%255[_a-zA-Z0-9+\\-]%n", next_value, &bytes_read) == 1) {
+      total_bytes_read += bytes_read;
+      line += bytes_read;
+      next_value += bytes_read + 1;
+      char* end_value = next_value - 1;
+      while (sscanf(line, "%*[ \t]%255[_a-zA-Z0-9+\\-]%n", next_value, &bytes_read) == 1) {
+        total_bytes_read += bytes_read;
+        line += bytes_read;
+        *end_value = ' '; // override '\0'
+        next_value += bytes_read;
+        end_value = next_value-1;
+      }
+
+      if (option == CompileCommand::ControlIntrinsic || option == CompileCommand::DisableIntrinsic) {
+        ControlIntrinsicValidator validator(value, (option == CompileCommand::DisableIntrinsic));
+
+        if (!validator.is_valid()) {
+          jio_snprintf(errorbuf, buf_size, "Unrecognized intrinsic detected in %s: %s", option2name(option), validator.what());
+        }
+      }
+#ifndef PRODUCT
+      else if (option == CompileCommand::PrintIdealPhase) {
+        uint64_t mask = 0;
+        PhaseNameValidator validator(value, mask);
+
+        if (!validator.is_valid()) {
+          jio_snprintf(errorbuf, buf_size, "Unrecognized phase name in %s: %s", option2name(option), validator.what());
+        }
+      } else if (option == CompileCommand::TestOptionList) {
+        // all values are ok
+      }
+#endif
+      else {
+        assert(false, "Ccstrlist type option missing validator");
+      }
+
+      register_command(matcher, option, (ccstr) value);
+      return;
+    } else {
+      jio_snprintf(errorbuf, buf_size, "Value cannot be read for option '%s' of type '%s'", ccname, type_str);
+    }
+  } else if (type == OptionType::Bool) {
+    char value[256];
+    if (*line == '\0') {
+      // Short version of a CompileCommand sets a boolean Option to true
+      // -XXCompileCommand=<Option>,<method pattern>
+      register_command(matcher, option, true);
+      return;
+    }
+    if (sscanf(line, "%255[a-zA-Z]%n", value, &bytes_read) == 1) {
+      if (strcasecmp(value, "true") == 0) {
+        total_bytes_read += bytes_read;
+        line += bytes_read;
+        register_command(matcher, option, true);
+        return;
+      } else if (strcasecmp(value, "false") == 0) {
+        total_bytes_read
