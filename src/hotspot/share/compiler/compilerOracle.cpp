@@ -720,4 +720,206 @@ static void scan_value(enum OptionType type, char* line, int& total_bytes_read,
         register_command(matcher, option, true);
         return;
       } else if (strcasecmp(value, "false") == 0) {
-        total_bytes_read
+        total_bytes_read += bytes_read;
+        line += bytes_read;
+        register_command(matcher, option, false);
+        return;
+      } else {
+        jio_snprintf(errorbuf, buf_size, "Value cannot be read for option '%s' of type '%s'", ccname, type_str);
+      }
+    } else {
+      jio_snprintf(errorbuf, buf_size, "Value cannot be read for option '%s' of type '%s'", ccname, type_str);
+    }
+  } else if (type == OptionType::Double) {
+    char buffer[2][256];
+    // Decimal separator '.' has been replaced with ' ' or '/' earlier,
+    // so read integer and fraction part of double value separately.
+    if (sscanf(line, "%255[0-9]%*[ /\t]%255[0-9]%n", buffer[0], buffer[1], &bytes_read) == 2) {
+      char value[512] = "";
+      jio_snprintf(value, sizeof(value), "%s.%s", buffer[0], buffer[1]);
+      total_bytes_read += bytes_read;
+      line += bytes_read;
+      register_command(matcher, option, atof(value));
+      return;
+    } else {
+      jio_snprintf(errorbuf, buf_size, "Value cannot be read for option '%s' of type '%s'", ccname, type_str);
+    }
+  } else {
+    jio_snprintf(errorbuf, buf_size, "Type '%s' not supported ", type_str);
+  }
+}
+
+// Scan next option and value in line, return MethodMatcher object on success, nullptr on failure.
+// On failure, error_msg contains description for the first error.
+// For future extensions: set error_msg on first error.
+static void scan_option_and_value(enum OptionType type, char* line, int& total_bytes_read,
+                                TypedMethodOptionMatcher* matcher,
+                                char* errorbuf, const int buf_size) {
+  total_bytes_read = 0;
+  int bytes_read = 0;
+  char option_buf[256];
+
+  // Read option name.
+  if (sscanf(line, "%*[ \t]%255[a-zA-Z0-9]%n", option_buf, &bytes_read) == 1) {
+    line += bytes_read;
+    total_bytes_read += bytes_read;
+    int bytes_read2 = 0;
+    total_bytes_read += skip_whitespace(line);
+    enum CompileCommand option = match_option_name(option_buf, &bytes_read2, errorbuf, buf_size);
+    if (option == CompileCommand::Unknown) {
+      assert(*errorbuf != '\0', "error must have been set");
+      return;
+    }
+    enum OptionType optiontype = option2type(option);
+    if (option2type(option) != type) {
+      const char* optiontype_name = optiontype2name(optiontype);
+      const char* type_name = optiontype2name(type);
+      jio_snprintf(errorbuf, buf_size, "Option '%s' with type '%s' doesn't match supplied type '%s'", option_buf, optiontype_name, type_name);
+      return;
+    }
+    scan_value(type, line, total_bytes_read, matcher, option, errorbuf, buf_size);
+  } else {
+    const char* type_str = optiontype2name(type);
+    jio_snprintf(errorbuf, buf_size, "Option name for type '%s' should be alphanumeric ", type_str);
+  }
+  return;
+}
+
+void CompilerOracle::print_parse_error(char* error_msg, char* original_line) {
+  assert(*error_msg != '\0', "Must have error_message");
+  ttyLocker ttyl;
+  tty->print_cr("CompileCommand: An error occurred during parsing");
+  tty->print_cr("Error: %s", error_msg);
+  tty->print_cr("Line: '%s'", original_line);
+  print_tip();
+}
+
+class LineCopy : StackObj {
+  const char* _copy;
+public:
+    LineCopy(char* line) {
+      _copy = os::strdup(line, mtInternal);
+    }
+    ~LineCopy() {
+      os::free((void*)_copy);
+    }
+    char* get() {
+      return (char*)_copy;
+    }
+};
+
+void CompilerOracle::parse_from_line(char* line) {
+  if (line[0] == '\0') return;
+  if (line[0] == '#')  return;
+
+  LineCopy original(line);
+  int bytes_read;
+  char error_buf[1024] = {0};
+
+  enum CompileCommand option = match_option_name(line, &bytes_read, error_buf, sizeof(error_buf));
+  line += bytes_read;
+  ResourceMark rm;
+
+  if (option == CompileCommand::Unknown) {
+    print_parse_error(error_buf, original.get());
+    return;
+  }
+
+  if (option == CompileCommand::Quiet) {
+    _quiet = true;
+    return;
+  }
+
+  if (option == CompileCommand::Help) {
+    usage();
+    return;
+  }
+
+  if (option == CompileCommand::Option) {
+    // Look for trailing options.
+    //
+    // Two types of trailing options are
+    // supported:
+    //
+    // (1) CompileCommand=option,Klass::method,option
+    // (2) CompileCommand=option,Klass::method,type,option,value
+    //
+    // Type (1) is used to enable a boolean option for a method.
+    //
+    // Type (2) is used to support options with a value. Values can have the
+    // the following types: intx, uintx, bool, ccstr, ccstrlist, and double.
+
+    char option_type[256]; // stores option for Type (1) and type of Type (2)
+    skip_comma(line);
+    TypedMethodOptionMatcher* archetype = TypedMethodOptionMatcher::parse_method_pattern(line, error_buf, sizeof(error_buf));
+    if (archetype == nullptr) {
+      print_parse_error(error_buf, original.get());
+      return;
+    }
+
+    skip_whitespace(line);
+
+    // This is unnecessarily complex. Should retire multi-option lines and skip while loop
+    while (sscanf(line, "%255[a-zA-Z0-9]%n", option_type, &bytes_read) == 1) {
+      line += bytes_read;
+
+      // typed_matcher is used as a blueprint for each option, deleted at the end
+      TypedMethodOptionMatcher* typed_matcher = archetype->clone();
+      enum OptionType type = parse_option_type(option_type);
+      if (type != OptionType::Unknown) {
+        // Type (2) option: parse option name and value.
+        scan_option_and_value(type, line, bytes_read, typed_matcher, error_buf, sizeof(error_buf));
+        if (*error_buf != '\0') {
+          print_parse_error(error_buf, original.get());
+          return;
+        }
+        line += bytes_read;
+      } else {
+        // Type (1) option - option_type contains the option name -> bool value = true is implied
+        int bytes_read;
+        enum CompileCommand option = match_option_name(option_type, &bytes_read, error_buf, sizeof(error_buf));
+        if (option == CompileCommand::Unknown) {
+          print_parse_error(error_buf, original.get());
+          return;
+        }
+        if (option2type(option) == OptionType::Bool) {
+          register_command(typed_matcher, option, true);
+        } else {
+          jio_snprintf(error_buf, sizeof(error_buf), "  Missing type '%s' before option '%s'",
+                       optiontype2name(option2type(option)), option2name(option));
+          print_parse_error(error_buf, original.get());
+          return;
+        }
+      }
+      assert(typed_matcher != nullptr, "sanity");
+      assert(*error_buf == '\0', "No error here");
+      skip_whitespace(line);
+    } // while(
+    delete archetype;
+  } else {  // not an OptionCommand
+    // Command has the following form:
+    // CompileCommand=<option>,<method pattern><value>
+    // CompileCommand=<option>,<method pattern>     (implies option is bool and value is true)
+    assert(*error_buf == '\0', "Don't call here with error_buf already set");
+    enum OptionType type = option2type(option);
+    int bytes_read = 0;
+    skip_comma(line);
+    TypedMethodOptionMatcher* matcher = TypedMethodOptionMatcher::parse_method_pattern(line, error_buf, sizeof(error_buf));
+    if (matcher == nullptr) {
+      print_parse_error(error_buf, original.get());
+      return;
+    }
+    skip_whitespace(line);
+    if (*line == '\0') {
+      // if this is a bool option this implies true
+      if (option2type(option) == OptionType::Bool) {
+        register_command(matcher, option, true);
+        return;
+      } else {
+        jio_snprintf(error_buf, sizeof(error_buf), "  Option '%s' is not followed by a value", option2name(option));
+        print_parse_error(error_buf, original.get());
+        return;
+      }
+    }
+    scan_value(type, line, bytes_read, matcher, option, error_buf, sizeof(error_buf));
+    if (*error_b
