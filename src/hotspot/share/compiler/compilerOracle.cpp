@@ -922,4 +922,181 @@ void CompilerOracle::parse_from_line(char* line) {
       }
     }
     scan_value(type, line, bytes_read, matcher, option, error_buf, sizeof(error_buf));
-    if (*error_b
+    if (*error_buf != '\0') {
+      print_parse_error(error_buf, original.get());
+      return;
+    }
+    assert(matcher != nullptr, "consistency");
+  }
+}
+
+static const char* default_cc_file = ".hotspot_compiler";
+
+static const char* cc_file() {
+#ifdef ASSERT
+  if (CompileCommandFile == nullptr)
+    return default_cc_file;
+#endif
+  return CompileCommandFile;
+}
+
+bool CompilerOracle::has_command_file() {
+  return cc_file() != nullptr;
+}
+
+bool CompilerOracle::_quiet = false;
+
+void CompilerOracle::parse_from_file() {
+  assert(has_command_file(), "command file must be specified");
+  FILE* stream = os::fopen(cc_file(), "rt");
+  if (stream == nullptr) return;
+
+  char token[1024];
+  int  pos = 0;
+  int  c = getc(stream);
+  while(c != EOF && pos < (int)(sizeof(token)-1)) {
+    if (c == '\n') {
+      token[pos++] = '\0';
+      parse_from_line(token);
+      pos = 0;
+    } else {
+      token[pos++] = c;
+    }
+    c = getc(stream);
+  }
+  token[pos++] = '\0';
+  parse_from_line(token);
+
+  fclose(stream);
+}
+
+void CompilerOracle::parse_from_string(const char* str, void (*parse_line)(char*)) {
+  char token[1024];
+  int  pos = 0;
+  const char* sp = str;
+  int  c = *sp++;
+  while (c != '\0' && pos < (int)(sizeof(token)-1)) {
+    if (c == '\n') {
+      token[pos++] = '\0';
+      parse_line(token);
+      pos = 0;
+    } else {
+      token[pos++] = c;
+    }
+    c = *sp++;
+  }
+  token[pos++] = '\0';
+  parse_line(token);
+}
+
+void compilerOracle_init() {
+  CompilerOracle::parse_from_string(CompileCommand, CompilerOracle::parse_from_line);
+  CompilerOracle::parse_from_string(CompileOnly, CompilerOracle::parse_compile_only);
+  if (CompilerOracle::has_command_file()) {
+    CompilerOracle::parse_from_file();
+  } else {
+    struct stat buf;
+    if (os::stat(default_cc_file, &buf) == 0) {
+      warning("%s file is present but has been ignored.  "
+              "Run with -XX:CompileCommandFile=%s to load the file.",
+              default_cc_file, default_cc_file);
+    }
+  }
+  if (has_command(CompileCommand::Print)) {
+    if (PrintAssembly) {
+      warning("CompileCommand and/or %s file contains 'print' commands, but PrintAssembly is also enabled", default_cc_file);
+    }
+  }
+}
+
+void CompilerOracle::parse_compile_only(char* line) {
+  int i;
+  char name[1024];
+  const char* className = nullptr;
+  const char* methodName = nullptr;
+
+  bool have_colon = (strstr(line, "::") != nullptr);
+  char method_sep = have_colon ? ':' : '.';
+
+  if (Verbose) {
+    tty->print_cr("%s", line);
+  }
+
+  ResourceMark rm;
+  while (*line != '\0') {
+    MethodMatcher::Mode c_match = MethodMatcher::Exact;
+    MethodMatcher::Mode m_match = MethodMatcher::Exact;
+
+    for (i = 0;
+         i < 1024 && *line != '\0' && *line != method_sep && *line != ',' && !isspace(*line);
+         line++, i++) {
+      name[i] = *line;
+      if (name[i] == '.')  name[i] = '/';  // package prefix uses '/'
+    }
+
+    if (i > 0) {
+      char* newName = NEW_RESOURCE_ARRAY( char, i + 1);
+      if (newName == nullptr)
+        return;
+      strncpy(newName, name, i);
+      newName[i] = '\0';
+
+      if (className == nullptr) {
+        className = newName;
+      } else {
+        methodName = newName;
+      }
+    }
+
+    if (*line == method_sep) {
+      if (className == nullptr) {
+        className = "";
+        c_match = MethodMatcher::Any;
+      }
+    } else {
+      // got foo or foo/bar
+      if (className == nullptr) {
+        ShouldNotReachHere();
+      } else {
+        // missing class name handled as "Any" class match
+        if (className[0] == '\0') {
+          c_match = MethodMatcher::Any;
+        }
+      }
+    }
+
+    // each directive is terminated by , or NUL or . followed by NUL
+    if (*line == ',' || *line == '\0' || (line[0] == '.' && line[1] == '\0')) {
+      if (methodName == nullptr) {
+        methodName = "";
+        if (*line != method_sep) {
+          m_match = MethodMatcher::Any;
+        }
+      }
+
+      EXCEPTION_MARK;
+      Symbol* c_name = SymbolTable::new_symbol(className);
+      Symbol* m_name = SymbolTable::new_symbol(methodName);
+      Symbol* signature = nullptr;
+
+      TypedMethodOptionMatcher* tom = new TypedMethodOptionMatcher();
+      tom->init_matcher(c_name, c_match, m_name, m_match, signature);
+      register_command(tom, CompileCommand::CompileOnly, true);
+      if (PrintVMOptions) {
+        tty->print("CompileOnly: compileonly ");
+        tom->print();
+      }
+
+      className = nullptr;
+      methodName = nullptr;
+    }
+
+    line = *line == '\0' ? line : line + 1;
+  }
+}
+
+enum CompileCommand CompilerOracle::string_to_option(const char* name) {
+  int bytes_read = 0;
+  char errorbuf[1024] = {0};
+  return match_option_name(name, &bytes_read, errorbuf, sizeof(errorbuf));
+}
