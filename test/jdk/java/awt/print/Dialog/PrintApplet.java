@@ -119,4 +119,23 @@ public class PrintApplet extends JApplet implements Printable {
          if (pageFormat != null) {
 
             prtPaper = pageFormat.getPaper();
-            pageFormat.setPaper(prtPape
+            pageFormat.setPaper(prtPaper);
+
+
+            printJob.setPrintable(this, pageFormat);
+         }
+
+         if (printJob.printDialog()) {
+
+             try {
+                 printJob.print();
+             }
+             catch (java.awt.print.PrinterException ex) {
+                 ex.printStackTrace();
+             }
+
+         }
+
+      }
+    }
+}
