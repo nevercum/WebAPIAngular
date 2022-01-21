@@ -14,4 +14,8 @@ interface Foo1Bar1 extends Foo1, Bar1 {} //types Bar1 and Foo1 are incompatible;
 
 interface AC extends A, C {} //name clash: getOldest(List<?>) in C and getOldest(List<Number>) in A have the same erasure, yet neither overrides the other
 interface ABC extends A, B, C {} //ok - raw override
-interface AD extends A, D {} //name clash: getOldest(List<Intege
+interface AD extends A, D {} //name clash: getOldest(List<Integer>) in D and getOldest(List<Number>) in A have the same erasure, yet neither overrides the other
+
+interface Foo2<T> { void m(T arg);}
+interface Bar2<S> { void m(S arg);}
+interface Foo2Bar2<T1, T2> extends Foo2<T1>, Bar2<T2> {} //name clash: m(S) in Bar and m(T) in Foo have the same erasure, yet neither overrides the other
