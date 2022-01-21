@@ -247,4 +247,31 @@ public final class TraceClassVisitor extends ClassVisitor {
             final String descriptor,
             final String signature,
             final Object value) {
-        Printer fieldPrinter = p.visitField(acce
+        Printer fieldPrinter = p.visitField(access, name, descriptor, signature, value);
+        return new TraceFieldVisitor(
+                super.visitField(access, name, descriptor, signature, value), fieldPrinter);
+    }
+
+    @Override
+    public MethodVisitor visitMethod(
+            final int access,
+            final String name,
+            final String descriptor,
+            final String signature,
+            final String[] exceptions) {
+        Printer methodPrinter = p.visitMethod(access, name, descriptor, signature, exceptions);
+        return new TraceMethodVisitor(
+                super.visitMethod(access, name, descriptor, signature, exceptions), methodPrinter);
+    }
+
+    @Override
+    public void visitEnd() {
+        p.visitClassEnd();
+        if (printWriter != null) {
+            p.print(printWriter);
+            printWriter.flush();
+        }
+        super.visitEnd();
+    }
+}
+
