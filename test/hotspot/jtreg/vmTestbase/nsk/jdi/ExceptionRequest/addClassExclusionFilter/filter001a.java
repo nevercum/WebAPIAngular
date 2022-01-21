@@ -48,4 +48,167 @@ public class filter001a {
     }
 
     private static void logErr(String message) {
-        log.complain("**> debuggee: " + m
+        log.complain("**> debuggee: " + message);
+    }
+
+    //====================================================== test program
+
+    static Thread thread1 = null;
+    static Thread thread2 = null;
+
+    //------------------------------------------------------ common section
+
+    static int exitCode = PASSED;
+
+    static int instruction = 1;
+    static int end         = 0;
+                                   //    static int quit        = 0;
+                                   //    static int continue    = 2;
+    static int maxInstr    = 2;    // 2;
+
+    static int lineForComm = 2;
+
+    private static void methodForCommunication() {
+        int i1 = instruction;
+        int i2 = i1;
+        int i3 = i2;
+    }
+    //----------------------------------------------------   main method
+
+    public static void main (String argv[]) {
+
+        argHandler = new ArgumentHandler(argv);
+        log = argHandler.createDebugeeLog();
+
+        log1("debuggee started!");
+
+        for (int i = 0; ; i++) {
+
+            log1("methodForCommunication();");
+            methodForCommunication();
+            if (instruction == end)
+                break;
+
+            if (instruction > maxInstr) {
+                logErr("ERROR: unexpected instruction: " + instruction);
+                exitCode = FAILED;
+                break ;
+            }
+
+            switch (i) {
+
+//------------------------------------------------------  section tested
+
+                case 0:
+                thread1 = JDIThreadFactory.newThread(new Thread1filter001a("thread1"));
+                log1("new filter001a().run1(thread1);");
+                new filter001a().run1(thread1);
+                break;
+
+                case 1:
+                thread2 = JDIThreadFactory.newThread(new Thread2filter001a("thread2"));
+                log1("new filter001a().run1(thread2);");
+                new filter001a().run1(thread2);
+
+//-------------------------------------------------    standard end section
+
+                default:
+                instruction = end;
+                break;
+            }
+        }
+
+        log1("debuggee exits");
+        System.exit(exitCode + PASS_BASE);
+    }
+
+    static Object waitnotifyObj = new Object();
+
+    static int threadStart(Thread t) {
+        synchronized (waitnotifyObj) {
+            t.start();
+            try {
+                waitnotifyObj.wait();
+            } catch ( Exception e) {
+                exitCode = FAILED;
+                logErr("       Exception : " + e );
+                return FAILED;
+            }
+        }
+        return PASSED;
+    }
+
+    public void run1(Thread t) {
+        t.start();
+        try {
+            t.join();
+        } catch ( InterruptedException e ) {
+        }
+    }
+}
+
+class Thread1filter001a extends NamedTask {
+
+    class TestClass10{
+        void m10() {
+            throw new NullPointerException("m10");
+        }
+    }
+    class TestClass11 extends TestClass10{
+        void m11() {
+
+            try {
+                (new TestClass10()).m10();
+            } catch ( NullPointerException e ) {
+            }
+        throw new NullPointerException("m11");
+        }
+    }
+
+    public Thread1filter001a(String threadName) {
+        super(threadName);
+    }
+
+    public void run() {
+        filter001a.log1("  'run': enter  :: threadName == " + getName());
+        try {
+            (new TestClass11()).m11();
+        } catch ( NullPointerException e) {
+        }
+        filter001a.log1("  'run': exit   :: threadName == " + getName());
+        return;
+    }
+}
+
+class Thread2filter001a extends NamedTask {
+
+    class TestClass20{
+        void m20() {
+            throw new NullPointerException("m20");
+        }
+    }
+    class TestClass21 extends TestClass20{
+        void m21() {
+
+            try {
+                (new TestClass20()).m20();
+            } catch ( NullPointerException e ) {
+            }
+            throw new NullPointerException("m11");
+        }
+    }
+
+    public Thread2filter001a(String threadName) {
+        super(threadName);
+    }
+
+    public void run() {
+        filter001a.log1("  'run': enter  :: threadName == " + getName());
+        try {
+            (new TestClass21()).m21();
+        } catch ( NullPointerException e) {
+        }
+        filter001a.log1("  'run': exit   :: threadName == " + getName());
+        return;
+    }
+}
