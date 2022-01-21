@@ -134,4 +134,53 @@ public class TestExtends {
         RecordedEvent grandpa = findEvent(r, GrandpaEvent.class.getName());
         Asserts.assertEquals(grandpa.getValue("gPublicField"), 4);
         Asserts.assertEquals(grandpa.getValue("gProtectedField"), 3);
-        Asserts.assertEquals(grandpa.getValue("g
+        Asserts.assertEquals(grandpa.getValue("gPrivateField"), 2);
+        Asserts.assertEquals(grandpa.getValue("gDefaultField"), 1);
+        Asserts.assertEquals(grandpa.getValue("hiddenField"), 4711);
+
+        RecordedEvent parent = findEvent(r, ParentEvent.class.getName());
+        Asserts.assertEquals(parent.getValue("gPublicField"), 4);
+        Asserts.assertEquals(parent.getValue("gProtectedField"), 3);
+        Asserts.assertEquals(parent.getValue("gDefaultField"), 1);
+        Asserts.assertEquals(parent.getValue("pPublicField"), 40);
+        Asserts.assertEquals(parent.getValue("pProtectedField"), 30);
+        Asserts.assertEquals(parent.getValue("pPrivateField"), 20);
+        Asserts.assertEquals(parent.getValue("pDefaultField"), 10);
+        Asserts.assertEquals(parent.getValue("hiddenField"), true);
+
+        RecordedEvent me = findEvent(r, MeEvent.class.getName());
+        Asserts.assertEquals(me.getValue("gPublicField"), 4);
+        Asserts.assertEquals(me.getValue("gProtectedField"), 3);
+        Asserts.assertEquals(me.getValue("gDefaultField"), 1);
+        Asserts.assertEquals(me.getValue("pPublicField"), 40);
+        Asserts.assertEquals(me.getValue("pProtectedField"), 30);
+        Asserts.assertEquals(me.getValue("pDefaultField"), 10);
+        Asserts.assertEquals(me.getValue("mPublicField"), 400);
+        Asserts.assertEquals(me.getValue("mProtectedField"), 300);
+        Asserts.assertEquals(me.getValue("mPrivateField"), 200);
+        Asserts.assertEquals(me.getValue("mDefaultField"), 100);
+        Asserts.assertEquals(me.getValue("hiddenField"), "Hidden");
+    }
+
+    private static RecordedEvent findEvent(Recording r, String name) throws Exception {
+        for (RecordedEvent re : Events.fromRecording(r)) {
+            if (re.getEventType().getName().equals(name)) {
+                return re;
+            }
+        }
+        throw new Exception("Event type hierarchy exist, but missing event " + name + " from recording");
+    }
+
+    private static void verifyFieldCount(EventType t, int count) throws Exception {
+        if (t.getFields().size() != count + DEFAULT_FIELD_COUNT) {
+            throw new Exception("Incorrect number of fields " + count);
+        }
+    }
+
+    private static void verifyField(EventType t, String name) throws Exception {
+        ValueDescriptor d = t.getField(name);
+        if (d == null) {
+            throw new Exception("Missing field " + name + " in event " + t.getName());
+        }
+    }
+}
