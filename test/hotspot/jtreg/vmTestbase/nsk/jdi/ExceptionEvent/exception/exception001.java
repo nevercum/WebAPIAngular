@@ -567,4 +567,135 @@ public class exception001 {
 
                              if (event instanceof VMDisconnectEvent) {
                                  break isConnected;
-           
+                             }
+
+                             if (event instanceof ExceptionEvent) {
+
+                                 ExceptionEvent castedEvent = (ExceptionEvent)event;
+
+                                 ObjectReference eventThrowable = castedEvent.exception();
+                                 if (eventThrowable == null) {
+                                     log.complain("FAILURE 1: ExceptionEvent.exception() returns null");
+                                     testFailed = true;
+                                 } else {
+                                     ReferenceType eventRefType = castedEvent.exception().referenceType();
+                                     if (eventRefType.equals(userException)) {
+                                         log.display("ExceptionEvent for " + USER_EXCEPTION + " is received");
+                                         userExceptionReceived = true;
+
+                                         Location eventLocation  = castedEvent.location();
+                                         if (!(eventLocation.declaringType().name().equals(DEBUGGEE_NAME))) {
+                                             log.complain("FAILURE 2: eventLocation.declaringType() does not equal to debuggee class");
+                                             testFailed = true;
+                                         }
+
+                                     } else if (eventRefType.equals(userError)) {
+                                         log.display("ExceptionEvent for " + USER_ERROR + " is received");
+                                         userErrorReceived = true;
+
+                                         Location eventLocation  = castedEvent.location();
+                                         if (!(eventLocation.declaringType().name().equals(DEBUGGEE_NAME))) {
+                                             log.complain("FAILURE 2: eventLocation.declaringType() does not equal to debuggee class");
+                                             testFailed = true;
+                                         }
+
+                                     } else if (eventRefType.equals(userThrowable)) {
+                                         log.display("ExceptionEvent for " + USER_THROWABLE + " is received");
+                                         userThrowableReceived = true;
+
+                                         Location eventLocation  = castedEvent.location();
+                                         if (!(eventLocation.declaringType().name().equals(DEBUGGEE_NAME))) {
+                                             log.complain("FAILURE 2: eventLocation.declaringType() does not equal to debuggee class");
+                                             testFailed = true;
+                                         }
+
+                                     } else {
+                                         String eventTypeName = eventRefType.name();
+                                         if (eventTypeName.equals(JAVA_EXCEPTION)) {
+                                             log.display("ExceptionEvent for " + JAVA_EXCEPTION + " is received");
+                                             javaExceptionReceived = true;
+                                         } else if (eventTypeName.equals(JAVA_ERROR)) {
+                                             log.display("ExceptionEvent for " + JAVA_ERROR + " is received");
+                                             javaErrorReceived = true;
+                                         }
+                                     }
+                                 }
+
+                                 EventRequest eventRequest = castedEvent.request();
+                                 if (!(checkedRequest.equals(eventRequest))) {
+                                     log.complain("FAILURE 4: eventRequest does not equal to checked request");
+                                     testFailed = true;
+                                 }
+                                 ThreadReference eventThread = castedEvent.thread();
+                                 if (!(checkedThread.equals(eventThread))) {
+                                     log.complain("FAILURE 5: eventThread does not equal to checked thread");
+                                     testFailed = true;
+                                 }
+                                 VirtualMachine eventMachine = castedEvent.virtualMachine();
+                                 if (!(vm.equals(eventMachine))) {
+                                     log.complain("FAILURE 6: eventVirtualMachine does not equal to checked vm");
+                                     testFailed = true;
+                                 }
+                             }
+                         }
+                         eventSet.resume();
+                     }
+                 } catch (InterruptedException e) {
+                 } catch (VMDisconnectedException e) {
+                     log.complain("TEST INCOMPLETE: caught VMDisconnectedException while waiting for event");
+                     testFailed = true;
+                 }
+                 log.display("eventHandler completed");
+             }
+        }
+
+        EventHandler eventHandler = new EventHandler();
+        log.display("Starting eventHandler");
+        eventHandler.start();
+
+        log.display("Sending command: " + COMMAND_GO);
+        pipe.println(COMMAND_GO);
+
+        try {
+            eventHandler.join(argHandler.getWaitTime()*60000);
+            if (eventHandler.isAlive()) {
+                log.complain("FAILURE 20: Timeout for waiting of event was exceeded");
+                eventHandler.interrupt();
+                testFailed = true;
+            }
+        } catch (InterruptedException e) {
+            log.complain("TEST INCOMPLETE: InterruptedException caught while waiting for eventHandler's death");
+            testFailed = true;
+        }
+
+        log.display("Waiting for debuggee terminating");
+        debuggee.waitFor();
+
+        if (!userExceptionReceived) {
+            log.complain("FAILURE 7: " + USER_EXCEPTION + " was not received received");
+            testFailed= true;
+        }
+        if (!userErrorReceived) {
+            log.complain("FAILURE 8: " + USER_ERROR + " was not received received");
+            testFailed= true;
+        }
+        if (!userThrowableReceived) {
+            log.complain("FAILURE 9: " + USER_THROWABLE + " was not received received");
+            testFailed= true;
+        }
+        if (!javaExceptionReceived) {
+            log.complain("FAILURE 10: " + JAVA_EXCEPTION + " was not received received");
+            testFailed= true;
+        }
+        if (!javaErrorReceived) {
+            log.complain("FAILURE 11: " + JAVA_ERROR + " was not received received");
+            testFailed= true;
+        }
+
+        if (testFailed) return FAILED;
+        return PASSED;
+    }
+
+}
+
+*/
