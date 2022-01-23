@@ -356,4 +356,215 @@ public class exception001 {
                 log.complain("FAILURE 11: " + USER_THROWABLE + " was not received received");
                 testFailed= true;
             }
-            if (!javaExceptionRe
+            if (!javaExceptionReceived) {
+                log.complain("FAILURE 12: " + JAVA_EXCEPTION + " was not received received");
+                testFailed= true;
+            }
+            if (!javaErrorReceived) {
+                log.complain("FAILURE 13: " + JAVA_ERROR + " was not received received");
+                testFailed= true;
+            }
+
+            // end testing
+
+        } catch (Failure e) {
+            log.complain("TEST FAILURE: " + e.getMessage());
+            testFailed = true;
+        } catch (Exception e) {
+            log.complain("Unexpected exception: " + e);
+            e.printStackTrace(out);
+            testFailed = true;
+        } finally {
+
+            log.display("");
+
+            // disable event request to prevent appearance of further events
+            if (checkedRequest != null && checkedRequest.isEnabled()) {
+                log.display("Disabling event request");
+                checkedRequest.disable();
+            }
+
+            // force debugee to exit
+            log.display("Sending command: " + COMMAND_QUIT);
+            pipe.println(COMMAND_QUIT);
+
+            // wait for debuggee exits and analize its exit code
+            log.display("Waiting for debuggee terminating");
+            int debuggeeStatus = debuggee.endDebugee();
+            if (debuggeeStatus == PASSED + JCK_STATUS_BASE) {
+                log.display("Debuggee PASSED with exit code: " + debuggeeStatus);
+            } else {
+                log.complain("Debuggee FAILED with exit code: " + debuggeeStatus);
+                testFailed = true;
+            }
+        }
+
+        // check test results
+        if (testFailed) {
+            log.complain("TEST FAILED");
+            return FAILED;
+        }
+
+        log.display("TEST PASSED");
+        return PASSED;
+    }
+}
+
+
+/*
+// This class is the debugger in the test
+
+public class exception001 {
+    static final int PASSED = 0;
+    static final int FAILED = 2;
+    static final int JCK_STATUS_BASE = 95;
+    static final String COMMAND_READY = "ready";
+    static final String COMMAND_QUIT = "quit";
+    static final String COMMAND_GO = "go";
+    static final String DEBUGGEE_NAME = "nsk.jdi.ExceptionEvent.exception.exception001a";
+    static final String USER_EXCEPTION = DEBUGGEE_NAME + "Exception";
+    static final String USER_ERROR     = DEBUGGEE_NAME + "Error";
+    static final String USER_THROWABLE = DEBUGGEE_NAME + "Throwable";
+    static final String JAVA_EXCEPTION = "java.lang.NumberFormatException";
+    static final String JAVA_ERROR     = "java.lang.StackOverflowError";
+
+    static private Debugee debuggee;
+    static private VirtualMachine vm;
+    static private IOPipe pipe;
+    static private Log log;
+    static private ArgumentHandler argHandler;
+    static private EventSet eventSet;
+
+    static private ExceptionRequest  checkedRequest;
+    static private ReferenceType     checkedClass;
+    static private ThreadReference   checkedThread;
+
+    static private ReferenceType userException;
+    static private ReferenceType userError;
+    static private ReferenceType userThrowable;
+    static private boolean userExceptionReceived;
+    static private boolean userErrorReceived;
+    static private boolean userThrowableReceived;
+    static private boolean javaExceptionReceived;
+    static private boolean javaErrorReceived;
+
+    static private boolean testFailed;
+
+    public static void main (String args[]) {
+          System.exit(run(args, System.out) + JCK_STATUS_BASE);
+    }
+
+    public static int run(final String args[], final PrintStream out) {
+
+        testFailed = false;
+        userExceptionReceived = false;
+        userErrorReceived = false;
+        userThrowableReceived = false;
+        javaExceptionReceived = false;
+        javaErrorReceived = false;
+
+        argHandler = new ArgumentHandler(args);
+        log = new Log(out, argHandler);
+
+        Binder binder = new Binder(argHandler, log);
+        log.display("Connecting to debuggee");
+        debuggee = binder.bindToDebugee(DEBUGGEE_NAME);
+        debuggee.redirectStderr(log, "exception001a >");
+
+        pipe = debuggee.createIOPipe();
+        vm = debuggee.VM();
+        EventRequestManager erManager = debuggee.VM().eventRequestManager();
+
+        log.display("Resuming debuggee");
+        debuggee.resume();
+
+        log.display("Waiting for command: " + COMMAND_READY);
+        String command = pipe.readln();
+
+        while (true) {
+
+            if (!command.equals(COMMAND_READY)) {
+                log.complain("TEST BUG: unexpected debuggee's command: " + command);
+                testFailed = true;
+                break;
+            }
+
+            log.display("Getting loaded classes in debuggee");
+            if ((checkedClass = debuggee.classByName(DEBUGGEE_NAME)) == null) {
+                log.complain("TEST BUG: cannot find " + DEBUGGEE_NAME);
+                testFailed = true;
+                break;
+            }
+
+            if ((userException = debuggee.classByName(USER_EXCEPTION)) == null) {
+                log.complain("TEST BUG: cannot find " + USER_EXCEPTION);
+                testFailed = true;
+                break;
+            }
+
+            if ((userError = debuggee.classByName(USER_ERROR)) == null) {
+                log.complain("TEST BUG: cannot find " + USER_ERROR);
+                testFailed = true;
+                break;
+            }
+
+            if ((userThrowable = debuggee.classByName(USER_THROWABLE)) == null) {
+                log.complain("TEST BUG: cannot find " + USER_THROWABLE);
+                testFailed = true;
+                break;
+            }
+
+            log.display("Getting reference to main thread");
+            Iterator threadIterator = vm.allThreads().iterator();
+            while (threadIterator.hasNext()) {
+                ThreadReference curThread = (ThreadReference) threadIterator.next();
+                if (curThread.name().equals("main")) {
+                     checkedThread = curThread;
+                }
+            }
+            if (checkedThread == null) {
+                log.complain("TEST BUG: unable to find reference to main thread");
+                testFailed = true;
+                break;
+            }
+
+            log.display("Creating ExceptionRequest");
+            boolean notifyCaught = true;
+            boolean notifyUncaught = true;
+            if ((checkedRequest = erManager.createExceptionRequest(null, notifyCaught, notifyUncaught)) == null) {
+                log.complain("TEST BUG: unable to create ExceptionRequest");
+                testFailed = true;
+                break;
+            }
+
+            //checkedRequest.addClassFilter(checkedClass);
+            checkedRequest.setSuspendPolicy(EventRequest.SUSPEND_ALL);
+            checkedRequest.enable();
+            log.display("ExceptionRequest is created");
+
+            break;
+        }
+        if (testFailed) {
+            log.display("Sending command: " + COMMAND_QUIT);
+            pipe.println(COMMAND_QUIT);
+            log.display("Waiting for debuggee terminating");
+            debuggee.waitFor();
+            return FAILED;
+        }
+
+        class EventHandler extends Thread {
+             public void run() {
+                 eventSet = null;
+                 try {
+                     isConnected:
+                     while (true) {
+                         eventSet = vm.eventQueue().remove();
+
+                         EventIterator eventIterator = eventSet.eventIterator();
+                         while (eventIterator.hasNext()) {
+
+                             Event event = eventIterator.nextEvent();
+
+                             if (event instanceof VMDisconnectEvent) {
+                                 break isConnected;
+           
