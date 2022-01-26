@@ -122,4 +122,73 @@ public final class RawNativeLibraries {
      * @see System#mapLibraryName(String)
      */
     public NativeLibrary load(String pathname) {
-        
+        RawNativeLibraryImpl lib = new RawNativeLibraryImpl(pathname);
+        if (!lib.open()) {
+            return null;
+        }
+        libraries.add(lib);
+        return lib;
+    }
+
+    /*
+     * Unloads the given native library.  Each {@code NativeLibrary}
+     * instance can be unloaded only once.
+     *
+     * The native library may remain opened after this method is called.
+     * Refer to the platform-specific library loading mechanism, for example,
+     * dlopen/dlclose on Unix or LoadLibrary/FreeLibrary on Windows.
+     *
+     * @throws IllegalArgumentException if the given library is not
+     * loaded by this RawNativeLibraries or has already been unloaded
+     */
+    public void unload(NativeLibrary lib) {
+        Objects.requireNonNull(lib);
+        if (!libraries.remove(lib)) {
+            throw new IllegalArgumentException("can't unload " + lib.name() + " loaded from " + lib);
+        }
+        RawNativeLibraryImpl nl = (RawNativeLibraryImpl)lib;
+        nl.close();
+    }
+
+    static class RawNativeLibraryImpl extends NativeLibrary {
+        // the name of the raw native library.
+        final String name;
+        // opaque handle to raw native library, used in native code.
+        long handle;
+
+        RawNativeLibraryImpl(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public long find(String name) {
+            return findEntry0(handle, name);
+        }
+
+        /*
+         * Loads the named native library.
+         */
+        boolean open() {
+            if (handle != 0) {
+                throw new InternalError("Native library " + name + " has been loaded");
+            }
+            return load0(this, name);
+        }
+
+        /*
+         * Close this native library.
+         */
+        void close() {
+            unload0(name, handle);
+        }
+    }
+
+    private static native boolean load0(RawNativeLibraryImpl impl, String name);
+    private static native void unload0(String name, long handle);
+}
+
