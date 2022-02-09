@@ -211,4 +211,96 @@ Java_nsk_jvmti_unit_functions_nosuspendStackTrace_JvmtiTest_RawMonitorNotify(JNI
     ret = jvmti->RawMonitorNotifyAll(jraw_monitor[i]);
 
     if (ret != JVMTI_ERROR_NONE) {
-        pr
+        printf("Error: RawMonitorNotify %d \n", ret);
+        iGlobalStatus = 2;
+    }
+}
+
+JNIEXPORT int JNICALL
+Java_nsk_jvmti_unit_functions_nosuspendStackTrace_JvmtiTest_GetFrameCount(JNIEnv * env, jclass cls, jobject thr) {
+    jvmtiError ret;
+    jint count;
+
+    debug_printf("jvmti GetFrameCount \n");
+    ret = jvmti->GetFrameCount((jthread) thr,  &count);
+    if (ret != JVMTI_ERROR_NONE) {
+        printf("Error: GetFrameCount returned  %d \n", ret);
+        iGlobalStatus = 2;
+    }
+    return count;
+}
+
+JNIEXPORT void JNICALL
+Java_nsk_jvmti_unit_functions_nosuspendStackTrace_JvmtiTest_GetStackTrace(JNIEnv * env, jclass cls, jobject thr) {
+    jvmtiError ret;
+    jvmtiFrameInfo *stack_buffer = NULL;
+    jint count = 20;
+    jclass klass;
+    char *mname;
+    char *signature;
+    char *clname;
+    char *generic;
+    int i;
+
+
+    debug_printf("jvmti GetStackTrace \n");
+
+    ret = jvmti->Allocate(sizeof(jvmtiFrameInfo) * count, (unsigned char**)&stack_buffer);
+    if (ret != JVMTI_ERROR_NONE) {
+        printf("Error: Allocate failed with  %d \n", ret);
+        iGlobalStatus = 2;
+    }
+
+
+    ret = jvmti->GetStackTrace(thr, 0, count, stack_buffer, &count);
+
+    if (ret != JVMTI_ERROR_NONE) {
+        printf("Error: GetStackTrace %d \n", ret);
+        iGlobalStatus = 2;
+    }
+
+    debug_printf(" Java Stack trace ---\n");
+
+    for (i = 0; i < count; i++) {
+        ret = jvmti->GetMethodDeclaringClass(stack_buffer[i].method, &klass);
+        if (ret != JVMTI_ERROR_NONE) {
+            printf("Error: GetMethodDeclaringClass %d  \n", ret);
+            iGlobalStatus = 2;
+            return;
+        }
+
+        ret = jvmti->GetClassSignature(klass, &clname, &generic);
+        if (ret != JVMTI_ERROR_NONE) {
+            printf("Error: GetMethodDeclaringClass %d  \n", ret);
+            iGlobalStatus = 2;
+            return;
+        }
+
+        ret = jvmti->GetMethodName(stack_buffer[i].method, &mname, &signature, &generic);
+        if (ret != JVMTI_ERROR_NONE) {
+            printf("Error: GetMethodDeclaringClass %d  \n", ret);
+            iGlobalStatus = 2;
+            return;
+        }
+
+        debug_printf("[%d]  %s::%s(%s) at %lld \n",i,clname, mname, signature, stack_buffer[i].location);
+
+
+    }
+
+
+    ret = jvmti->Deallocate((unsigned char *) stack_buffer);
+    if (ret != JVMTI_ERROR_NONE) {
+        printf("Error: Deallocate failed with  %d \n", ret);
+        iGlobalStatus = 2;
+    }
+
+
+}
+
+JNIEXPORT void JNICALL
+Java_nsk_jvmti_unit_functions_nosuspendStackTrace_JvmtiTest_SaveThreadInfo(JNIEnv * env, jclass cls, jobject oobj) {
+
+}
+
+}
