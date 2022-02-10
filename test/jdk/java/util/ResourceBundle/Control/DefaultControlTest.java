@@ -297,4 +297,166 @@ public class DefaultControlTest {
         // NPE test
         final int NARGS = 4;
         for (int mask = 0; mask < (1 << NARGS)-1; mask++) {
-            Object[] data =
+            Object[] data = getNpeArgs(NARGS, mask);
+            Locale loc = (Locale) data[1];
+            try {
+                rb = CONTROL.newBundle((String) data[0], loc,
+                                       (String) data[2], (ClassLoader) data[3],
+                                       false);
+                error("newBundle(%s, %s, %s, %s, false) doesn't throw NPE.%n",
+                      data[0], toString(loc), data[2], data[3]);
+            } catch (NullPointerException npe) {
+            } catch (Exception e) {
+                error("newBundle(%s, %s, %s, %s, false) threw %s.%n",
+                      data[0], toString(loc), data[2], data[3], e);
+            }
+        }
+    }
+
+    private static void testGetTimeToLive() {
+        long ttl = CONTROL.getTimeToLive("any", Locale.US);
+        if (ttl != CONTROL.TTL_NO_EXPIRATION_CONTROL) {
+            error("getTimeToLive: got %d, expected %d%n", ttl,
+                  CONTROL.TTL_NO_EXPIRATION_CONTROL);
+        }
+        final int NARGS = 2;
+        for (int mask = 0; mask < (1 << NARGS)-1; mask++) {
+            Object[] data = getNpeArgs(NARGS, mask);
+            try {
+                ttl = CONTROL.getTimeToLive((String) data[0], (Locale) data[1]);
+                error("getTimeToLive(%s, %s) doesn't throw NPE.%n", data[0], data[1]);
+            } catch (NullPointerException e) {
+            }
+        }
+    }
+
+    // The functionality of needsReload is tested by
+    // ExpirationTest.sh. Only parameter checking is tested here.
+    private static void testNeedsReload() {
+        long loadTime = System.currentTimeMillis();
+
+        // NPE test
+        final int NARGS = 5;
+        for (int mask = 0; mask < (1 << NARGS)-1; mask++) {
+            Object[] data = getNpeArgs(NARGS, mask);
+            Locale loc = (Locale) data[1];
+            try {
+                boolean b = CONTROL.needsReload((String) data[0], loc,
+                                                (String) data[2], (ClassLoader) data[3],
+                                                (ResourceBundle) data[4], loadTime);
+                error("needsReload(%s, %s, %s, %s, %s, loadTime) doesn't throw NPE.%n",
+                      data[0], toString(loc), data[2], data[3], data[4]);
+            } catch (NullPointerException e) {
+            }
+        }
+    }
+
+    private static void testToBundleName() {
+        final String name = "J2SE";
+        Map<Locale, String> bundleNames = new HashMap<Locale, String>();
+        bundleNames.put(Locale.of("ja", "JP", "YOK"),
+                        name + "_" + "ja" + "_" + "JP" + "_" + "YOK");
+        bundleNames.put(Locale.of("ja", "JP"),
+                        name + "_" + "ja" + "_" + "JP");
+        bundleNames.put(Locale.of("ja"),
+                        name + "_" + "ja");
+        bundleNames.put(Locale.of("ja", "", "YOK"),
+                        name + "_" + "ja" + "_" + "" + "_" + "YOK");
+        bundleNames.put(Locale.of("", "JP", "YOK"),
+                        name + "_" + "" + "_" + "JP" + "_" + "YOK");
+        bundleNames.put(Locale.of("", "", "YOK"),
+                        name + "_" + "" + "_" + "" + "_" + "YOK");
+        bundleNames.put(Locale.of("", "JP"),
+                        name + "_" + "" + "_" + "JP");
+        bundleNames.put(Locale.ROOT,
+                        name);
+
+        for (Locale locale : bundleNames.keySet()) {
+            String bn = CONTROL.toBundleName(name, locale);
+            String expected = bundleNames.get(locale);
+            if (!bn.equals(expected)) {
+                error("toBundleName: got %s, expected %s%n", bn, expected);
+            }
+        }
+
+        final int NARGS = 2;
+        for (int mask = 0; mask < (1 << NARGS)-1; mask++) {
+            Object[] data = getNpeArgs(NARGS, mask);
+            try {
+                String s = CONTROL.toBundleName((String) data[0], (Locale) data[1]);
+                error("toBundleName(%s, %s) doesn't throw NPE.%n", data[0], data[1]);
+            } catch (NullPointerException e) {
+            }
+        }
+    }
+
+    private static void testToResourceName() {
+        String[][] names = {
+            // bundleName,   suffix, expected result
+            { "com.sun.J2SE", "xml", "com/sun/J2SE.xml" },
+            { ".J2SE", "xml", "/J2SE.xml" },
+            { "J2SE", "xml", "J2SE.xml" },
+            { "com/sun/J2SE", "xml", "com/sun/J2SE.xml" },
+            { "com.sun.J2SE", "", "com/sun/J2SE." },
+            { ".", "", "/." },
+            { "", "", "." },
+
+            // data for NPE tests
+            { null, "any", null },
+            { "any", null, null },
+            { null, null, null },
+            };
+
+        for (String[] data : names) {
+            String result = null;
+            boolean npeThrown = false;
+            try {
+                result = CONTROL.toResourceName(data[0], data[1]);
+            } catch (NullPointerException npe) {
+                npeThrown = true;
+            }
+            String expected = data[2];
+            if (expected != null) {
+                if (!result.equals(expected)) {
+                    error("toResourceName: got %s, expected %s%n", result, data[2]);
+                }
+            } else {
+                if (!npeThrown) {
+                    error("toResourceName(%s, %s) doesn't throw NPE.%n", data[0], data[1]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Produces permutations argument data that contains at least one
+     * null.
+     */
+    private static Object[] getNpeArgs(int length, int mask) {
+        Object[] data = new Object[length];
+        for (int i = 0; i < length; i++) {
+            if ((mask & (1 << i)) == 0) {
+                data[i] = null;
+            } else {
+                data[i] = FULLARGS[i];
+            }
+        }
+        return data;
+    }
+
+    private static String toString(Locale loc) {
+        if (loc == null)
+            return "null";
+        return "\"" + loc.getLanguage() + "_" + loc.getCountry() + "_" + loc.getVariant() + "\"";
+    }
+
+    private static void error(String msg) {
+        System.out.println(msg);
+        errors++;
+    }
+
+    private static void error(String fmt, Object... args) {
+        System.out.printf(fmt, args);
+        errors++;
+    }
+}
