@@ -366,3 +366,31 @@ public class addthreadfilter004 extends JDIBase {
 
     private ModificationWatchpointRequest setting2ModificationWatchpointRequest (
                                                   ThreadReference thread,
+                                                  ReferenceType   testedClass,
+                                                  String          fieldName,
+                                                  int             suspendPolicy,
+                                                  String          property        )
+            throws JDITestRuntimeException {
+        try {
+            log2("......setting up ModificationWatchpointRequest:");
+            log2("       thread: " + thread + "; class: " + testedClass + "; fieldName: " + fieldName);
+            Field field = testedClass.fieldByName(fieldName);
+
+            ModificationWatchpointRequest
+            awr = eventRManager.createModificationWatchpointRequest(field);
+            awr.putProperty("number", property);
+
+            if (thread != null)
+                awr.addThreadFilter(thread);
+            awr.setSuspendPolicy(suspendPolicy);
+
+            log2("      ModificationWatchpointRequest has been set up");
+            return awr;
+        } catch ( Exception e ) {
+            log3("ERROR: ATTENTION: Exception within settingModificationWatchpointRequest() : " + e);
+            log3("       ModificationWatchpointRequest HAS NOT BEEN SET UP");
+            throw new JDITestRuntimeException("** FAILURE to set up ModificationWatchpointRequest **");
+        }
+    }
+
+}
