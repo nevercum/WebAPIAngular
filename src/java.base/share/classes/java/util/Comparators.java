@@ -81,3 +81,20 @@ class Comparators {
                 return (b == null) ? 0 : (nullFirst ? -1 : 1);
             } else if (b == null) {
                 return nullFirst ? 1: -1;
+            } else {
+                return (real == null) ? 0 : real.compare(a, b);
+            }
+        }
+
+        @Override
+        public Comparator<T> thenComparing(Comparator<? super T> other) {
+            Objects.requireNonNull(other);
+            return new NullComparator<>(nullFirst, real == null ? other : real.thenComparing(other));
+        }
+
+        @Override
+        public Comparator<T> reversed() {
+            return new NullComparator<>(!nullFirst, real == null ? null : real.reversed());
+        }
+    }
+}
