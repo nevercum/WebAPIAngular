@@ -14,4 +14,41 @@
  *
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Fl
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+
+/*
+ * @test
+ *
+ * @summary converted from VM Testbase nsk/jdi/Field/hashCode/hashcode001.
+ * VM Testbase keywords: [jpda, jdi]
+ * VM Testbase readme:
+ * DESCRIPTION
+ *     This test checks the hashCode() method of Field interface of
+ *     com.sun.jdi package.
+ *     nsk/jdi/Field/hashcode001 checks assertion:
+ *     public int hashCode()
+ *     Returns: the integer code
+ *     Whenever hashCode() invoked on the same Field more then once during
+ *     an execution, it must consistently return the same integer.
+ * COMMENTS
+ *
+ * @library /vmTestbase
+ *          /test/lib
+ * @build nsk.jdi.Field.hashCode.hashcode001
+ *        nsk.jdi.Field.hashCode.hashcode001a
+ * @run main/othervm
+ *      nsk.jdi.Field.hashCode.hashcode001
+ *      -verbose
+ *      -arch=${os.family}-${os.simpleArch}
+ *      -waittime=5
+ *      -debugee.vmkind=java
+ *      -transport.address=dynamic
+ *      -debugee.vmkeys="${test.vm.opts} ${test.java.opts}"
+ */
+
