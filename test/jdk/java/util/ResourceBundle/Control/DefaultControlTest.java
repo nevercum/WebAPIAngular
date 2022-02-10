@@ -111,4 +111,190 @@ public class DefaultControlTest {
 
         // Check TTL_*
         if (CONTROL.TTL_DONT_CACHE != -1) {
-            error("Wrong Control
+            error("Wrong Control.TTL_DONT_CACHE: %d%n", CONTROL.TTL_DONT_CACHE);
+        }
+        if (CONTROL.TTL_NO_EXPIRATION_CONTROL != -2) {
+            error("Wrong Control.TTL_NO_EXPIRATION_CONTROL: %d%n",
+                  CONTROL.TTL_NO_EXPIRATION_CONTROL);
+        }
+    }
+
+    private static void checkImmutableList(List<String> list) {
+        try {
+            list.add("hello");
+            error("%s is mutable%n", list);
+        } catch (UnsupportedOperationException e) {
+        }
+    }
+
+    private static void testGetFormats() {
+        List<String> list = CONTROL.getFormats("foo");
+        if (list != CONTROL.FORMAT_DEFAULT) {
+            error("getFormats returned " + list);
+        }
+        try {
+            list = CONTROL.getFormats(null);
+            error("getFormats doesn't throw NPE.");
+        } catch (NullPointerException e) {
+        }
+    }
+
+    private static void testGetCandidateLocales() {
+        Map<Locale, Locale[]> candidateData = new HashMap<Locale, Locale[]>();
+        candidateData.put(Locale.of("ja", "JP", "YOK"), new Locale[] {
+                              Locale.of("ja", "JP", "YOK"),
+                              Locale.of("ja", "JP"),
+                              Locale.of("ja"),
+                              Locale.ROOT });
+        candidateData.put(Locale.of("ja", "JP"), new Locale[] {
+                              Locale.of("ja", "JP"),
+                              Locale.of("ja"),
+                              Locale.ROOT });
+        candidateData.put(Locale.of("ja"), new Locale[] {
+                              Locale.of("ja"),
+                              Locale.ROOT });
+
+        candidateData.put(Locale.of("ja", "", "YOK"), new Locale[] {
+                              Locale.of("ja", "", "YOK"),
+                              Locale.of("ja"),
+                              Locale.ROOT });
+        candidateData.put(Locale.of("", "JP", "YOK"), new Locale[] {
+                              Locale.of("", "JP", "YOK"),
+                              Locale.of("", "JP"),
+                              Locale.ROOT });
+        candidateData.put(Locale.of("", "", "YOK"), new Locale[] {
+                              Locale.of("", "", "YOK"),
+                              Locale.ROOT });
+        candidateData.put(Locale.of("", "JP"), new Locale[] {
+                              Locale.of("", "JP"),
+                              Locale.ROOT });
+        candidateData.put(Locale.ROOT, new Locale[] {
+                              Locale.ROOT });
+
+        // Norwegian Bokmal
+        candidateData.put(Locale.forLanguageTag("nb-NO-POSIX"), new Locale[] {
+                Locale.forLanguageTag("nb-NO-POSIX"),
+                Locale.forLanguageTag("no-NO-POSIX"),
+                Locale.forLanguageTag("nb-NO"),
+                Locale.forLanguageTag("no-NO"),
+                Locale.forLanguageTag("nb"),
+                Locale.forLanguageTag("no"),
+                Locale.ROOT});
+        candidateData.put(Locale.forLanguageTag("no-NO-POSIX"), new Locale[] {
+                Locale.forLanguageTag("no-NO-POSIX"),
+                Locale.forLanguageTag("nb-NO-POSIX"),
+                Locale.forLanguageTag("no-NO"),
+                Locale.forLanguageTag("nb-NO"),
+                Locale.forLanguageTag("no"),
+                Locale.forLanguageTag("nb"),
+                Locale.ROOT});
+
+
+        for (Locale locale : candidateData.keySet()) {
+            List<Locale> candidates = CONTROL.getCandidateLocales("any", locale);
+            List<Locale> expected = Arrays.asList(candidateData.get(locale));
+            if (!candidates.equals(expected)) {
+                error("Wrong candidates for %s: got %s, expected %s%n",
+                      toString(locale), candidates, expected);
+            }
+        }
+        final int NARGS = 2;
+        for (int mask = 0; mask < (1 << NARGS)-1; mask++) {
+            Object[] data = getNpeArgs(NARGS, mask);
+            try {
+                List<Locale> candidates = CONTROL.getCandidateLocales((String) data[0],
+                                                                      (Locale) data[1]);
+                error("getCandidateLocales(%s, %s) doesn't throw NPE.%n",
+                      data[0], toString((Locale)data[1]));
+            } catch (NullPointerException e) {
+            }
+        }
+    }
+
+    private static void testGetFallbackLocale() {
+        Locale current = Locale.getDefault();
+        Locale.setDefault(Locale.ITALY);
+        try {
+            Locale loc = CONTROL.getFallbackLocale("any", Locale.FRANCE);
+            if (loc != Locale.ITALY) {
+                error("getFallbackLocale: got %s, expected %s%n",
+                      toString(loc), toString(Locale.ITALY));
+            }
+            loc = CONTROL.getFallbackLocale("any", Locale.ITALY);
+            if (loc != null) {
+                error("getFallbackLocale: got %s, expected null%n", toString(loc));
+            }
+        } finally {
+            Locale.setDefault(current);
+        }
+
+        final int NARGS = 2;
+        for (int mask = 0; mask < (1 << NARGS)-1; mask++) {
+            Object[] data = getNpeArgs(NARGS, mask);
+            try {
+                Locale loc = CONTROL.getFallbackLocale((String) data[0], (Locale) data[1]);
+                error("getFallbackLocale(%s, %s) doesn't throw NPE.%n", data[0], data[1]);
+            } catch (NullPointerException e) {
+            }
+        }
+    }
+
+    private static void testNewBundle() {
+        int testNo = 0;
+        ResourceBundle rb = null;
+        try {
+            testNo = 1;
+            rb = CONTROL.newBundle("StressOut", Locale.JAPANESE,
+                                   PROPERTIES, LOADER, false);
+            String s = rb.getString("data");
+            if (!s.equals("Japan")) {
+                error("newBundle: #%d got %s, expected Japan%n", testNo, s);
+            }
+
+            testNo = 2;
+            rb = CONTROL.newBundle("TestResourceRB", Locale.ROOT,
+                                   CLAZZ, LOADER, false);
+            s = rb.getString("type");
+            if (!s.equals(CLAZZ)) {
+                error("newBundle: #%d got %s, expected %s%n", testNo, s, CLAZZ);
+            }
+        } catch (Throwable e) {
+            error("newBundle: #%d threw %s%n", testNo, e);
+            e.printStackTrace();
+        }
+
+        // Test exceptions
+
+        try {
+            // MalformedDataRB contains an invalid Unicode notation which
+            // causes to throw an IllegalArgumentException.
+            rb = CONTROL.newBundle("MalformedDataRB", Locale.ENGLISH,
+                                   PROPERTIES, LOADER, false);
+            error("newBundle: doesn't throw IllegalArgumentException with malformed data.");
+        } catch (IllegalArgumentException iae) {
+        } catch (Exception e) {
+            error("newBundle: threw %s%n", e);
+        }
+
+        try {
+            rb = CONTROL.newBundle("StressOut", Locale.JAPANESE,
+                                   "foo.bar", LOADER, false);
+            error("newBundle: doesn't throw IllegalArgumentException with invalid format.");
+        } catch (IllegalArgumentException iae) {
+        } catch (Exception e) {
+            error("newBundle: threw %s%n", e);
+        }
+
+        try {
+            rb = CONTROL.newBundle("NonResourceBundle", Locale.ROOT,
+                                   "java.class", LOADER, false);
+            error("newBundle: doesn't throw ClassCastException with a non-ResourceBundle subclass.");
+        } catch (ClassCastException cce) {
+        } catch (Exception e) {
+            error("newBundle: threw %s%n", e);
+        }
+
+        // NPE test
+        final int NARGS = 4;
+        for (int mask = 0; mask < (1 << NARGS)-1; mask++) {
+            Object[] data =
