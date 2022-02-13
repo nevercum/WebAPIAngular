@@ -180,4 +180,118 @@ public final class ClassParser {
             }
         }
         // Return the information we have gathered in a new object
-        return new JavaClass(classNameIndex, supercla
+        return new JavaClass(classNameIndex, superclassNameIndex, fileName, major, minor, accessFlags, constantPool, interfaces, fields, methods, attributes,
+            isZip ? JavaClass.ZIP : JavaClass.FILE);
+    }
+
+    /**
+     * Reads information about the attributes of the class.
+     *
+     * @throws IOException if an I/O error occurs.
+     * @throws ClassFormatException if a class is malformed or cannot be interpreted as a class file
+     */
+    private void readAttributes() throws IOException, ClassFormatException {
+        final int attributesCount = dataInputStream.readUnsignedShort();
+        attributes = new Attribute[attributesCount];
+        for (int i = 0; i < attributesCount; i++) {
+            attributes[i] = Attribute.readAttribute(dataInputStream, constantPool);
+        }
+    }
+
+    /**
+     * Reads information about the class and its super class.
+     *
+     * @throws IOException if an I/O error occurs.
+     * @throws ClassFormatException if a class is malformed or cannot be interpreted as a class file
+     */
+    private void readClassInfo() throws IOException, ClassFormatException {
+        accessFlags = dataInputStream.readUnsignedShort();
+        /*
+         * Interfaces are implicitly abstract, the flag should be set according to the JVM specification.
+         */
+        if ((accessFlags & Const.ACC_INTERFACE) != 0) {
+            accessFlags |= Const.ACC_ABSTRACT;
+        }
+        if ((accessFlags & Const.ACC_ABSTRACT) != 0 && (accessFlags & Const.ACC_FINAL) != 0) {
+            throw new ClassFormatException("Class " + fileName + " can't be both final and abstract");
+        }
+        classNameIndex = dataInputStream.readUnsignedShort();
+        superclassNameIndex = dataInputStream.readUnsignedShort();
+    }
+
+    /**
+     * Reads constant pool entries.
+     *
+     * @throws IOException if an I/O error occurs.
+     * @throws ClassFormatException if a class is malformed or cannot be interpreted as a class file
+     */
+    private void readConstantPool() throws IOException, ClassFormatException {
+        constantPool = new ConstantPool(dataInputStream);
+    }
+
+    /**
+     * Reads information about the fields of the class, i.e., its variables.
+     *
+     * @throws IOException if an I/O error occurs.
+     * @throws ClassFormatException if a class is malformed or cannot be interpreted as a class file
+     */
+    private void readFields() throws IOException, ClassFormatException {
+        final int fieldsCount = dataInputStream.readUnsignedShort();
+        fields = new Field[fieldsCount];
+        for (int i = 0; i < fieldsCount; i++) {
+            fields[i] = new Field(dataInputStream, constantPool);
+        }
+    }
+
+    /******************** Private utility methods **********************/
+    /**
+     * Checks whether the header of the file is ok. Of course, this has to be the first action on successive file reads.
+     *
+     * @throws IOException if an I/O error occurs.
+     * @throws ClassFormatException if a class is malformed or cannot be interpreted as a class file
+     */
+    private void readID() throws IOException, ClassFormatException {
+        if (dataInputStream.readInt() != Const.JVM_CLASSFILE_MAGIC) {
+            throw new ClassFormatException(fileName + " is not a Java .class file");
+        }
+    }
+
+    /**
+     * Reads information about the interfaces implemented by this class.
+     *
+     * @throws IOException if an I/O error occurs.
+     * @throws ClassFormatException if a class is malformed or cannot be interpreted as a class file
+     */
+    private void readInterfaces() throws IOException, ClassFormatException {
+        final int interfacesCount = dataInputStream.readUnsignedShort();
+        interfaces = new int[interfacesCount];
+        for (int i = 0; i < interfacesCount; i++) {
+            interfaces[i] = dataInputStream.readUnsignedShort();
+        }
+    }
+
+    /**
+     * Reads information about the methods of the class.
+     *
+     * @throws IOException if an I/O error occurs.
+     * @throws ClassFormatException if a class is malformed or cannot be interpreted as a class file
+     */
+    private void readMethods() throws IOException {
+        final int methodsCount = dataInputStream.readUnsignedShort();
+        methods = new Method[methodsCount];
+        for (int i = 0; i < methodsCount; i++) {
+            methods[i] = new Method(dataInputStream, constantPool);
+        }
+    }
+
+    /**
+     * Reads major and minor version of compiler which created the file.
+     *
+     * @throws IOException if an I/O error occurs.
+     * @throws ClassFormatException if a class is malformed or cannot be interpreted as a class file
+     */
+    private void readVersion() throws IOException, ClassFormatException {
+        minor = dataInputStream.readUnsignedShort();
+        major = dataInputStream.readUnsignedShort();
+    }
+}
