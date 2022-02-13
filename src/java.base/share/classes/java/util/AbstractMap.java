@@ -461,4 +461,223 @@ public abstract class AbstractMap<K,V> implements Map<K,V> {
      * @implSpec
      * This implementation first checks if the specified object is this map;
      * if so it returns {@code true}.  Then, it checks if the specified
-     * object is a map whose size is identical to the size of 
+     * object is a map whose size is identical to the size of this map; if
+     * not, it returns {@code false}.  If so, it iterates over this map's
+     * {@code entrySet} collection, and checks that the specified map
+     * contains each mapping that this map contains.  If the specified map
+     * fails to contain such a mapping, {@code false} is returned.  If the
+     * iteration completes, {@code true} is returned.
+     *
+     * @param o object to be compared for equality with this map
+     * @return {@code true} if the specified object is equal to this map
+     */
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        if (!(o instanceof Map<?, ?> m))
+            return false;
+        if (m.size() != size())
+            return false;
+
+        try {
+            for (Entry<K, V> e : entrySet()) {
+                K key = e.getKey();
+                V value = e.getValue();
+                if (value == null) {
+                    if (!(m.get(key) == null && m.containsKey(key)))
+                        return false;
+                } else {
+                    if (!value.equals(m.get(key)))
+                        return false;
+                }
+            }
+        } catch (ClassCastException | NullPointerException unused) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns the hash code value for this map.  The hash code of a map is
+     * defined to be the sum of the hash codes of each entry in the map's
+     * {@code entrySet()} view.  This ensures that {@code m1.equals(m2)}
+     * implies that {@code m1.hashCode()==m2.hashCode()} for any two maps
+     * {@code m1} and {@code m2}, as required by the general contract of
+     * {@link Object#hashCode}.
+     *
+     * @implSpec
+     * This implementation iterates over {@code entrySet()}, calling
+     * {@link Map.Entry#hashCode hashCode()} on each element (entry) in the
+     * set, and adding up the results.
+     *
+     * @return the hash code value for this map
+     * @see Map.Entry#hashCode()
+     * @see Object#equals(Object)
+     * @see Set#equals(Object)
+     */
+    public int hashCode() {
+        int h = 0;
+        for (Entry<K, V> entry : entrySet())
+            h += entry.hashCode();
+        return h;
+    }
+
+    /**
+     * Returns a string representation of this map.  The string representation
+     * consists of a list of key-value mappings in the order returned by the
+     * map's {@code entrySet} view's iterator, enclosed in braces
+     * ({@code "{}"}).  Adjacent mappings are separated by the characters
+     * {@code ", "} (comma and space).  Each key-value mapping is rendered as
+     * the key followed by an equals sign ({@code "="}) followed by the
+     * associated value.  Keys and values are converted to strings as by
+     * {@link String#valueOf(Object)}.
+     *
+     * @return a string representation of this map
+     */
+    public String toString() {
+        Iterator<Entry<K,V>> i = entrySet().iterator();
+        if (! i.hasNext())
+            return "{}";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append('{');
+        for (;;) {
+            Entry<K,V> e = i.next();
+            K key = e.getKey();
+            V value = e.getValue();
+            sb.append(key   == this ? "(this Map)" : key);
+            sb.append('=');
+            sb.append(value == this ? "(this Map)" : value);
+            if (! i.hasNext())
+                return sb.append('}').toString();
+            sb.append(',').append(' ');
+        }
+    }
+
+    /**
+     * Returns a shallow copy of this {@code AbstractMap} instance: the keys
+     * and values themselves are not cloned.
+     *
+     * @return a shallow copy of this map
+     */
+    protected Object clone() throws CloneNotSupportedException {
+        AbstractMap<?,?> result = (AbstractMap<?,?>)super.clone();
+        result.keySet = null;
+        result.values = null;
+        return result;
+    }
+
+    /**
+     * Utility method for SimpleEntry and SimpleImmutableEntry.
+     * Test for equality, checking for nulls.
+     *
+     * NB: Do not replace with Object.equals until JDK-8015417 is resolved.
+     */
+    private static boolean eq(Object o1, Object o2) {
+        return o1 == null ? o2 == null : o1.equals(o2);
+    }
+
+    // Implementation Note: SimpleEntry and SimpleImmutableEntry
+    // are distinct unrelated classes, even though they share
+    // some code. Since you can't add or subtract final-ness
+    // of a field in a subclass, they can't share representations,
+    // and the amount of duplicated code is too small to warrant
+    // exposing a common abstract class.
+
+
+    /**
+     * An Entry maintaining a key and a value.  The value may be
+     * changed using the {@code setValue} method. Instances of
+     * this class are not associated with any map nor with any
+     * map's entry-set view.
+     *
+     * @apiNote
+     * This class facilitates the process of building custom map
+     * implementations. For example, it may be convenient to return
+     * arrays of {@code SimpleEntry} instances in method
+     * {@code Map.entrySet().toArray}.
+     *
+     * @param <K> the type of key
+     * @param <V> the type of the value
+     *
+     * @since 1.6
+     */
+    public static class SimpleEntry<K,V>
+        implements Entry<K,V>, java.io.Serializable
+    {
+        @java.io.Serial
+        private static final long serialVersionUID = -8499721149061103585L;
+
+        @SuppressWarnings("serial") // Conditionally serializable
+        private final K key;
+        @SuppressWarnings("serial") // Conditionally serializable
+        private V value;
+
+        /**
+         * Creates an entry representing a mapping from the specified
+         * key to the specified value.
+         *
+         * @param key the key represented by this entry
+         * @param value the value represented by this entry
+         */
+        public SimpleEntry(K key, V value) {
+            this.key   = key;
+            this.value = value;
+        }
+
+        /**
+         * Creates an entry representing the same mapping as the
+         * specified entry.
+         *
+         * @param entry the entry to copy
+         */
+        public SimpleEntry(Entry<? extends K, ? extends V> entry) {
+            this.key   = entry.getKey();
+            this.value = entry.getValue();
+        }
+
+        /**
+         * Returns the key corresponding to this entry.
+         *
+         * @return the key corresponding to this entry
+         */
+        public K getKey() {
+            return key;
+        }
+
+        /**
+         * Returns the value corresponding to this entry.
+         *
+         * @return the value corresponding to this entry
+         */
+        public V getValue() {
+            return value;
+        }
+
+        /**
+         * Replaces the value corresponding to this entry with the specified
+         * value.
+         *
+         * @param value new value to be stored in this entry
+         * @return the old value corresponding to the entry
+         */
+        public V setValue(V value) {
+            V oldValue = this.value;
+            this.value = value;
+            return oldValue;
+        }
+
+        /**
+         * Compares the specified object with this entry for equality.
+         * Returns {@code true} if the given object is also a map entry and
+         * the two entries represent the same mapping.  More formally, two
+         * entries {@code e1} and {@code e2} represent the same mapping
+         * if<pre>
+         *   (e1.getKey()==null ?
+         *    e2.getKey()==null :
+         *    e1.getKey().equals(e2.getKey()))
+         *   &amp;&amp;
+         *   (e1.getValue()==null ?
+         *    e2
