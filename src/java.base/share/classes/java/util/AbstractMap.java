@@ -234,4 +234,231 @@ public abstract class AbstractMap<K,V> implements Map<K,V> {
         Iterator<Entry<K,V>> i = entrySet().iterator();
         Entry<K,V> correctEntry = null;
         if (key==null) {
-            while (correctEntry==null && i.has
+            while (correctEntry==null && i.hasNext()) {
+                Entry<K,V> e = i.next();
+                if (e.getKey()==null)
+                    correctEntry = e;
+            }
+        } else {
+            while (correctEntry==null && i.hasNext()) {
+                Entry<K,V> e = i.next();
+                if (key.equals(e.getKey()))
+                    correctEntry = e;
+            }
+        }
+
+        V oldValue = null;
+        if (correctEntry !=null) {
+            oldValue = correctEntry.getValue();
+            i.remove();
+        }
+        return oldValue;
+    }
+
+
+    // Bulk Operations
+
+    /**
+     * {@inheritDoc}
+     *
+     * @implSpec
+     * This implementation iterates over the specified map's
+     * {@code entrySet()} collection, and calls this map's {@code put}
+     * operation once for each entry returned by the iteration.
+     *
+     * <p>Note that this implementation throws an
+     * {@code UnsupportedOperationException} if this map does not support
+     * the {@code put} operation and the specified map is nonempty.
+     *
+     * @throws UnsupportedOperationException {@inheritDoc}
+     * @throws ClassCastException            {@inheritDoc}
+     * @throws NullPointerException          {@inheritDoc}
+     * @throws IllegalArgumentException      {@inheritDoc}
+     */
+    public void putAll(Map<? extends K, ? extends V> m) {
+        for (Map.Entry<? extends K, ? extends V> e : m.entrySet())
+            put(e.getKey(), e.getValue());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @implSpec
+     * This implementation calls {@code entrySet().clear()}.
+     *
+     * <p>Note that this implementation throws an
+     * {@code UnsupportedOperationException} if the {@code entrySet}
+     * does not support the {@code clear} operation.
+     *
+     * @throws UnsupportedOperationException {@inheritDoc}
+     */
+    public void clear() {
+        entrySet().clear();
+    }
+
+
+    // Views
+
+    /**
+     * Each of these fields are initialized to contain an instance of the
+     * appropriate view the first time this view is requested.  The views are
+     * stateless, so there's no reason to create more than one of each.
+     *
+     * <p>Since there is no synchronization performed while accessing these fields,
+     * it is expected that java.util.Map view classes using these fields have
+     * no non-final fields (or any fields at all except for outer-this). Adhering
+     * to this rule would make the races on these fields benign.
+     *
+     * <p>It is also imperative that implementations read the field only once,
+     * as in:
+     *
+     * <pre> {@code
+     * public Set<K> keySet() {
+     *   Set<K> ks = keySet;  // single racy read
+     *   if (ks == null) {
+     *     ks = new KeySet();
+     *     keySet = ks;
+     *   }
+     *   return ks;
+     * }
+     *}</pre>
+     */
+    transient Set<K>        keySet;
+    transient Collection<V> values;
+
+    /**
+     * {@inheritDoc}
+     *
+     * @implSpec
+     * This implementation returns a set that subclasses {@link AbstractSet}.
+     * The subclass's iterator method returns a "wrapper object" over this
+     * map's {@code entrySet()} iterator.  The {@code size} method
+     * delegates to this map's {@code size} method and the
+     * {@code contains} method delegates to this map's
+     * {@code containsKey} method.
+     *
+     * <p>The set is created the first time this method is called,
+     * and returned in response to all subsequent calls.  No synchronization
+     * is performed, so there is a slight chance that multiple calls to this
+     * method will not all return the same set.
+     */
+    public Set<K> keySet() {
+        Set<K> ks = keySet;
+        if (ks == null) {
+            ks = new AbstractSet<K>() {
+                public Iterator<K> iterator() {
+                    return new Iterator<K>() {
+                        private Iterator<Entry<K,V>> i = entrySet().iterator();
+
+                        public boolean hasNext() {
+                            return i.hasNext();
+                        }
+
+                        public K next() {
+                            return i.next().getKey();
+                        }
+
+                        public void remove() {
+                            i.remove();
+                        }
+                    };
+                }
+
+                public int size() {
+                    return AbstractMap.this.size();
+                }
+
+                public boolean isEmpty() {
+                    return AbstractMap.this.isEmpty();
+                }
+
+                public void clear() {
+                    AbstractMap.this.clear();
+                }
+
+                public boolean contains(Object k) {
+                    return AbstractMap.this.containsKey(k);
+                }
+            };
+            keySet = ks;
+        }
+        return ks;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @implSpec
+     * This implementation returns a collection that subclasses {@link
+     * AbstractCollection}.  The subclass's iterator method returns a
+     * "wrapper object" over this map's {@code entrySet()} iterator.
+     * The {@code size} method delegates to this map's {@code size}
+     * method and the {@code contains} method delegates to this map's
+     * {@code containsValue} method.
+     *
+     * <p>The collection is created the first time this method is called, and
+     * returned in response to all subsequent calls.  No synchronization is
+     * performed, so there is a slight chance that multiple calls to this
+     * method will not all return the same collection.
+     */
+    public Collection<V> values() {
+        Collection<V> vals = values;
+        if (vals == null) {
+            vals = new AbstractCollection<V>() {
+                public Iterator<V> iterator() {
+                    return new Iterator<V>() {
+                        private Iterator<Entry<K,V>> i = entrySet().iterator();
+
+                        public boolean hasNext() {
+                            return i.hasNext();
+                        }
+
+                        public V next() {
+                            return i.next().getValue();
+                        }
+
+                        public void remove() {
+                            i.remove();
+                        }
+                    };
+                }
+
+                public int size() {
+                    return AbstractMap.this.size();
+                }
+
+                public boolean isEmpty() {
+                    return AbstractMap.this.isEmpty();
+                }
+
+                public void clear() {
+                    AbstractMap.this.clear();
+                }
+
+                public boolean contains(Object v) {
+                    return AbstractMap.this.containsValue(v);
+                }
+            };
+            values = vals;
+        }
+        return vals;
+    }
+
+    public abstract Set<Entry<K,V>> entrySet();
+
+
+    // Comparison and hashing
+
+    /**
+     * Compares the specified object with this map for equality.  Returns
+     * {@code true} if the given object is also a map and the two maps
+     * represent the same mappings.  More formally, two maps {@code m1} and
+     * {@code m2} represent the same mappings if
+     * {@code m1.entrySet().equals(m2.entrySet())}.  This ensures that the
+     * {@code equals} method works properly across different implementations
+     * of the {@code Map} interface.
+     *
+     * @implSpec
+     * This implementation first checks if the specified object is this map;
+     * if so it returns {@code true}.  Then, it checks if the specified
+     * object is a map whose size is identical to the size of 
