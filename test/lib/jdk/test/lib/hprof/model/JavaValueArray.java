@@ -286,4 +286,67 @@ public class JavaValueArray extends JavaLazyReadObject
             for (int i = 0; i < things.length; i++) {
                 result.append(things[i]);
             }
-       
+        } else {
+            int limit = 8;
+            if (bigLimit) {
+                limit = 1000;
+            }
+            result = new StringBuilder("{");
+            for (int i = 0; i < things.length; i++) {
+                if (i > 0) {
+                    result.append(", ");
+                }
+                if (i >= limit) {
+                    result.append("... ");
+                    break;
+                }
+                switch (elementSignature) {
+                    case 'Z': {
+                        boolean val = ((JavaBoolean)things[i]).value;
+                        if (val) {
+                            result.append("true");
+                        } else {
+                            result.append("false");
+                        }
+                        break;
+                    }
+                    case 'B': {
+                        byte val = ((JavaByte)things[i]).value;
+                        result.append("0x").append(Integer.toString(val, 16));
+                        break;
+                    }
+                    case 'S': {
+                        short val = ((JavaShort)things[i]).value;
+                        result.append(val);
+                        break;
+                    }
+                    case 'I': {
+                        int val = ((JavaInt)things[i]).value;
+                        result.append(val);
+                        break;
+                    }
+                    case 'J': {         // long
+                        long val = ((JavaLong)things[i]).value;
+                        result.append(val);
+                        break;
+                    }
+                    case 'F': {
+                        float val = ((JavaFloat)things[i]).value;
+                        result.append(val);
+                        break;
+                    }
+                    case 'D': {         // double
+                        double val = ((JavaDouble)things[i]).value;
+                        result.append(val);
+                        break;
+                    }
+                    default: {
+                        throw new RuntimeException("unknown primitive type?");
+                    }
+                }
+            }
+            result.append('}');
+        }
+        return result.toString();
+    }
+}
