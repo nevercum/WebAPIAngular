@@ -54,4 +54,156 @@ public class CloseInflaterDeflaterTest {
             throw new IOException();
         }
         @Override
-        public void write(byte[] b) throw
+        public void write(byte[] b) throws IOException {}
+        @Override
+        public void write(int b) throws IOException {}
+    };
+    // InputStream that will throw an exception during a read operation
+    private static InputStream inStream = new InputStream() {
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            throw new IOException();
+        }
+        @Override
+        public int read(byte[] b) throws IOException { throw new IOException();}
+        @Override
+        public int read() throws IOException { throw new IOException();}
+    };
+    // Input bytes for read/write operation
+    private static byte[] inputBytes = new byte[INPUT_LENGTH];
+    // Random function to add bytes to inputBytes
+    private static Random rand = new Random();
+
+    /**
+     * DataProvider to specify whether to use close() or finish() of OutputStream
+     *
+     * @return Entry object indicating which method to use for closing OutputStream
+     */
+    @DataProvider
+    public Object[][] testOutputStreams() {
+     return new Object[][] {
+      { true },
+      { false },
+     };
+    }
+
+    /**
+     * DataProvider to specify on which outputstream closeEntry() has to be called
+     *
+     * @return Entry object returning either JarOutputStream or ZipOutputStream
+     */
+    @DataProvider
+    public Object[][] testZipAndJar() throws IOException{
+     return new Object[][] {
+      { new JarOutputStream(outStream)},
+      { new ZipOutputStream(outStream)},
+     };
+    }
+
+    /**
+     * Add inputBytes array with random bytes to write into OutputStream
+     */
+    @BeforeTest
+    public void before_test()
+    {
+       rand.nextBytes(inputBytes);
+    }
+
+    /**
+     * Test for infinite loop by writing bytes to closed GZIPOutputStream
+     *
+     * @param useCloseMethod indicates whether to use Close() or finish() method
+     * @throws IOException if an error occurs
+     */
+    @Test(dataProvider = "testOutputStreams")
+    public void testGZip(boolean useCloseMethod) throws IOException {
+        GZIPOutputStream gzip = new GZIPOutputStream(outStream);
+        gzip.write(inputBytes, 0, INPUT_LENGTH);
+        assertThrows(IOException.class, () -> {
+            // Close GZIPOutputStream
+            if (useCloseMethod) {
+                gzip.close();
+            } else {
+                gzip.finish();
+            }
+        });
+        // Write on a closed GZIPOutputStream, closed Deflater IOException expected
+        assertThrows(NullPointerException.class , () -> gzip.write(inputBytes, 0, INPUT_LENGTH));
+    }
+
+    /**
+     * Test for infinite loop by writing bytes to closed DeflaterOutputStream
+     *
+     * @param useCloseMethod indicates whether to use Close() or finish() method
+     * @throws IOException if an error occurs
+     */
+    @Test(dataProvider = "testOutputStreams")
+    public void testDeflaterOutputStream(boolean useCloseMethod) throws IOException {
+        DeflaterOutputStream def = new DeflaterOutputStream(outStream);
+        assertThrows(IOException.class , () -> def.write(inputBytes, 0, INPUT_LENGTH));
+        assertThrows(IOException.class, () -> {
+            // Close DeflaterOutputStream
+            if (useCloseMethod) {
+                def.close();
+            } else {
+                def.finish();
+            }
+        });
+        // Write on a closed DeflaterOutputStream, 'Deflater has been closed' NPE is expected
+        assertThrows(NullPointerException.class , () -> def.write(inputBytes, 0, INPUT_LENGTH));
+    }
+
+    /**
+     * Test for infinite loop by reading bytes from closed DeflaterInputStream
+     *
+     * @throws IOException if an error occurs
+     */
+    @Test
+    public void testDeflaterInputStream() throws IOException {
+        DeflaterInputStream def = new DeflaterInputStream(inStream);
+        assertThrows(IOException.class , () -> def.read(inputBytes, 0, INPUT_LENGTH));
+        // Close DeflaterInputStream
+        def.close();
+        // Read from a closed DeflaterInputStream, closed Deflater IOException expected
+        assertThrows(IOException.class , () -> def.read(inputBytes, 0, INPUT_LENGTH));
+    }
+
+    /**
+     * Test for infinite loop by writing bytes to closed InflaterOutputStream
+     *
+     * Note: Disabling this test as it is failing intermittently.
+     * @param useCloseMethod indicates whether to use Close() or finish() method
+     * @throws IOException if an error occurs
+     */
+    @Test(dataProvider = "testOutputStreams",enabled=false)
+    public void testInflaterOutputStream(boolean useCloseMethod) throws IOException {
+        InflaterOutputStream inf = new InflaterOutputStream(outStream);
+        assertThrows(IOException.class , () -> inf.write(inputBytes, 0, INPUT_LENGTH));
+        assertThrows(IOException.class , () -> {
+            // Close InflaterOutputStream
+            if (useCloseMethod) {
+                inf.close();
+            } else {
+                inf.finish();
+            }
+        });
+        // Write on a closed InflaterOutputStream , closed Inflater IOException expected
+        assertThrows(IOException.class , () -> inf.write(inputBytes, 0, INPUT_LENGTH));
+    }
+
+    /**
+     * Test for infinite loop by writing bytes to closed ZipOutputStream/JarOutputStream
+     *
+     * @param zip will be the instance of either JarOutputStream or ZipOutputStream
+     * @throws IOException if an error occurs
+     */
+    @Test(dataProvider = "testZipAndJar")
+    public void testZipCloseEntry(ZipOutputStream zip) throws IOException {
+        assertThrows(IOException.class , () -> zip.putNextEntry(new ZipEntry("")));
+        zip.write(inputBytes, 0, INPUT_LENGTH);
+        assertThrows(IOException.class , () -> zip.closeEntry());
+        // Write on a closed ZipOutputStream , 'Deflater has been closed' NPE is expected
+        assertThrows(NullPointerException.class , () -> zip.write(inputBytes, 0, INPUT_LENGTH));
+    }
+
+}
