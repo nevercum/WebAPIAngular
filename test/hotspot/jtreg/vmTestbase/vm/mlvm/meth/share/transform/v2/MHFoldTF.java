@@ -46,4 +46,45 @@ public class MHFoldTF extends MHNaryTF {
         Argument[] combinerArgs = _combiner.getArgs();
 
         MHUtils.assertAssignableType(
-                "
+                "combiner result assignable to parameter 0",
+                targetArgs[0].getType(),
+                _combiner.getRetVal().getType());
+
+        for ( int i = 0; i < combinerArgs.length; i++ ) {
+            MHUtils.assertAssignableType(
+                    "combiner parameter " + i + " assignable to target parameter " + (i + 1),
+                    combinerArgs[i].getType(),
+                    targetArgs[i + 1].getType());
+        }
+    }
+
+    @Override
+    protected Argument computeRetVal() {
+        return _target.getRetVal();
+    }
+
+    @Override
+    protected Argument[] computeInboundArgs() {
+        return TestUtils.cdr(_target.getArgs());
+    }
+
+    @Override
+    protected MethodHandle computeInboundMH() {
+        return MethodHandles.foldArguments(_target.getTargetMH(), _combiner.getTargetMH());
+    }
+
+    @Override
+    public MHCall[] getOutboundCalls() {
+        return new MHCall[] { _target, _combiner };
+    }
+
+    @Override
+    protected String getName() {
+        return "foldArguments";
+    }
+
+    @Override
+    protected String getDescription() {
+        return "combiner=" + _combiner;
+    }
+}
