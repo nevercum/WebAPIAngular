@@ -198,4 +198,156 @@ public class field001 extends JDIBase {
 
    /*
     * Return value: 0 - normal end of the test
-    *            
+    *               1 - ubnormal end of the test
+    *               2 - VMDisconnectedException while test phase
+    */
+
+    private int runTest() {
+
+        try {
+            testRun();
+
+            log2("waiting for VMDeathEvent");
+            getEventSet();
+            if (eventIterator.nextEvent() instanceof VMDeathEvent)
+                return 0;
+
+            log3("ERROR: last event is not the VMDeathEvent");
+            return 1;
+        } catch ( VMDisconnectedException e ) {
+            log3("ERROR: VMDisconnectedException : " + e);
+            return 2;
+        } catch ( Exception e ) {
+            log3("ERROR: Exception : " + e);
+            return 1;
+        }
+
+    }
+
+    private void testRun()
+                 throws JDITestRuntimeException, Exception {
+
+        eventRManager = vm.eventRequestManager();
+
+        ClassPrepareRequest cpRequest = eventRManager.createClassPrepareRequest();
+        cpRequest.setSuspendPolicy( EventRequest.SUSPEND_EVENT_THREAD);
+        cpRequest.addClassFilter(debuggeeName);
+
+        cpRequest.enable();
+        vm.resume();
+        getEventSet();
+        cpRequest.disable();
+
+        ClassPrepareEvent event = (ClassPrepareEvent) eventIterator.next();
+        debuggeeClass = event.referenceType();
+
+        if (!debuggeeClass.name().equals(debuggeeName))
+           throw new JDITestRuntimeException("** Unexpected ClassName for ClassPrepareEvent **");
+
+        log2("      received: ClassPrepareEvent for debuggeeClass");
+
+        String bPointMethod = "methodForCommunication";
+        String lineForComm  = "lineForComm";
+
+        ThreadReference   mainThread = debuggee.threadByNameOrThrow("main");
+
+        BreakpointRequest bpRequest = settingBreakpoint(mainThread,
+                                             debuggeeClass,
+                                            bPointMethod, lineForComm, "zero");
+        bpRequest.enable();
+
+    //------------------------------------------------------  testing section
+
+        log1("     TESTING BEGINS");
+
+        EventRequest  eventRequest1 = null;
+        String        property1     = "AccessWatchpointRequest1";
+        String        fieldName1    = "var101";
+
+        ReferenceType testClassReference = null;
+
+
+        for (int i = 0; ; i++) {
+
+            vm.resume();
+            breakpointForCommunication();
+
+            int instruction = ((IntegerValue)
+                               (debuggeeClass.getValue(debuggeeClass.fieldByName("instruction")))).value();
+
+            if (instruction == 0) {
+                vm.resume();
+                break;
+            }
+
+
+            log1(":::::: case: # " + i);
+
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ variable part
+
+            switch (i) {
+
+              case 0:
+                     testClassReference =
+                           (ReferenceType) vm.classesByName(testedClassName1).get(0);
+
+                     log2("......setting up AccessWatchpointRequest and getting Field object field1");
+                     eventRequest1 = setting21AccessWatchpointRequest (null,
+                                             testClassReference, fieldName1,
+                                             EventRequest.SUSPEND_NONE, property1);
+
+                     log2("......getting: field2 = ((WatchpointRequest) eventRequest1).field();");
+                     field2 = ((WatchpointRequest) eventRequest1).field();
+
+                     log2("      checking up on equality of field1 and field2");
+                     if ( !field1.equals(field2) ) {
+                         testExitCode = FAILED;
+                         log3("ERROR: Field objects are not equal");
+                     }
+
+                      break;
+
+              default:
+                      throw new JDITestRuntimeException("** default case 2 **");
+            }
+
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        }
+        log1("    TESTING ENDS");
+        return;
+    }
+
+    // ============================== test's additional methods
+
+    private AccessWatchpointRequest setting21AccessWatchpointRequest (
+                                                  ThreadReference thread,
+                                                  ReferenceType   fieldClass,
+                                                  String          fieldName,
+                                                  int             suspendPolicy,
+                                                  String          property        )
+            throws JDITestRuntimeException {
+        try {
+            log2("......setting up AccessWatchpointRequest:");
+            log2("       thread: " + thread + "; fieldClass: " + fieldClass + "; fieldName: " + fieldName);
+            Field field = fieldClass.fieldByName(fieldName);
+
+            field1 = field;
+
+            AccessWatchpointRequest
+            awr = eventRManager.createAccessWatchpointRequest(field);
+            awr.putProperty("number", property);
+
+            if (thread != null)
+                awr.addThreadFilter(thread);
+            awr.setSuspendPolicy(suspendPolicy);
+
+            log2("      AccessWatchpointRequest has been set up");
+            return awr;
+        } catch ( Exception e ) {
+            log3("ERROR: ATTENTION: Exception within settingAccessWatchpointRequest() : " + e);
+            log3("       AccessWatchpointRequest HAS NOT BEEN SET UP");
+            throw new JDITestRuntimeException("** FAILURE to set up AccessWatchpointRequest **");
+        }
+    }
+
+}
