@@ -58,4 +58,63 @@ public class InterruptAtExit extends Thread {
             try {
                 timeMax = Integer.parseUnsignedInt(args[0]);
             } catch (NumberFormatException nfe) {
-                System.err.println("'" + args[0] + "': invalid ti
+                System.err.println("'" + args[0] + "': invalid timeMax value.");
+                usage();
+            }
+        }
+
+        System.out.println("About to execute for " + timeMax + " seconds.");
+
+        long count = 0;
+        long start_time = System.currentTimeMillis();
+        while (System.currentTimeMillis() < start_time + (timeMax * 1000)) {
+            count++;
+
+            InterruptAtExit thread = new InterruptAtExit();
+            thread.start();
+            try {
+                // Wait for the worker thread to get going.
+                thread.startSyncObj.await();
+                // Tell the worker thread to race to the exit and the
+                // Thread.interrupt() calls will come in during thread exit.
+                thread.exitSyncObj.countDown();
+                while (true) {
+                    thread.interrupt();
+
+                    if (!thread.isAlive()) {
+                        // Done with Thread.interrupt() calls since
+                        // thread is not alive.
+                        break;
+                    }
+                }
+            } catch (InterruptedException e) {
+                throw new Error("Unexpected: " + e);
+            }
+
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                throw new Error("Unexpected: " + e);
+            }
+            thread.interrupt();
+        }
+
+        System.out.println("Executed " + count + " loops in " + timeMax +
+                           " seconds.");
+
+        String cmd = System.getProperty("sun.java.command");
+        if (cmd != null && !cmd.startsWith("com.sun.javatest.regtest.agent.MainWrapper")) {
+            // Exit with success in a non-JavaTest environment:
+            System.exit(0);
+        }
+    }
+
+    public static void usage() {
+        System.err.println("Usage: " + PROG_NAME + " [time_max]");
+        System.err.println("where:");
+        System.err.println("    time_max  max looping time in seconds");
+        System.err.println("              (default is " + DEF_TIME_MAX +
+                           " seconds)");
+        System.exit(1);
+    }
+}
