@@ -142,4 +142,13 @@ public class CommandLinePortNotSpecifiedTest {
                 new ProcessBuilder(args).directory(TEST_DIR.toFile()),
                 line -> sb.append(line + "\n"),
                 line -> line.startsWith(waitForLine.value),
-                30,  // s
+                30,  // suitably high default timeout, not expected to timeout
+                TimeUnit.SECONDS);
+        if (destroy) {
+            p.destroy();  // SIGTERM on Unix
+        }
+        int ec = p.waitFor();
+        var outputAnalyser = new OutputAnalyzer(sb.toString(), "", ec);
+        return outputAnalyser;
+    }
+}
