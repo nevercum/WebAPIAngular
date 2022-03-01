@@ -45,4 +45,9 @@ public class TestMissingInterface implements MissingInterface {
         Class<?> c = getClass();
         System.out.println("class: " + c);
         System.out.println("superclass: " + c.getSuperclass());
-        System.out.println("generic su
+        System.out.println("generic superclass: " +c.getGenericSuperclass());
+        System.out.println("interfaces: " + Arrays.asList(c.getInterfaces()));
+        System.out.println("generic interfaces: " + Arrays.asList(c.getGenericInterfaces()));
+    }
+
+}
