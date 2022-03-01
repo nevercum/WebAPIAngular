@@ -238,4 +238,61 @@ public class valuecur001 {
             pipe.println(COMMAND_GO);
 
             // wait for confirmation from debugee
-      
+            log.display("Waiting for command: " + COMMAND_DONE);
+            command = pipe.readln();
+            if (command == null || !command.equals(COMMAND_DONE)) {
+                throw new Failure("TEST BUG: unexpected debuggee's command: " + command);
+            }
+
+            // notify EventHandler that all events generated
+            done = true;
+
+            // wait for all expected events received
+            log.display("Waiting for all expected events received");
+            try {
+                eventHandler.join(argHandler.getWaitTime()*60000);
+                if (eventHandler.isAlive()) {
+                    log.complain("FAILURE 20: Timeout for waiting of event was exceeded");
+                    eventHandler.interrupt();
+                    testFailed = true;
+                }
+            } catch (InterruptedException e) {
+                log.complain("TEST INCOMPLETE: InterruptedException caught while waiting for eventHandler's death");
+                testFailed = true;
+            }
+        } catch (Failure e) {
+            log.complain("TEST FAILURE: " + e.getMessage());
+            testFailed = true;
+        } catch (Exception e) {
+            log.complain("Unexpected exception: " + e);
+            e.printStackTrace(out);
+            testFailed = true;
+        } finally {
+
+            log.display("");
+
+            // force debugee to exit
+            log.display("Sending command: " + COMMAND_QUIT);
+            pipe.println(COMMAND_QUIT);
+
+            // wait for debuggee exits and analize its exit code
+            log.display("Waiting for debuggee terminating");
+            int debuggeeStatus = debuggee.endDebugee();
+            if (debuggeeStatus == PASSED + JCK_STATUS_BASE) {
+                log.display("Debuggee PASSED with exit code: " + debuggeeStatus);
+            } else {
+                log.complain("Debuggee FAILED with exit code: " + debuggeeStatus);
+                testFailed = true;
+            }
+        }
+
+        // check test results
+        if (testFailed) {
+            log.complain("TEST FAILED");
+            return FAILED;
+        }
+
+        log.display("TEST PASSED");
+        return PASSED;
+    }
+}
