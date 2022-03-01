@@ -79,4 +79,28 @@ public class ClassProcessor extends JavacTestingAbstractProcessor {
 
         byte[] bytes = new byte[(int) pkgInfo.length()];
         try (DataInputStream in = new DataInputStream(new FileInputStream(pkgInfo))) {
-            in.readFully(byt
+            in.readFully(bytes);
+        } catch (IOException ioe) {
+            error("Couldn't read package info file: " + ioe);
+        }
+
+        try (OutputStream out = kind.equals("java") ?
+              filer.createSourceFile("foo.package-info").openOutputStream() :
+              filer.createClassFile("foo.package-info").openOutputStream()) {
+            out.write(bytes, 0, bytes.length);
+        } catch (IOException ioe) {
+            error("Couldn't create package info file: " + ioe);
+        }
+    }
+
+    private void checkEqual(String label, String actual, String expect) {
+        if (!actual.equals(expect)) {
+            error("Unexpected value for " + label + "; actual=" + actual + ", expected=" + expect);
+        }
+    }
+
+    private void error(String msg) {
+        messager.printError(msg);
+    }
+}
+
