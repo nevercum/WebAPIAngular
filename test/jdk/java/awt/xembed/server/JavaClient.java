@@ -85,4 +85,42 @@ class ClientContainer extends Container {
                     dtde.acceptDrop(DnDConstants.ACTION_COPY);
                     try {
                         tf.setText(tf.getText() + (String)dtde.getTransferable().getTransferData(DataFlavor.stringFlavor));
-  
+                    } catch (Exception e) {
+                    }
+                }
+            };
+        final DropTarget dt = new DropTarget(tf, dtl);
+
+        setLayout(new FlowLayout());
+        add(tf);
+        Button close = new Button("Close");
+        close.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    parent.dispose();
+                }
+            });
+        Button inc = new Button("Increase size");
+        inc.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    changeSize(10);
+                }
+            });
+        Button dec = new Button("Decrease size");
+        dec.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    changeSize(-10);
+                }
+            });
+        add(close);
+        add(inc);
+        add(dec);
+    }
+    void changeSize(int step) {
+        width += step;
+        height += step;
+        parent.pack();
+    }
+    public Dimension getPreferredSize() {
+        return new Dimension(width, height);
+    }
+}
