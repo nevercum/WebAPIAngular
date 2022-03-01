@@ -92,4 +92,150 @@ public class valuecur001 {
 
         // resume debuggee
         log.display("Resuming debuggee");
-        debuggee.resu
+        debuggee.resume();
+
+        // check debuggee's capabilities
+        if (!debuggee.VM().canWatchFieldAccess()) {
+            log.display("TEST WARNING: test passed because JDI implementation does not support " +
+             "watchpoints for field access");
+            pipe.println(COMMAND_QUIT);
+            debuggee.waitFor();
+            return PASSED;
+        }
+
+        if (!debuggee.VM().canWatchFieldModification()) {
+            log.display("TEST WARNING: test passed because JDI implementation does not support " +
+             "watchpoints for field modification");
+            pipe.println(COMMAND_QUIT);
+            debuggee.waitFor();
+            return PASSED;
+        }
+
+        try {
+
+            // wait for debuggee started
+            log.display("Waiting for command: " + COMMAND_READY);
+            String command = pipe.readln();
+            if (!command.equals(COMMAND_READY)) {
+                throw new Failure("TEST BUG: unexpected debuggee's command: " + command);
+            }
+
+            // get mirrors
+            if ((rType = debuggee.classByName(CHECKED_CLASS_NAME)) == null) {
+                throw new Failure("TEST BUG: cannot find " + CHECKED_CLASS_NAME);
+            }
+
+            // create events requests
+            log.display("Creating requests for WatchpointEvent");
+            EventRequestManager erManager = debuggee.VM().eventRequestManager();
+            Iterator fieldsIter;
+            try {
+                fieldsList = rType.fields();
+                fieldsIter = fieldsList.iterator();
+            } catch (ClassNotPreparedException e) {
+                throw new Failure( "TEST_BUG: " + rType.name() + " is not prepared");
+            }
+            while (fieldsIter.hasNext()) {
+                Field refField = (Field)fieldsIter.next();
+                if ((checkedRequest = erManager.createAccessWatchpointRequest(refField)) == null) {
+                    throw new Failure("TEST BUG: unable to create AccessWatchpointRequest");
+                } else {
+                    log.display("AccessWatchpointRequest for field " +  refField.name() + " created");
+                    checkedRequest.enable();
+                }
+                if ((checkedRequest = erManager.createModificationWatchpointRequest(refField)) == null) {
+                    throw new Failure("TEST BUG: unable to create ModificationWatchpointRequest");
+                } else {
+                    log.display("ModificationWatchpointRequest for field " +  refField.name() + " created");
+                    checkedRequest.enable();
+                }
+                requestsCount++;
+            }
+            log.display("Created total " + requestsCount + " WatchpointRequests");
+
+            // define separate thread for handling events
+            class EventHandler extends Thread {
+                  public void run() {
+                       eventSet = null;
+                       try {
+                            // handle events until all events generated and received
+                            while ( awpEventsCount < requestsCount
+                                    || mwpEventsCount < requestsCount ) {
+
+                                 eventSet = null;
+                                 eventSet = vm.eventQueue().remove(TIMEOUT_DELTA);
+
+                                 if (eventSet == null)
+                                     continue;
+
+                                 EventIterator eventIterator = eventSet.eventIterator();
+                                 while (eventIterator.hasNext()) {
+
+                                     Event event = eventIterator.nextEvent();
+
+                                     // handle WatchpointEvent
+                                     if (event instanceof WatchpointEvent) {
+                                        WatchpointEvent castedEvent = (WatchpointEvent)event;
+                                        Value evValue = castedEvent.valueCurrent();
+                                        Field evField = castedEvent.field();
+
+                                        if (event instanceof AccessWatchpointEvent) {
+                                            awpEventsCount++;
+                                            log.display("AccessWatchpointEvent received for " + evField.name());
+                                        } else if (event instanceof ModificationWatchpointEvent) {
+                                            mwpEventsCount++;
+                                            log.display("ModificationWatchpointEvent received for " + evField.name());
+                                        }
+
+                                        if (evValue == null) {
+                                             log.complain("FAILURE 1: WatchpointEvent.valueCurrent() returns null for " + evField.name());
+                                             testFailed = true;
+                                        } else {
+                                             int ind = fieldsList.indexOf(evField);
+                                             if (ind == -1) {
+                                                 log.complain("FAILURE 2: Watchpoint.field() returns unknown field");
+                                                 testFailed = true;
+                                             } else {
+                                                 Value valueCur = castedEvent.valueCurrent();
+                                                 Value valueFld;
+                                                 try {
+                                                     valueFld = castedEvent.object().getValue(evField);
+                                                 } catch (NullPointerException e) {
+                                                     // field is static
+                                                     valueFld = rType.getValue(evField);
+                                                 }
+                                                 if (!valueFld.equals(valueCur)) {
+                                                     log.complain("FAILURE 3: Watchpoint.valueCurrent() returns incorrect value for " +
+                                                       evField.name() + "\nvalueCurrent(): " + valueCur + " ; getValue(): " + valueFld);
+                                                     testFailed = true;
+                                                 } else {
+                                                     valuecur001.log.display(evField.name() + " equals to " + castedEvent.valueCurrent().toString());
+                                                 }
+                                             }
+                                         }
+                                     }
+                                }
+                                eventSet.resume();
+                            }
+                       } catch (InterruptedException e) {
+                             log.complain("TEST INCOMPLETE: caught InterruptedException while waiting for event");
+                             testFailed = true;
+                       } catch (VMDisconnectedException e) {
+                             log.complain("TEST INCOMPLETE: caught VMDisconnectedException while waiting for event");
+                             testFailed = true;
+                       }
+                       log.display("eventHandler completed");
+                  }
+            }
+
+            // start event handling thread
+            EventHandler eventHandler = new EventHandler();
+            log.display("Starting eventHandler");
+            eventHandler.start();
+
+            // force debuggee to generate events
+            log.display("Sending command: " + COMMAND_GO);
+            pipe.println(COMMAND_GO);
+
+            // wait for confirmation from debugee
+      
