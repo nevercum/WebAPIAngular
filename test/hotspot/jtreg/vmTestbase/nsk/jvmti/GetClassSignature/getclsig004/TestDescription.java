@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -25,33 +26,17 @@
 /*
  * @test
  *
- * @summary converted from VM Testbase nsk/jdi/ReferenceType/locationsOfLine_i/locationsofline_i002.
- * VM Testbase keywords: [quick, jpda, jdi]
+ * @summary converted from VM Testbase nsk/jvmti/GetClassSignature/getclsig004.
+ * VM Testbase keywords: [quick, jpda, jvmti, noras]
  * VM Testbase readme:
  * DESCRIPTION
- *     This test checks that the JDI method
- *        com.sun.jdi.ReferenceType.locationsOfLine(int)
- *     properly returns an empty list for arrays (ArrayType) primitive
- *     classes, and for interfaces (InterfaceType) if the interface has
- *     no executable code in its class initialization at the specified line
- *     number.
- *     Debugger part of it attempts to get locations that map to the debuggee
- *     field values/type declaration, which themselves are:
- *     primitive classes, arrays of primitive types and classes, and finally,
- *     an interface type.
+ *     The test exercises JVMTI function GetClassSignature(clazz, sigPtr).
+ *     The test checks if the function returns the expected signature
+ *     for java.lang.Object and for all primitive classes.
  * COMMENTS
+ *     Ported from JVMDI.
  *
  * @library /vmTestbase
  *          /test/lib
- * @build nsk.jdi.ReferenceType.locationsOfLine_i.locationsofline_i002
- *        nsk.jdi.ReferenceType.locationsOfLine_i.locationsofline_i002t
- * @run main/othervm
- *      nsk.jdi.ReferenceType.locationsOfLine_i.locationsofline_i002
- *      -verbose
- *      -arch=${os.family}-${os.simpleArch}
- *      -waittime=5
- *      -debugee.vmkind=java
- *      -transport.address=dynamic
- *      -debugee.vmkeys="${test.vm.opts} ${test.java.opts}"
+ * @run main/othervm/native -agentlib:getclsig004 nsk.jvmti.GetClassSignature.getclsig004
  */
-
