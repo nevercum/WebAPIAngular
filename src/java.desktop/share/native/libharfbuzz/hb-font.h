@@ -122,4 +122,203 @@ typedef struct hb_font_extents_t {
   hb_position_t reserved5;
   hb_position_t reserved4;
   hb_position_t reserved3;
-  hb_position_t res
+  hb_position_t reserved2;
+  hb_position_t reserved1;
+} hb_font_extents_t;
+
+/**
+ * hb_glyph_extents_t:
+ * @x_bearing: Distance from the x-origin to the left extremum of the glyph.
+ * @y_bearing: Distance from the top extremum of the glyph to the y-origin.
+ * @width: Distance from the left extremum of the glyph to the right extremum.
+ * @height: Distance from the top extremum of the glyph to the bottom extremum.
+ *
+ * Glyph extent values, measured in font units.
+ *
+ * Note that @height is negative, in coordinate systems that grow up.
+ **/
+typedef struct hb_glyph_extents_t {
+  hb_position_t x_bearing;
+  hb_position_t y_bearing;
+  hb_position_t width;
+  hb_position_t height;
+} hb_glyph_extents_t;
+
+/* func types */
+
+/**
+ * hb_font_get_font_extents_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @extents: (out): The font extents retrieved
+ * @user_data: User data pointer passed by the caller
+ *
+ * This method should retrieve the extents for a font.
+ *
+ **/
+typedef hb_bool_t (*hb_font_get_font_extents_func_t) (hb_font_t *font, void *font_data,
+                                                       hb_font_extents_t *extents,
+                                                       void *user_data);
+
+/**
+ * hb_font_get_font_h_extents_func_t:
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the extents for a font, for horizontal-direction
+ * text segments. Extents must be returned in an #hb_glyph_extents output
+ * parameter.
+ *
+ **/
+typedef hb_font_get_font_extents_func_t hb_font_get_font_h_extents_func_t;
+
+/**
+ * hb_font_get_font_v_extents_func_t:
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the extents for a font, for vertical-direction
+ * text segments. Extents must be returned in an #hb_glyph_extents output
+ * parameter.
+ *
+ **/
+typedef hb_font_get_font_extents_func_t hb_font_get_font_v_extents_func_t;
+
+
+/**
+ * hb_font_get_nominal_glyph_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @unicode: The Unicode code point to query
+ * @glyph: (out): The glyph ID retrieved
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the nominal glyph ID for a specified Unicode code
+ * point. Glyph IDs must be returned in a #hb_codepoint_t output parameter.
+ *
+ * Return value: %true if data found, %false otherwise
+ *
+ **/
+typedef hb_bool_t (*hb_font_get_nominal_glyph_func_t) (hb_font_t *font, void *font_data,
+                                                       hb_codepoint_t unicode,
+                                                       hb_codepoint_t *glyph,
+                                                       void *user_data);
+
+/**
+ * hb_font_get_variation_glyph_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @unicode: The Unicode code point to query
+ * @variation_selector: The  variation-selector code point to query
+ * @glyph: (out): The glyph ID retrieved
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the glyph ID for a specified Unicode code point
+ * followed by a specified Variation Selector code point. Glyph IDs must be
+ * returned in a #hb_codepoint_t output parameter.
+ *
+ * Return value: %true if data found, %false otherwise
+ *
+ **/
+typedef hb_bool_t (*hb_font_get_variation_glyph_func_t) (hb_font_t *font, void *font_data,
+                                                         hb_codepoint_t unicode, hb_codepoint_t variation_selector,
+                                                         hb_codepoint_t *glyph,
+                                                         void *user_data);
+
+
+/**
+ * hb_font_get_nominal_glyphs_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @count: number of code points to query
+ * @first_unicode: The first Unicode code point to query
+ * @unicode_stride: The stride between successive code points
+ * @first_glyph: (out): The first glyph ID retrieved
+ * @glyph_stride: The stride between successive glyph IDs
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the nominal glyph IDs for a sequence of
+ * Unicode code points. Glyph IDs must be returned in a #hb_codepoint_t
+ * output parameter.
+ *
+ * Return value: the number of code points processed
+ *
+ **/
+typedef unsigned int (*hb_font_get_nominal_glyphs_func_t) (hb_font_t *font, void *font_data,
+                                                           unsigned int count,
+                                                           const hb_codepoint_t *first_unicode,
+                                                           unsigned int unicode_stride,
+                                                           hb_codepoint_t *first_glyph,
+                                                           unsigned int glyph_stride,
+                                                           void *user_data);
+
+/**
+ * hb_font_get_glyph_advance_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @glyph: The glyph ID to query
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the advance for a specified glyph. The
+ * method must return an #hb_position_t.
+ *
+ * Return value: The advance of @glyph within @font
+ *
+ **/
+typedef hb_position_t (*hb_font_get_glyph_advance_func_t) (hb_font_t *font, void *font_data,
+                                                           hb_codepoint_t glyph,
+                                                           void *user_data);
+
+/**
+ * hb_font_get_glyph_h_advance_func_t:
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the advance for a specified glyph, in
+ * horizontal-direction text segments. Advances must be returned in
+ * an #hb_position_t output parameter.
+ *
+ **/
+typedef hb_font_get_glyph_advance_func_t hb_font_get_glyph_h_advance_func_t;
+
+/**
+ * hb_font_get_glyph_v_advance_func_t:
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the advance for a specified glyph, in
+ * vertical-direction text segments. Advances must be returned in
+ * an #hb_position_t output parameter.
+ *
+ **/
+typedef hb_font_get_glyph_advance_func_t hb_font_get_glyph_v_advance_func_t;
+
+/**
+ * hb_font_get_glyph_advances_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @count: The number of glyph IDs in the sequence queried
+ * @first_glyph: The first glyph ID to query
+ * @glyph_stride: The stride between successive glyph IDs
+ * @first_advance: (out): The first advance retrieved
+ * @advance_stride: The stride between successive advances
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the advances for a sequence of glyphs.
+ *
+ **/
+typedef void (*hb_font_get_glyph_advances_func_t) (hb_font_t* font, void* font_data,
+                                                   unsigned int count,
+                                                   const hb_codepoint_t *first_glyph,
+                                                   unsigned glyph_stride,
+         
