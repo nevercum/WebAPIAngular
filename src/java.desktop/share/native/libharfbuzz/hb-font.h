@@ -321,4 +321,201 @@ typedef void (*hb_font_get_glyph_advances_func_t) (hb_font_t* font, void* font_d
                                                    unsigned int count,
                                                    const hb_codepoint_t *first_glyph,
                                                    unsigned glyph_stride,
-         
+                                                   hb_position_t *first_advance,
+                                                   unsigned advance_stride,
+                                                   void *user_data);
+
+/**
+ * hb_font_get_glyph_h_advances_func_t:
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the advances for a sequence of glyphs, in
+ * horizontal-direction text segments.
+ *
+ **/
+typedef hb_font_get_glyph_advances_func_t hb_font_get_glyph_h_advances_func_t;
+
+/**
+ * hb_font_get_glyph_v_advances_func_t:
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the advances for a sequence of glyphs, in
+ * vertical-direction text segments.
+ *
+ **/
+typedef hb_font_get_glyph_advances_func_t hb_font_get_glyph_v_advances_func_t;
+
+/**
+ * hb_font_get_glyph_origin_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @glyph: The glyph ID to query
+ * @x: (out): The X coordinate of the origin
+ * @y: (out): The Y coordinate of the origin
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the (X,Y) coordinates (in font units) of the
+ * origin for a glyph. Each coordinate must be returned in an #hb_position_t
+ * output parameter.
+ *
+ * Return value: %true if data found, %false otherwise
+ *
+ **/
+typedef hb_bool_t (*hb_font_get_glyph_origin_func_t) (hb_font_t *font, void *font_data,
+                                                      hb_codepoint_t glyph,
+                                                      hb_position_t *x, hb_position_t *y,
+                                                      void *user_data);
+
+/**
+ * hb_font_get_glyph_h_origin_func_t:
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the (X,Y) coordinates (in font units) of the
+ * origin for a glyph, for horizontal-direction text segments. Each
+ * coordinate must be returned in an #hb_position_t output parameter.
+ *
+ **/
+typedef hb_font_get_glyph_origin_func_t hb_font_get_glyph_h_origin_func_t;
+
+/**
+ * hb_font_get_glyph_v_origin_func_t:
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the (X,Y) coordinates (in font units) of the
+ * origin for a glyph, for vertical-direction text segments. Each coordinate
+ * must be returned in an #hb_position_t output parameter.
+ *
+ **/
+typedef hb_font_get_glyph_origin_func_t hb_font_get_glyph_v_origin_func_t;
+
+/**
+ * hb_font_get_glyph_kerning_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @first_glyph: The glyph ID of the first glyph in the glyph pair
+ * @second_glyph: The glyph ID of the second glyph in the glyph pair
+ * @user_data: User data pointer passed by the caller
+ *
+ * This method should retrieve the kerning-adjustment value for a glyph-pair in
+ * the specified font, for horizontal text segments.
+ *
+ **/
+typedef hb_position_t (*hb_font_get_glyph_kerning_func_t) (hb_font_t *font, void *font_data,
+                                                           hb_codepoint_t first_glyph, hb_codepoint_t second_glyph,
+                                                           void *user_data);
+/**
+ * hb_font_get_glyph_h_kerning_func_t:
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the kerning-adjustment value for a glyph-pair in
+ * the specified font, for horizontal text segments.
+ *
+ **/
+typedef hb_font_get_glyph_kerning_func_t hb_font_get_glyph_h_kerning_func_t;
+
+
+/**
+ * hb_font_get_glyph_extents_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @glyph: The glyph ID to query
+ * @extents: (out): The #hb_glyph_extents_t retrieved
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the extents for a specified glyph. Extents must be
+ * returned in an #hb_glyph_extents output parameter.
+ *
+ * Return value: %true if data found, %false otherwise
+ *
+ **/
+typedef hb_bool_t (*hb_font_get_glyph_extents_func_t) (hb_font_t *font, void *font_data,
+                                                       hb_codepoint_t glyph,
+                                                       hb_glyph_extents_t *extents,
+                                                       void *user_data);
+
+/**
+ * hb_font_get_glyph_contour_point_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @glyph: The glyph ID to query
+ * @point_index: The contour-point index to query
+ * @x: (out): The X value retrieved for the contour point
+ * @y: (out): The Y value retrieved for the contour point
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the (X,Y) coordinates (in font units) for a
+ * specified contour point in a glyph. Each coordinate must be returned as
+ * an #hb_position_t output parameter.
+ *
+ * Return value: %true if data found, %false otherwise
+ *
+ **/
+typedef hb_bool_t (*hb_font_get_glyph_contour_point_func_t) (hb_font_t *font, void *font_data,
+                                                             hb_codepoint_t glyph, unsigned int point_index,
+                                                             hb_position_t *x, hb_position_t *y,
+                                                             void *user_data);
+
+
+/**
+ * hb_font_get_glyph_name_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @glyph: The glyph ID to query
+ * @name: (out) (array length=size): Name string retrieved for the glyph ID
+ * @size: Length of the glyph-name string retrieved
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the glyph name that corresponds to a
+ * glyph ID. The name should be returned in a string output parameter.
+ *
+ * Return value: %true if data found, %false otherwise
+ *
+ **/
+typedef hb_bool_t (*hb_font_get_glyph_name_func_t) (hb_font_t *font, void *font_data,
+                                                    hb_codepoint_t glyph,
+                                                    char *name, unsigned int size,
+                                                    void *user_data);
+
+/**
+ * hb_font_get_glyph_from_name_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @name: (array length=len): The name string to query
+ * @len: The length of the name queried
+ * @glyph: (out): The glyph ID retrieved
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * This method should retrieve the glyph ID that corresponds to a glyph-name
+ * string.
+ *
+ * Return value: %true if data found, %false otherwise
+ *
+ **/
+typedef hb_bool_t (*hb_font_get_glyph_from_name_func_t) (hb_font_t *font, void *font_data,
+                                                         const char *name, int len, /* -1 means nul-terminated */
+                                                         hb_codepoint_t *glyph,
+                                                         void *user_data);
+
+/**
+ * hb_font_get_glyph_shape_func_t:
+ * @font: #hb_font_t to work upon
+ * @font_data: @font user data pointer
+ * @glyph: The glyph ID to query
+ * @draw_funcs: The draw functions to send the shape data to
+ * @draw_data: The data accompanying the draw functions
+ * @user_data: User data p
