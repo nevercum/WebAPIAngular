@@ -518,4 +518,196 @@ typedef hb_bool_t (*hb_font_get_glyph_from_name_func_t) (hb_font_t *font, void *
  * @glyph: The glyph ID to query
  * @draw_funcs: The draw functions to send the shape data to
  * @draw_data: The data accompanying the draw functions
- * @user_data: User data p
+ * @user_data: User data pointer passed by the caller
+ *
+ * A virtual method for the #hb_font_funcs_t of an #hb_font_t object.
+ *
+ * Since: 4.0.0
+ *
+ **/
+typedef void (*hb_font_get_glyph_shape_func_t) (hb_font_t *font, void *font_data,
+                                                hb_codepoint_t glyph,
+                                                hb_draw_funcs_t *draw_funcs, void *draw_data,
+                                                void *user_data);
+
+
+/* func setters */
+
+/**
+ * hb_font_funcs_set_font_h_extents_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_font_h_extents_func_t.
+ *
+ * Since: 1.1.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_font_h_extents_func (hb_font_funcs_t *ffuncs,
+                                       hb_font_get_font_h_extents_func_t func,
+                                       void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_font_v_extents_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_font_v_extents_func_t.
+ *
+ * Since: 1.1.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_font_v_extents_func (hb_font_funcs_t *ffuncs,
+                                       hb_font_get_font_v_extents_func_t func,
+                                       void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_nominal_glyph_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_nominal_glyph_func_t.
+ *
+ * Since: 1.2.3
+ **/
+HB_EXTERN void
+hb_font_funcs_set_nominal_glyph_func (hb_font_funcs_t *ffuncs,
+                                      hb_font_get_nominal_glyph_func_t func,
+                                      void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_nominal_glyphs_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_nominal_glyphs_func_t.
+ *
+ * Since: 2.0.0
+ **/
+HB_EXTERN void
+hb_font_funcs_set_nominal_glyphs_func (hb_font_funcs_t *ffuncs,
+                                       hb_font_get_nominal_glyphs_func_t func,
+                                       void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_variation_glyph_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_variation_glyph_func_t.
+ *
+ * Since: 1.2.3
+ **/
+HB_EXTERN void
+hb_font_funcs_set_variation_glyph_func (hb_font_funcs_t *ffuncs,
+                                        hb_font_get_variation_glyph_func_t func,
+                                        void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_h_advance_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_h_advance_func_t.
+ *
+ * Since: 0.9.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_h_advance_func (hb_font_funcs_t *ffuncs,
+                                        hb_font_get_glyph_h_advance_func_t func,
+                                        void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_v_advance_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_v_advance_func_t.
+ *
+ * Since: 0.9.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_v_advance_func (hb_font_funcs_t *ffuncs,
+                                        hb_font_get_glyph_v_advance_func_t func,
+                                        void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_h_advances_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_h_advances_func_t.
+ *
+ * Since: 1.8.6
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_h_advances_func (hb_font_funcs_t *ffuncs,
+                                        hb_font_get_glyph_h_advances_func_t func,
+                                        void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_v_advances_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_v_advances_func_t.
+ *
+ * Since: 1.8.6
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_v_advances_func (hb_font_funcs_t *ffuncs,
+                                        hb_font_get_glyph_v_advances_func_t func,
+                                        void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_h_origin_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_h_origin_func_t.
+ *
+ * Since: 0.9.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_h_origin_func (hb_font_funcs_t *ffuncs,
+                                       hb_font_get_glyph_h_origin_func_t func,
+                                       void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_v_origin_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_v_origin_func_t.
+ *
+ * Since: 0.9.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_v_origin_func (hb_font_funcs_t *ffuncs,
+                                       hb_font_get_glyph_v_origin_func_t func,
+                                       void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_g
