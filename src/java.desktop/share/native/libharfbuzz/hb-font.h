@@ -710,4 +710,196 @@ hb_font_funcs_set_glyph_v_origin_func (hb_font_funcs_t *ffuncs,
                                        void *user_data, hb_destroy_func_t destroy);
 
 /**
- * hb_font_funcs_set_g
+ * hb_font_funcs_set_glyph_h_kerning_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_h_kerning_func_t.
+ *
+ * Since: 0.9.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_h_kerning_func (hb_font_funcs_t *ffuncs,
+                                        hb_font_get_glyph_h_kerning_func_t func,
+                                        void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_extents_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_extents_func_t.
+ *
+ * Since: 0.9.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_extents_func (hb_font_funcs_t *ffuncs,
+                                      hb_font_get_glyph_extents_func_t func,
+                                      void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_contour_point_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_contour_point_func_t.
+ *
+ * Since: 0.9.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_contour_point_func (hb_font_funcs_t *ffuncs,
+                                            hb_font_get_glyph_contour_point_func_t func,
+                                            void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_name_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_name_func_t.
+ *
+ * Since: 0.9.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_name_func (hb_font_funcs_t *ffuncs,
+                                   hb_font_get_glyph_name_func_t func,
+                                   void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_from_name_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_from_name_func_t.
+ *
+ * Since: 0.9.2
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_from_name_func (hb_font_funcs_t *ffuncs,
+                                        hb_font_get_glyph_from_name_func_t func,
+                                        void *user_data, hb_destroy_func_t destroy);
+
+/**
+ * hb_font_funcs_set_glyph_shape_func:
+ * @ffuncs: A font-function structure
+ * @func: (closure user_data) (destroy destroy) (scope notified): The callback function to assign
+ * @user_data: Data to pass to @func
+ * @destroy: (nullable): The function to call when @user_data is not needed anymore
+ *
+ * Sets the implementation function for #hb_font_get_glyph_shape_func_t.
+ *
+ * Since: 4.0.0
+ **/
+HB_EXTERN void
+hb_font_funcs_set_glyph_shape_func (hb_font_funcs_t *ffuncs,
+                                    hb_font_get_glyph_shape_func_t func,
+                                    void *user_data, hb_destroy_func_t destroy);
+
+/* func dispatch */
+
+HB_EXTERN hb_bool_t
+hb_font_get_h_extents (hb_font_t *font,
+                       hb_font_extents_t *extents);
+HB_EXTERN hb_bool_t
+hb_font_get_v_extents (hb_font_t *font,
+                       hb_font_extents_t *extents);
+
+HB_EXTERN hb_bool_t
+hb_font_get_nominal_glyph (hb_font_t *font,
+                           hb_codepoint_t unicode,
+                           hb_codepoint_t *glyph);
+HB_EXTERN hb_bool_t
+hb_font_get_variation_glyph (hb_font_t *font,
+                             hb_codepoint_t unicode, hb_codepoint_t variation_selector,
+                             hb_codepoint_t *glyph);
+
+HB_EXTERN unsigned int
+hb_font_get_nominal_glyphs (hb_font_t *font,
+                            unsigned int count,
+                            const hb_codepoint_t *first_unicode,
+                            unsigned int unicode_stride,
+                            hb_codepoint_t *first_glyph,
+                            unsigned int glyph_stride);
+
+HB_EXTERN hb_position_t
+hb_font_get_glyph_h_advance (hb_font_t *font,
+                             hb_codepoint_t glyph);
+HB_EXTERN hb_position_t
+hb_font_get_glyph_v_advance (hb_font_t *font,
+                             hb_codepoint_t glyph);
+
+HB_EXTERN void
+hb_font_get_glyph_h_advances (hb_font_t* font,
+                              unsigned int count,
+                              const hb_codepoint_t *first_glyph,
+                              unsigned glyph_stride,
+                              hb_position_t *first_advance,
+                              unsigned advance_stride);
+HB_EXTERN void
+hb_font_get_glyph_v_advances (hb_font_t* font,
+                              unsigned int count,
+                              const hb_codepoint_t *first_glyph,
+                              unsigned glyph_stride,
+                              hb_position_t *first_advance,
+                              unsigned advance_stride);
+
+HB_EXTERN hb_bool_t
+hb_font_get_glyph_h_origin (hb_font_t *font,
+                            hb_codepoint_t glyph,
+                            hb_position_t *x, hb_position_t *y);
+HB_EXTERN hb_bool_t
+hb_font_get_glyph_v_origin (hb_font_t *font,
+                            hb_codepoint_t glyph,
+                            hb_position_t *x, hb_position_t *y);
+
+HB_EXTERN hb_position_t
+hb_font_get_glyph_h_kerning (hb_font_t *font,
+                             hb_codepoint_t left_glyph, hb_codepoint_t right_glyph);
+
+HB_EXTERN hb_bool_t
+hb_font_get_glyph_extents (hb_font_t *font,
+                           hb_codepoint_t glyph,
+                           hb_glyph_extents_t *extents);
+
+HB_EXTERN hb_bool_t
+hb_font_get_glyph_contour_point (hb_font_t *font,
+                                 hb_codepoint_t glyph, unsigned int point_index,
+                                 hb_position_t *x, hb_position_t *y);
+
+HB_EXTERN hb_bool_t
+hb_font_get_glyph_name (hb_font_t *font,
+                        hb_codepoint_t glyph,
+                        char *name, unsigned int size);
+HB_EXTERN hb_bool_t
+hb_font_get_glyph_from_name (hb_font_t *font,
+                             const char *name, int len, /* -1 means nul-terminated */
+                             hb_codepoint_t *glyph);
+
+HB_EXTERN void
+hb_font_get_glyph_shape (hb_font_t *font,
+                         hb_codepoint_t glyph,
+                         hb_draw_funcs_t *dfuncs, void *draw_data);
+
+
+/* high-level funcs, with fallback */
+
+/* Calls either hb_font_get_nominal_glyph() if variation_selector is 0,
+ * otherwise calls hb_font_get_variation_glyph(). */
+HB_EXTERN hb_bool_t
+hb_font_get_glyph (hb_font_t *font,
+                   hb_codepoint_t unicode, hb_codepoint_t variation_selector,
+                   hb_codepoint_t *glyph);
+
+HB_EXTERN void
+hb_font_get_extents_for_direction (hb_font_t *font,
+                
