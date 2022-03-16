@@ -285,4 +285,92 @@ static void print_boolean_array(typeArrayOop ta, int print_len, outputStream* st
 }
 
 
-static void print_char_array(typeArrayOop ta, int print_len, o
+static void print_char_array(typeArrayOop ta, int print_len, outputStream* st) {
+  for (int index = 0; index < print_len; index++) {
+    jchar c = ta->char_at(index);
+    st->print_cr(" - %3d: %x %c", index, c, isprint(c) ? c : ' ');
+  }
+}
+
+
+static void print_float_array(typeArrayOop ta, int print_len, outputStream* st) {
+  for (int index = 0; index < print_len; index++) {
+    st->print_cr(" - %3d: %g", index, ta->float_at(index));
+  }
+}
+
+
+static void print_double_array(typeArrayOop ta, int print_len, outputStream* st) {
+  for (int index = 0; index < print_len; index++) {
+    st->print_cr(" - %3d: %g", index, ta->double_at(index));
+  }
+}
+
+
+static void print_byte_array(typeArrayOop ta, int print_len, outputStream* st) {
+  for (int index = 0; index < print_len; index++) {
+    jbyte c = ta->byte_at(index);
+    st->print_cr(" - %3d: %x %c", index, c, isprint(c) ? c : ' ');
+  }
+}
+
+
+static void print_short_array(typeArrayOop ta, int print_len, outputStream* st) {
+  for (int index = 0; index < print_len; index++) {
+    int v = ta->ushort_at(index);
+    st->print_cr(" - %3d: 0x%x\t %d", index, v, v);
+  }
+}
+
+
+static void print_int_array(typeArrayOop ta, int print_len, outputStream* st) {
+  for (int index = 0; index < print_len; index++) {
+    jint v = ta->int_at(index);
+    st->print_cr(" - %3d: 0x%x %d", index, v, v);
+  }
+}
+
+
+static void print_long_array(typeArrayOop ta, int print_len, outputStream* st) {
+  for (int index = 0; index < print_len; index++) {
+    jlong v = ta->long_at(index);
+    st->print_cr(" - %3d: 0x%x 0x%x", index, high(v), low(v));
+  }
+}
+
+
+void TypeArrayKlass::oop_print_on(oop obj, outputStream* st) {
+  ArrayKlass::oop_print_on(obj, st);
+  typeArrayOop ta = typeArrayOop(obj);
+  int print_len = MIN2((intx) ta->length(), MaxElementPrintSize);
+  switch (element_type()) {
+    case T_BOOLEAN: print_boolean_array(ta, print_len, st); break;
+    case T_CHAR:    print_char_array(ta, print_len, st);    break;
+    case T_FLOAT:   print_float_array(ta, print_len, st);   break;
+    case T_DOUBLE:  print_double_array(ta, print_len, st);  break;
+    case T_BYTE:    print_byte_array(ta, print_len, st);    break;
+    case T_SHORT:   print_short_array(ta, print_len, st);   break;
+    case T_INT:     print_int_array(ta, print_len, st);     break;
+    case T_LONG:    print_long_array(ta, print_len, st);    break;
+    default: ShouldNotReachHere();
+  }
+  int remaining = ta->length() - print_len;
+  if (remaining > 0) {
+    st->print_cr(" - <%d more elements, increase MaxElementPrintSize to print>", remaining);
+  }
+}
+
+#endif // PRODUCT
+
+const char* TypeArrayKlass::internal_name() const {
+  return Klass::external_name();
+}
+
+// A TypeArrayKlass is an array of a primitive type, its defining module is java.base
+ModuleEntry* TypeArrayKlass::module() const {
+  return ModuleEntryTable::javabase_moduleEntry();
+}
+
+PackageEntry* TypeArrayKlass::package() const {
+  return nullptr;
+}
