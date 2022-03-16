@@ -902,4 +902,207 @@ hb_font_get_glyph (hb_font_t *font,
 
 HB_EXTERN void
 hb_font_get_extents_for_direction (hb_font_t *font,
-                
+                                   hb_direction_t direction,
+                                   hb_font_extents_t *extents);
+HB_EXTERN void
+hb_font_get_glyph_advance_for_direction (hb_font_t *font,
+                                         hb_codepoint_t glyph,
+                                         hb_direction_t direction,
+                                         hb_position_t *x, hb_position_t *y);
+HB_EXTERN void
+hb_font_get_glyph_advances_for_direction (hb_font_t* font,
+                                          hb_direction_t direction,
+                                          unsigned int count,
+                                          const hb_codepoint_t *first_glyph,
+                                          unsigned glyph_stride,
+                                          hb_position_t *first_advance,
+                                          unsigned advance_stride);
+HB_EXTERN void
+hb_font_get_glyph_origin_for_direction (hb_font_t *font,
+                                        hb_codepoint_t glyph,
+                                        hb_direction_t direction,
+                                        hb_position_t *x, hb_position_t *y);
+HB_EXTERN void
+hb_font_add_glyph_origin_for_direction (hb_font_t *font,
+                                        hb_codepoint_t glyph,
+                                        hb_direction_t direction,
+                                        hb_position_t *x, hb_position_t *y);
+HB_EXTERN void
+hb_font_subtract_glyph_origin_for_direction (hb_font_t *font,
+                                             hb_codepoint_t glyph,
+                                             hb_direction_t direction,
+                                             hb_position_t *x, hb_position_t *y);
+
+HB_EXTERN void
+hb_font_get_glyph_kerning_for_direction (hb_font_t *font,
+                                         hb_codepoint_t first_glyph, hb_codepoint_t second_glyph,
+                                         hb_direction_t direction,
+                                         hb_position_t *x, hb_position_t *y);
+
+HB_EXTERN hb_bool_t
+hb_font_get_glyph_extents_for_origin (hb_font_t *font,
+                                      hb_codepoint_t glyph,
+                                      hb_direction_t direction,
+                                      hb_glyph_extents_t *extents);
+
+HB_EXTERN hb_bool_t
+hb_font_get_glyph_contour_point_for_origin (hb_font_t *font,
+                                            hb_codepoint_t glyph, unsigned int point_index,
+                                            hb_direction_t direction,
+                                            hb_position_t *x, hb_position_t *y);
+
+/* Generates gidDDD if glyph has no name. */
+HB_EXTERN void
+hb_font_glyph_to_string (hb_font_t *font,
+                         hb_codepoint_t glyph,
+                         char *s, unsigned int size);
+/* Parses gidDDD and uniUUUU strings automatically. */
+HB_EXTERN hb_bool_t
+hb_font_glyph_from_string (hb_font_t *font,
+                           const char *s, int len, /* -1 means nul-terminated */
+                           hb_codepoint_t *glyph);
+
+
+/*
+ * hb_font_t
+ */
+
+/* Fonts are very light-weight objects */
+
+HB_EXTERN hb_font_t *
+hb_font_create (hb_face_t *face);
+
+HB_EXTERN hb_font_t *
+hb_font_create_sub_font (hb_font_t *parent);
+
+HB_EXTERN hb_font_t *
+hb_font_get_empty (void);
+
+HB_EXTERN hb_font_t *
+hb_font_reference (hb_font_t *font);
+
+HB_EXTERN void
+hb_font_destroy (hb_font_t *font);
+
+HB_EXTERN hb_bool_t
+hb_font_set_user_data (hb_font_t          *font,
+                       hb_user_data_key_t *key,
+                       void *              data,
+                       hb_destroy_func_t   destroy,
+                       hb_bool_t           replace);
+
+
+HB_EXTERN void *
+hb_font_get_user_data (hb_font_t          *font,
+                       hb_user_data_key_t *key);
+
+HB_EXTERN void
+hb_font_make_immutable (hb_font_t *font);
+
+HB_EXTERN hb_bool_t
+hb_font_is_immutable (hb_font_t *font);
+
+HB_EXTERN unsigned int
+hb_font_get_serial (hb_font_t *font);
+
+HB_EXTERN void
+hb_font_changed (hb_font_t *font);
+
+HB_EXTERN void
+hb_font_set_parent (hb_font_t *font,
+                    hb_font_t *parent);
+
+HB_EXTERN hb_font_t *
+hb_font_get_parent (hb_font_t *font);
+
+HB_EXTERN void
+hb_font_set_face (hb_font_t *font,
+                  hb_face_t *face);
+
+HB_EXTERN hb_face_t *
+hb_font_get_face (hb_font_t *font);
+
+
+HB_EXTERN void
+hb_font_set_funcs (hb_font_t         *font,
+                   hb_font_funcs_t   *klass,
+                   void              *font_data,
+                   hb_destroy_func_t  destroy);
+
+/* Be *very* careful with this function! */
+HB_EXTERN void
+hb_font_set_funcs_data (hb_font_t         *font,
+                        void              *font_data,
+                        hb_destroy_func_t  destroy);
+
+
+HB_EXTERN void
+hb_font_set_scale (hb_font_t *font,
+                   int x_scale,
+                   int y_scale);
+
+HB_EXTERN void
+hb_font_get_scale (hb_font_t *font,
+                   int *x_scale,
+                   int *y_scale);
+
+/*
+ * A zero value means "no hinting in that direction"
+ */
+HB_EXTERN void
+hb_font_set_ppem (hb_font_t *font,
+                  unsigned int x_ppem,
+                  unsigned int y_ppem);
+
+HB_EXTERN void
+hb_font_get_ppem (hb_font_t *font,
+                  unsigned int *x_ppem,
+                  unsigned int *y_ppem);
+
+/*
+ * Point size per EM.  Used for optical-sizing in CoreText.
+ * A value of zero means "not set".
+ */
+HB_EXTERN void
+hb_font_set_ptem (hb_font_t *font, float ptem);
+
+HB_EXTERN float
+hb_font_get_ptem (hb_font_t *font);
+
+HB_EXTERN void
+hb_font_set_synthetic_slant (hb_font_t *font, float slant);
+
+HB_EXTERN float
+hb_font_get_synthetic_slant (hb_font_t *font);
+
+HB_EXTERN void
+hb_font_set_variations (hb_font_t *font,
+                        const hb_variation_t *variations,
+                        unsigned int variations_length);
+
+HB_EXTERN void
+hb_font_set_var_coords_design (hb_font_t *font,
+                               const float *coords,
+                               unsigned int coords_length);
+
+HB_EXTERN const float *
+hb_font_get_var_coords_design (hb_font_t *font,
+                               unsigned int *length);
+
+HB_EXTERN void
+hb_font_set_var_coords_normalized (hb_font_t *font,
+                                   const int *coords, /* 2.14 normalized */
+                                   unsigned int coords_length);
+
+HB_EXTERN const int *
+hb_font_get_var_coords_normalized (hb_font_t *font,
+                                   unsigned int *length);
+
+HB_EXTERN void
+hb_font_set_var_named_instance (hb_font_t *font,
+                                unsigned instance_index);
+
+
+HB_END_DECLS
+
+#endif /* HB_FONT_H */
