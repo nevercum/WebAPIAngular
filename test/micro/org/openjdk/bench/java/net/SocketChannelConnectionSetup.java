@@ -108,4 +108,28 @@ public class SocketChannelConnectionSetup {
     @Benchmark
     @Measurement(iterations = 5, batchSize=200)
     public void test() throws IOException {
-        s1 = SocketChannel.open(ssc.getLocalAddr
+        s1 = SocketChannel.open(ssc.getLocalAddress());
+        s2 = ssc.accept();
+        s1.close();
+        s2.close();
+    }
+
+    public static void main(String[] args) throws RunnerException {
+        Options opt = new OptionsBuilder()
+                .include(org.openjdk.bench.java.net.SocketChannelConnectionSetup.class.getSimpleName())
+                .warmupForks(1)
+                .forks(2)
+                .build();
+
+        new Runner(opt).run();
+
+        opt = new OptionsBuilder()
+                .include(org.openjdk.bench.java.net.SocketChannelConnectionSetup.class.getSimpleName())
+                .jvmArgsPrepend("-Djdk.net.useFastTcpLoopback=true")
+                .warmupForks(1)
+                .forks(2)
+                .build();
+
+        new Runner(opt).run();
+    }
+}
