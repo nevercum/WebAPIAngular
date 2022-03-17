@@ -56,4 +56,31 @@ public final class CheckpointEvent {
 
     public long touchedPools() {
         int count = 0;
-        for (CheckpointPool cpp : p
+        for (CheckpointPool cpp : pools.values()) {
+            if (cpp.isTouched()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public Collection<CheckpointPool> getPools() {
+        return pools.values();
+    }
+
+    public long getStartPosition() {
+        return startPosition;
+    }
+
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (CheckpointPool p : pools.values()) {
+            for (var e : p.getEntries()) {
+                if (e.isTouched()) {
+                    sb.append(e.getType().getName() + " " + e.getId() + "\n");
+                }
+            }
+        }
+        return sb.toString();
+    }
+}
