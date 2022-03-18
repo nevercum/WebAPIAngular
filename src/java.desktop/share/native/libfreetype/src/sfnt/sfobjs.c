@@ -341,4 +341,279 @@
   /* synthesized into a TTC with one offset table.              */
   static FT_Error
   sfnt_open_font( FT_Stream  stream,
-                  TT_Face    fac
+                  TT_Face    face,
+                  FT_Int*    face_instance_index,
+                  FT_Long*   woff2_num_faces )
+  {
+    FT_Memory  memory = stream->memory;
+    FT_Error   error;
+    FT_ULong   tag, offset;
+
+    static const FT_Frame_Field  ttc_header_fields[] =
+    {
+#undef  FT_STRUCTURE
+#define FT_STRUCTURE  TTC_HeaderRec
+
+      FT_FRAME_START( 8 ),
+        FT_FRAME_LONG( version ),
+        FT_FRAME_LONG( count   ),  /* this is ULong in the specs */
+      FT_FRAME_END
+    };
+
+#ifndef FT_CONFIG_OPTION_USE_BROTLI
+    FT_UNUSED( face_instance_index );
+    FT_UNUSED( woff2_num_faces );
+#endif
+
+
+    face->ttc_header.tag     = 0;
+    face->ttc_header.version = 0;
+    face->ttc_header.count   = 0;
+
+#if defined( FT_CONFIG_OPTION_USE_ZLIB )   || \
+    defined( FT_CONFIG_OPTION_USE_BROTLI )
+  retry:
+#endif
+
+    offset = FT_STREAM_POS();
+
+    if ( FT_READ_ULONG( tag ) )
+      return error;
+
+#ifdef FT_CONFIG_OPTION_USE_ZLIB
+    if ( tag == TTAG_wOFF )
+    {
+      FT_TRACE2(( "sfnt_open_font: file is a WOFF; synthesizing SFNT\n" ));
+
+      if ( FT_STREAM_SEEK( offset ) )
+        return error;
+
+      error = woff_open_font( stream, face );
+      if ( error )
+        return error;
+
+      /* Swap out stream and retry! */
+      stream = face->root.stream;
+      goto retry;
+    }
+#endif
+
+#ifdef FT_CONFIG_OPTION_USE_BROTLI
+    if ( tag == TTAG_wOF2 )
+    {
+      FT_TRACE2(( "sfnt_open_font: file is a WOFF2; synthesizing SFNT\n" ));
+
+      if ( FT_STREAM_SEEK( offset ) )
+        return error;
+
+      error = woff2_open_font( stream,
+                               face,
+                               face_instance_index,
+                               woff2_num_faces );
+      if ( error )
+        return error;
+
+      /* Swap out stream and retry! */
+      stream = face->root.stream;
+      goto retry;
+    }
+#endif
+
+    if ( tag != 0x00010000UL &&
+         tag != TTAG_ttcf    &&
+         tag != TTAG_OTTO    &&
+         tag != TTAG_true    &&
+         tag != TTAG_typ1    &&
+         tag != TTAG_0xA5kbd &&
+         tag != TTAG_0xA5lst &&
+         tag != 0x00020000UL )
+    {
+      FT_TRACE2(( "  not a font using the SFNT container format\n" ));
+      return FT_THROW( Unknown_File_Format );
+    }
+
+    face->ttc_header.tag = TTAG_ttcf;
+
+    if ( tag == TTAG_ttcf )
+    {
+      FT_Int  n;
+
+
+      FT_TRACE3(( "sfnt_open_font: file is a collection\n" ));
+
+      if ( FT_STREAM_READ_FIELDS( ttc_header_fields, &face->ttc_header ) )
+        return error;
+
+      FT_TRACE3(( "                with %ld subfonts\n",
+                  face->ttc_header.count ));
+
+      if ( face->ttc_header.count == 0 )
+        return FT_THROW( Invalid_Table );
+
+      /* a rough size estimate: let's conservatively assume that there   */
+      /* is just a single table info in each subfont header (12 + 16*1 = */
+      /* 28 bytes), thus we have (at least) `12 + 4*count' bytes for the */
+      /* size of the TTC header plus `28*count' bytes for all subfont    */
+      /* headers                                                         */
+      if ( (FT_ULong)face->ttc_header.count > stream->size / ( 28 + 4 ) )
+        return FT_THROW( Array_Too_Large );
+
+      /* now read the offsets of each font in the file */
+      if ( FT_QNEW_ARRAY( face->ttc_header.offsets, face->ttc_header.count ) )
+        return error;
+
+      if ( FT_FRAME_ENTER( face->ttc_header.count * 4L ) )
+        return error;
+
+      for ( n = 0; n < face->ttc_header.count; n++ )
+        face->ttc_header.offsets[n] = FT_GET_ULONG();
+
+      FT_FRAME_EXIT();
+    }
+    else
+    {
+      FT_TRACE3(( "sfnt_open_font: synthesize TTC\n" ));
+
+      face->ttc_header.version = 1 << 16;
+      face->ttc_header.count   = 1;
+
+      if ( FT_QNEW( face->ttc_header.offsets ) )
+        return error;
+
+      face->ttc_header.offsets[0] = offset;
+    }
+
+    return error;
+  }
+
+
+  FT_LOCAL_DEF( FT_Error )
+  sfnt_init_face( FT_Stream      stream,
+                  TT_Face        face,
+                  FT_Int         face_instance_index,
+                  FT_Int         num_params,
+                  FT_Parameter*  params )
+  {
+    FT_Error      error;
+    FT_Library    library         = face->root.driver->root.library;
+    SFNT_Service  sfnt;
+    FT_Int        face_index;
+    FT_Long       woff2_num_faces = 0;
+
+
+    /* for now, parameters are unused */
+    FT_UNUSED( num_params );
+    FT_UNUSED( params );
+
+
+    sfnt = (SFNT_Service)face->sfnt;
+    if ( !sfnt )
+    {
+      sfnt = (SFNT_Service)FT_Get_Module_Interface( library, "sfnt" );
+      if ( !sfnt )
+      {
+        FT_ERROR(( "sfnt_init_face: cannot access `sfnt' module\n" ));
+        return FT_THROW( Missing_Module );
+      }
+
+      face->sfnt       = sfnt;
+      face->goto_table = sfnt->goto_table;
+    }
+
+    FT_FACE_FIND_GLOBAL_SERVICE( face, face->psnames, POSTSCRIPT_CMAPS );
+
+#ifdef TT_CONFIG_OPTION_GX_VAR_SUPPORT
+    if ( !face->mm )
+    {
+      /* we want the MM interface from the `truetype' module only */
+      FT_Module  tt_module = FT_Get_Module( library, "truetype" );
+
+
+      face->mm = ft_module_get_service( tt_module,
+                                        FT_SERVICE_ID_MULTI_MASTERS,
+                                        0 );
+    }
+
+    if ( !face->var )
+    {
+      /* we want the metrics variations interface */
+      /* from the `truetype' module only          */
+      FT_Module  tt_module = FT_Get_Module( library, "truetype" );
+
+
+      face->var = ft_module_get_service( tt_module,
+                                         FT_SERVICE_ID_METRICS_VARIATIONS,
+                                         0 );
+    }
+#endif
+
+    FT_TRACE2(( "SFNT driver\n" ));
+
+    error = sfnt_open_font( stream,
+                            face,
+                            &face_instance_index,
+                            &woff2_num_faces );
+    if ( error )
+      return error;
+
+    /* Stream may have changed in sfnt_open_font. */
+    stream = face->root.stream;
+
+    FT_TRACE2(( "sfnt_init_face: %p (index %d)\n",
+                (void *)face,
+                face_instance_index ));
+
+    face_index = FT_ABS( face_instance_index ) & 0xFFFF;
+
+    /* value -(N+1) requests information on index N */
+    if ( face_instance_index < 0 && face_index > 0 )
+      face_index--;
+
+    if ( face_index >= face->ttc_header.count )
+    {
+      if ( face_instance_index >= 0 )
+        return FT_THROW( Invalid_Argument );
+      else
+        face_index = 0;
+    }
+
+    if ( FT_STREAM_SEEK( face->ttc_header.offsets[face_index] ) )
+      return error;
+
+    /* check whether we have a valid TrueType file */
+    error = sfnt->load_font_dir( face, stream );
+    if ( error )
+      return error;
+
+#ifdef TT_CONFIG_OPTION_GX_VAR_SUPPORT
+    {
+      FT_Memory  memory = face->root.memory;
+
+      FT_ULong  fvar_len;
+
+      FT_ULong  version;
+      FT_ULong  offset;
+
+      FT_UShort  num_axes;
+      FT_UShort  axis_size;
+      FT_UShort  num_instances;
+      FT_UShort  instance_size;
+
+      FT_Int  instance_index;
+
+      FT_Byte*  default_values  = NULL;
+      FT_Byte*  instance_values = NULL;
+
+
+      instance_index = FT_ABS( face_instance_index ) >> 16;
+
+      /* test whether current face is a GX font with named instances */
+      if ( face->goto_table( face, TTAG_fvar, stream, &fvar_len ) ||
+           fvar_len < 20                                          ||
+           FT_READ_ULONG( version )                               ||
+           FT_READ_USHORT( offset )                               ||
+           FT_STREAM_SKIP( 2 ) /* reserved */                     ||
+           FT_READ_USHORT( num_axes )                             ||
+           FT_READ_USHORT( axis_size )                            ||
+           FT_READ_USHORT( num_instances )                        ||
+  
