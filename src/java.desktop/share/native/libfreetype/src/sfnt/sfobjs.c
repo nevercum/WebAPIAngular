@@ -1278,4 +1278,244 @@
           FT_MEM_QRENEW_ARRAY( sbit_strike_map, count, bsize_idx );
 
           /* from now on, all strike indices are mapped */
-   
+          /* using `sbit_strike_map'                    */
+          if ( bsize_idx )
+          {
+            face->sbit_strike_map = sbit_strike_map;
+
+            root->face_flags     |= FT_FACE_FLAG_FIXED_SIZES;
+            root->num_fixed_sizes = (FT_Int)bsize_idx;
+          }
+        }
+      }
+
+#endif /* TT_CONFIG_OPTION_EMBEDDED_BITMAPS */
+
+      /* a font with no bitmaps and no outlines is scalable; */
+      /* it has only empty glyphs then                       */
+      if ( !FT_HAS_FIXED_SIZES( root ) && !FT_IS_SCALABLE( root ) )
+        root->face_flags |= FT_FACE_FLAG_SCALABLE;
+
+
+      /**********************************************************************
+       *
+       * Set up metrics.
+       */
+      if ( FT_IS_SCALABLE( root ) ||
+           FT_HAS_SBIX( root )    )
+      {
+        /* XXX What about if outline header is missing */
+        /*     (e.g. sfnt wrapped bitmap)?             */
+        root->bbox.xMin    = face->header.xMin;
+        root->bbox.yMin    = face->header.yMin;
+        root->bbox.xMax    = face->header.xMax;
+        root->bbox.yMax    = face->header.yMax;
+        root->units_per_EM = face->header.Units_Per_EM;
+
+
+        /*
+         * Computing the ascender/descender/height is tricky.
+         *
+         * The OpenType specification v1.8.3 says:
+         *
+         *   [OS/2's] sTypoAscender, sTypoDescender and sTypoLineGap fields
+         *   are intended to allow applications to lay out documents in a
+         *   typographically-correct and portable fashion.
+         *
+         * This is somewhat at odds with the decades of backwards
+         * compatibility, operating systems and applications doing whatever
+         * they want, not to mention broken fonts.
+         *
+         * Not all fonts have an OS/2 table; in this case, we take the values
+         * in the horizontal header, although there is nothing stopping the
+         * values from being unreliable. Even with a OS/2 table, certain fonts
+         * set the sTypoAscender, sTypoDescender and sTypoLineGap fields to 0
+         * and instead correctly set usWinAscent and usWinDescent.
+         *
+         * As an example, Arial Narrow is shipped as four files ARIALN.TTF,
+         * ARIALNI.TTF, ARIALNB.TTF and ARIALNBI.TTF. Strangely, all fonts have
+         * the same values in their sTypo* fields, except ARIALNB.ttf which
+         * sets them to 0. All of them have different usWinAscent/Descent
+         * values. The OS/2 table therefore cannot be trusted for computing the
+         * text height reliably.
+         *
+         * As a compromise, do the following:
+         *
+         * 1. If the OS/2 table exists and the fsSelection bit 7 is set
+         *    (USE_TYPO_METRICS), trust the font and use the sTypo* metrics.
+         * 2. Otherwise, use the `hhea' table's metrics.
+         * 3. If they are zero and the OS/2 table exists,
+         *    1. use the OS/2 table's sTypo* metrics if they are non-zero.
+         *    2. Otherwise, use the OS/2 table's usWin* metrics.
+         */
+
+        if ( face->os2.version != 0xFFFFU && face->os2.fsSelection & 128 )
+        {
+          root->ascender  = face->os2.sTypoAscender;
+          root->descender = face->os2.sTypoDescender;
+          root->height    = root->ascender - root->descender +
+                            face->os2.sTypoLineGap;
+        }
+        else
+        {
+          root->ascender  = face->horizontal.Ascender;
+          root->descender = face->horizontal.Descender;
+          root->height    = root->ascender - root->descender +
+                            face->horizontal.Line_Gap;
+
+          if ( !( root->ascender || root->descender ) )
+          {
+            if ( face->os2.version != 0xFFFFU )
+            {
+              if ( face->os2.sTypoAscender || face->os2.sTypoDescender )
+              {
+                root->ascender  = face->os2.sTypoAscender;
+                root->descender = face->os2.sTypoDescender;
+                root->height    = root->ascender - root->descender +
+                                  face->os2.sTypoLineGap;
+              }
+              else
+              {
+                root->ascender  =  (FT_Short)face->os2.usWinAscent;
+                root->descender = -(FT_Short)face->os2.usWinDescent;
+                root->height    =  root->ascender - root->descender;
+              }
+            }
+          }
+        }
+
+        root->max_advance_width  =
+          (FT_Short)face->horizontal.advance_Width_Max;
+        root->max_advance_height =
+          (FT_Short)( face->vertical_info ? face->vertical.advance_Height_Max
+                                          : root->height );
+
+        /* See https://www.microsoft.com/typography/otspec/post.htm -- */
+        /* Adjust underline position from top edge to centre of        */
+        /* stroke to convert TrueType meaning to FreeType meaning.     */
+        root->underline_position  = face->postscript.underlinePosition -
+                                    face->postscript.underlineThickness / 2;
+        root->underline_thickness = face->postscript.underlineThickness;
+      }
+
+    }
+
+  Exit:
+    FT_TRACE2(( "sfnt_load_face: done\n" ));
+
+    return error;
+  }
+
+
+#undef LOAD_
+#undef LOADM_
+#undef GET_NAME
+
+
+  FT_LOCAL_DEF( void )
+  sfnt_done_face( TT_Face  face )
+  {
+    FT_Memory     memory;
+    SFNT_Service  sfnt;
+
+
+    if ( !face )
+      return;
+
+    memory = face->root.memory;
+    sfnt   = (SFNT_Service)face->sfnt;
+
+    if ( sfnt )
+    {
+      /* destroy the postscript names table if it is loaded */
+      if ( sfnt->free_psnames )
+        sfnt->free_psnames( face );
+
+      /* destroy the embedded bitmaps table if it is loaded */
+      if ( sfnt->free_eblc )
+        sfnt->free_eblc( face );
+
+      /* destroy color table data if it is loaded */
+      if ( sfnt->free_cpal )
+      {
+        sfnt->free_cpal( face );
+        sfnt->free_colr( face );
+      }
+
+#ifdef FT_CONFIG_OPTION_SVG
+      /* free SVG data */
+      if ( sfnt->free_svg )
+        sfnt->free_svg( face );
+#endif
+    }
+
+#ifdef TT_CONFIG_OPTION_BDF
+    /* freeing the embedded BDF properties */
+    tt_face_free_bdf_props( face );
+#endif
+
+    /* freeing the kerning table */
+    tt_face_done_kern( face );
+
+    /* freeing the collection table */
+    FT_FREE( face->ttc_header.offsets );
+    face->ttc_header.count = 0;
+
+    /* freeing table directory */
+    FT_FREE( face->dir_tables );
+    face->num_tables = 0;
+
+    {
+      FT_Stream  stream = FT_FACE_STREAM( face );
+
+
+      /* simply release the 'cmap' table frame */
+      FT_FRAME_RELEASE( face->cmap_table );
+      face->cmap_size = 0;
+    }
+
+    face->horz_metrics_size = 0;
+    face->vert_metrics_size = 0;
+
+    /* freeing vertical metrics, if any */
+    if ( face->vertical_info )
+    {
+      FT_FREE( face->vertical.long_metrics  );
+      FT_FREE( face->vertical.short_metrics );
+      face->vertical_info = 0;
+    }
+
+    /* freeing the gasp table */
+    FT_FREE( face->gasp.gaspRanges );
+    face->gasp.numRanges = 0;
+
+    /* freeing the name table */
+    if ( sfnt )
+      sfnt->free_name( face );
+
+    /* freeing family and style name */
+    FT_FREE( face->root.family_name );
+    FT_FREE( face->root.style_name );
+
+    /* freeing sbit size table */
+    FT_FREE( face->root.available_sizes );
+    FT_FREE( face->sbit_strike_map );
+    face->root.num_fixed_sizes = 0;
+
+    FT_FREE( face->postscript_name );
+
+#ifdef TT_CONFIG_OPTION_GX_VAR_SUPPORT
+    FT_FREE( face->var_postscript_prefix );
+#endif
+
+    /* freeing glyph color palette data */
+    FT_FREE( face->palette_data.palette_name_ids );
+    FT_FREE( face->palette_data.palette_flags );
+    FT_FREE( face->palette_data.palette_entry_name_ids );
+    FT_FREE( face->palette );
+
+    face->sfnt = NULL;
+  }
+
+
+/* END */
