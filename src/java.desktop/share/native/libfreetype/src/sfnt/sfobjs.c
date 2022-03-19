@@ -616,4 +616,216 @@
            FT_READ_USHORT( num_axes )                             ||
            FT_READ_USHORT( axis_size )                            ||
            FT_READ_USHORT( num_instances )                        ||
-  
+           FT_READ_USHORT( instance_size )                        )
+      {
+        version       = 0;
+        offset        = 0;
+        num_axes      = 0;
+        axis_size     = 0;
+        num_instances = 0;
+        instance_size = 0;
+      }
+
+      /* check that the data is bound by the table length */
+      if ( version != 0x00010000UL                    ||
+           axis_size != 20                            ||
+           num_axes == 0                              ||
+           /* `num_axes' limit implied by 16-bit `instance_size' */
+           num_axes > 0x3FFE                          ||
+           !( instance_size == 4 + 4 * num_axes ||
+              instance_size == 6 + 4 * num_axes )     ||
+           /* `num_instances' limit implied by limited range of name IDs */
+           num_instances > 0x7EFF                     ||
+           offset                          +
+             axis_size * num_axes          +
+             instance_size * num_instances > fvar_len )
+        num_instances = 0;
+      else
+        face->variation_support |= TT_FACE_FLAG_VAR_FVAR;
+
+      /*
+       * As documented in the OpenType specification, an entry for the
+       * default instance may be omitted in the named instance table.  In
+       * particular this means that even if there is no named instance
+       * table in the font we actually do have a named instance, namely the
+       * default instance.
+       *
+       * For consistency, we always want the default instance in our list
+       * of named instances.  If it is missing, we try to synthesize it
+       * later on.  Here, we have to adjust `num_instances' accordingly.
+       */
+
+      if ( ( face->variation_support & TT_FACE_FLAG_VAR_FVAR ) &&
+           !( FT_QALLOC(  default_values, num_axes * 4 ) ||
+              FT_QALLOC( instance_values, num_axes * 4 ) )     )
+      {
+        /* the current stream position is 16 bytes after the table start */
+        FT_ULong  array_start = FT_STREAM_POS() - 16 + offset;
+        FT_ULong  default_value_offset, instance_offset;
+
+        FT_Byte*  p;
+        FT_UInt   i;
+
+
+        default_value_offset = array_start + 8;
+        p                    = default_values;
+
+        for ( i = 0; i < num_axes; i++ )
+        {
+          (void)FT_STREAM_READ_AT( default_value_offset, p, 4 );
+
+          default_value_offset += axis_size;
+          p                    += 4;
+        }
+
+        instance_offset = array_start + axis_size * num_axes + 4;
+
+        for ( i = 0; i < num_instances; i++ )
+        {
+          (void)FT_STREAM_READ_AT( instance_offset,
+                                   instance_values,
+                                   num_axes * 4 );
+
+          if ( !ft_memcmp( default_values, instance_values, num_axes * 4 ) )
+            break;
+
+          instance_offset += instance_size;
+        }
+
+        if ( i == num_instances )
+        {
+          /* no default instance in named instance table; */
+          /* we thus have to synthesize it                */
+          num_instances++;
+        }
+      }
+
+      FT_FREE( default_values );
+      FT_FREE( instance_values );
+
+      /* we don't support Multiple Master CFFs yet; */
+      /* note that `glyf' or `CFF2' have precedence */
+      if ( face->goto_table( face, TTAG_glyf, stream, 0 ) &&
+           face->goto_table( face, TTAG_CFF2, stream, 0 ) &&
+           !face->goto_table( face, TTAG_CFF, stream, 0 ) )
+        num_instances = 0;
+
+      /* instance indices in `face_instance_index' start with index 1, */
+      /* thus `>' and not `>='                                         */
+      if ( instance_index > num_instances )
+      {
+        if ( face_instance_index >= 0 )
+          return FT_THROW( Invalid_Argument );
+        else
+          num_instances = 0;
+      }
+
+      face->root.style_flags = (FT_Long)num_instances << 16;
+    }
+#endif
+
+    face->root.num_faces  = face->ttc_header.count;
+    face->root.face_index = face_instance_index;
+
+    /* `num_faces' for a WOFF2 needs to be handled separately. */
+    if ( woff2_num_faces )
+      face->root.num_faces = woff2_num_faces;
+
+    return error;
+  }
+
+
+#define LOAD_( x )                                          \
+  do                                                        \
+  {                                                         \
+    FT_TRACE2(( "`" #x "' " ));                             \
+    FT_TRACE3(( "-->\n" ));                                 \
+                                                            \
+    error = sfnt->load_ ## x( face, stream );               \
+                                                            \
+    FT_TRACE2(( "%s\n", ( !error )                          \
+                        ? "loaded"                          \
+                        : FT_ERR_EQ( error, Table_Missing ) \
+                          ? "missing"                       \
+                          : "failed to load" ));            \
+    FT_TRACE3(( "\n" ));                                    \
+  } while ( 0 )
+
+#define LOADM_( x, vertical )                               \
+  do                                                        \
+  {                                                         \
+    FT_TRACE2(( "`%s" #x "' ",                              \
+                vertical ? "vertical " : "" ));             \
+    FT_TRACE3(( "-->\n" ));                                 \
+                                                            \
+    error = sfnt->load_ ## x( face, stream, vertical );     \
+                                                            \
+    FT_TRACE2(( "%s\n", ( !error )                          \
+                        ? "loaded"                          \
+                        : FT_ERR_EQ( error, Table_Missing ) \
+                          ? "missing"                       \
+                          : "failed to load" ));            \
+    FT_TRACE3(( "\n" ));                                    \
+  } while ( 0 )
+
+#define GET_NAME( id, field )                                   \
+  do                                                            \
+  {                                                             \
+    error = tt_face_get_name( face, TT_NAME_ID_ ## id, field ); \
+    if ( error )                                                \
+      goto Exit;                                                \
+  } while ( 0 )
+
+
+  FT_LOCAL_DEF( FT_Error )
+  sfnt_load_face( FT_Stream      stream,
+                  TT_Face        face,
+                  FT_Int         face_instance_index,
+                  FT_Int         num_params,
+                  FT_Parameter*  params )
+  {
+    FT_Error  error;
+#ifdef TT_CONFIG_OPTION_POSTSCRIPT_NAMES
+    FT_Error  psnames_error;
+#endif
+
+    FT_Bool  has_outline;
+    FT_Bool  is_apple_sbit;
+
+    FT_Bool  has_CBLC;
+    FT_Bool  has_CBDT;
+    FT_Bool  has_EBLC;
+    FT_Bool  has_bloc;
+    FT_Bool  has_sbix;
+
+    FT_Bool  ignore_typographic_family    = FALSE;
+    FT_Bool  ignore_typographic_subfamily = FALSE;
+    FT_Bool  ignore_sbix                  = FALSE;
+
+    SFNT_Service  sfnt = (SFNT_Service)face->sfnt;
+
+    FT_UNUSED( face_instance_index );
+
+
+    /* Check parameters */
+
+    {
+      FT_Int  i;
+
+
+      for ( i = 0; i < num_params; i++ )
+      {
+        if ( params[i].tag == FT_PARAM_TAG_IGNORE_TYPOGRAPHIC_FAMILY )
+          ignore_typographic_family = TRUE;
+        else if ( params[i].tag == FT_PARAM_TAG_IGNORE_TYPOGRAPHIC_SUBFAMILY )
+          ignore_typographic_subfamily = TRUE;
+        else if ( params[i].tag == FT_PARAM_TAG_IGNORE_SBIX )
+          ignore_sbix = TRUE;
+      }
+    }
+
+    /* Load tables */
+
+    /* We now support two SFNT-based bitmapped font formats.  They */
+    /* are recognized easily as they do not include a `glyf'       */
+    /* table. 
