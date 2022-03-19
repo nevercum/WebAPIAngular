@@ -1048,4 +1048,234 @@
         GET_NAME( FONT_FAMILY, &face->root.family_name );
 
       GET_NAME( WWS_SUBFAMILY, &face->root.style_name );
-      if ( !face->ro
+      if ( !face->root.style_name && !ignore_typographic_subfamily )
+        GET_NAME( TYPOGRAPHIC_SUBFAMILY, &face->root.style_name );
+      if ( !face->root.style_name )
+        GET_NAME( FONT_SUBFAMILY, &face->root.style_name );
+    }
+
+    /* now set up root fields */
+    {
+      FT_Face  root  = &face->root;
+      FT_Long  flags = root->face_flags;
+
+
+      /**********************************************************************
+       *
+       * Compute face flags.
+       */
+      if ( face->sbit_table_type == TT_SBIT_TABLE_TYPE_CBLC ||
+           face->sbit_table_type == TT_SBIT_TABLE_TYPE_SBIX ||
+           face->colr                                       ||
+           face->svg                                        )
+        flags |= FT_FACE_FLAG_COLOR;      /* color glyphs */
+
+      if ( has_outline == TRUE )
+      {
+        /* by default (and for backward compatibility) we handle */
+        /* fonts with an 'sbix' table as bitmap-only             */
+        if ( has_sbix )
+          flags |= FT_FACE_FLAG_SBIX;     /* with 'sbix' bitmaps */
+        else
+          flags |= FT_FACE_FLAG_SCALABLE; /* scalable outlines */
+      }
+
+      /* The sfnt driver only supports bitmap fonts natively, thus we */
+      /* don't set FT_FACE_FLAG_HINTER.                               */
+      flags |= FT_FACE_FLAG_SFNT       |  /* SFNT file format  */
+               FT_FACE_FLAG_HORIZONTAL;   /* horizontal data   */
+
+#ifdef TT_CONFIG_OPTION_POSTSCRIPT_NAMES
+      if ( !psnames_error                             &&
+           face->postscript.FormatType != 0x00030000L )
+        flags |= FT_FACE_FLAG_GLYPH_NAMES;
+#endif
+
+      /* fixed width font? */
+      if ( face->postscript.isFixedPitch )
+        flags |= FT_FACE_FLAG_FIXED_WIDTH;
+
+      /* vertical information? */
+      if ( face->vertical_info )
+        flags |= FT_FACE_FLAG_VERTICAL;
+
+      /* kerning available ? */
+      if ( TT_FACE_HAS_KERNING( face ) )
+        flags |= FT_FACE_FLAG_KERNING;
+
+#ifdef TT_CONFIG_OPTION_GX_VAR_SUPPORT
+      /* Don't bother to load the tables unless somebody asks for them. */
+      /* No need to do work which will (probably) not be used.          */
+      if ( face->variation_support & TT_FACE_FLAG_VAR_FVAR )
+      {
+        if ( tt_face_lookup_table( face, TTAG_glyf ) != 0 &&
+             tt_face_lookup_table( face, TTAG_gvar ) != 0 )
+          flags |= FT_FACE_FLAG_MULTIPLE_MASTERS;
+        if ( tt_face_lookup_table( face, TTAG_CFF2 ) != 0 )
+          flags |= FT_FACE_FLAG_MULTIPLE_MASTERS;
+      }
+#endif
+
+      root->face_flags = flags;
+
+      /**********************************************************************
+       *
+       * Compute style flags.
+       */
+
+      flags = 0;
+      if ( has_outline == TRUE && face->os2.version != 0xFFFFU )
+      {
+        /* We have an OS/2 table; use the `fsSelection' field.  Bit 9 */
+        /* indicates an oblique font face.  This flag has been        */
+        /* introduced in version 1.5 of the OpenType specification.   */
+
+        if ( face->os2.fsSelection & 512 )       /* bit 9 */
+          flags |= FT_STYLE_FLAG_ITALIC;
+        else if ( face->os2.fsSelection & 1 )    /* bit 0 */
+          flags |= FT_STYLE_FLAG_ITALIC;
+
+        if ( face->os2.fsSelection & 32 )        /* bit 5 */
+          flags |= FT_STYLE_FLAG_BOLD;
+      }
+      else
+      {
+        /* this is an old Mac font, use the header field */
+
+        if ( face->header.Mac_Style & 1 )
+          flags |= FT_STYLE_FLAG_BOLD;
+
+        if ( face->header.Mac_Style & 2 )
+          flags |= FT_STYLE_FLAG_ITALIC;
+      }
+
+      root->style_flags |= flags;
+
+      /**********************************************************************
+       *
+       * Polish the charmaps.
+       *
+       *   Try to set the charmap encoding according to the platform &
+       *   encoding ID of each charmap.  Emulate Unicode charmap if one
+       *   is missing.
+       */
+
+      tt_face_build_cmaps( face );  /* ignore errors */
+
+
+      /* set the encoding fields */
+      {
+        FT_Int   m;
+#ifdef FT_CONFIG_OPTION_POSTSCRIPT_NAMES
+        FT_Bool  has_unicode = FALSE;
+#endif
+
+
+        for ( m = 0; m < root->num_charmaps; m++ )
+        {
+          FT_CharMap  charmap = root->charmaps[m];
+
+
+          charmap->encoding = sfnt_find_encoding( charmap->platform_id,
+                                                  charmap->encoding_id );
+
+#ifdef FT_CONFIG_OPTION_POSTSCRIPT_NAMES
+
+          if ( charmap->encoding == FT_ENCODING_UNICODE   ||
+               charmap->encoding == FT_ENCODING_MS_SYMBOL )  /* PUA */
+            has_unicode = TRUE;
+        }
+
+        /* synthesize Unicode charmap if one is missing */
+        if ( !has_unicode                                &&
+             root->face_flags & FT_FACE_FLAG_GLYPH_NAMES )
+        {
+          FT_CharMapRec  cmaprec;
+
+
+          cmaprec.face        = root;
+          cmaprec.platform_id = TT_PLATFORM_MICROSOFT;
+          cmaprec.encoding_id = TT_MS_ID_UNICODE_CS;
+          cmaprec.encoding    = FT_ENCODING_UNICODE;
+
+
+          error = FT_CMap_New( (FT_CMap_Class)&tt_cmap_unicode_class_rec,
+                               NULL, &cmaprec, NULL );
+          if ( error                                      &&
+               FT_ERR_NEQ( error, No_Unicode_Glyph_Name ) &&
+               FT_ERR_NEQ( error, Unimplemented_Feature ) )
+            goto Exit;
+          error = FT_Err_Ok;
+
+#endif /* FT_CONFIG_OPTION_POSTSCRIPT_NAMES */
+
+        }
+      }
+
+#ifdef TT_CONFIG_OPTION_EMBEDDED_BITMAPS
+
+      /*
+       * Now allocate the root array of FT_Bitmap_Size records and
+       * populate them.  Unfortunately, it isn't possible to indicate bit
+       * depths in the FT_Bitmap_Size record.  This is a design error.
+       */
+      {
+        FT_UInt  count;
+
+
+        count = face->sbit_num_strikes;
+
+        if ( count > 0 )
+        {
+          FT_Memory        memory   = face->root.stream->memory;
+          FT_UShort        em_size  = face->header.Units_Per_EM;
+          FT_Short         avgwidth = face->os2.xAvgCharWidth;
+          FT_Size_Metrics  metrics;
+
+          FT_UInt*  sbit_strike_map = NULL;
+          FT_UInt   strike_idx, bsize_idx;
+
+
+          if ( em_size == 0 || face->os2.version == 0xFFFFU )
+          {
+            avgwidth = 1;
+            em_size = 1;
+          }
+
+          /* to avoid invalid strike data in the `available_sizes' field */
+          /* of `FT_Face', we map `available_sizes' indices to strike    */
+          /* indices                                                     */
+          if ( FT_NEW_ARRAY( root->available_sizes, count ) ||
+               FT_QNEW_ARRAY( sbit_strike_map, count ) )
+            goto Exit;
+
+          bsize_idx = 0;
+          for ( strike_idx = 0; strike_idx < count; strike_idx++ )
+          {
+            FT_Bitmap_Size*  bsize = root->available_sizes + bsize_idx;
+
+
+            error = sfnt->load_strike_metrics( face, strike_idx, &metrics );
+            if ( error )
+              continue;
+
+            bsize->height = (FT_Short)( metrics.height >> 6 );
+            bsize->width  = (FT_Short)(
+              ( avgwidth * metrics.x_ppem + em_size / 2 ) / em_size );
+
+            bsize->x_ppem = metrics.x_ppem << 6;
+            bsize->y_ppem = metrics.y_ppem << 6;
+
+            /* assume 72dpi */
+            bsize->size   = metrics.y_ppem << 6;
+
+            /* only use strikes with valid PPEM values */
+            if ( bsize->x_ppem && bsize->y_ppem )
+              sbit_strike_map[bsize_idx++] = strike_idx;
+          }
+
+          /* reduce array size to the actually used elements */
+          FT_MEM_QRENEW_ARRAY( sbit_strike_map, count, bsize_idx );
+
+          /* from now on, all strike indices are mapped */
+   
