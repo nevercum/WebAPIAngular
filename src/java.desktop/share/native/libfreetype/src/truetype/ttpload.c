@@ -127,4 +127,329 @@
         FT_Bool  found = 0;
 
 
-        /* 
+        /* compute the distance to next table in font file */
+        for ( ; entry < limit; entry++ )
+        {
+          FT_Long  diff = (FT_Long)entry->Offset - pos;
+
+
+          if ( diff > 0 && diff < dist )
+          {
+            dist  = diff;
+            found = 1;
+          }
+        }
+
+        if ( !found )
+        {
+          /* `loca' is the last table */
+          dist = (FT_Long)stream->size - pos;
+        }
+
+        if ( new_loca_len <= (FT_ULong)dist )
+        {
+          face->num_locations = (FT_ULong)face->root.num_glyphs + 1;
+          table_len           = new_loca_len;
+
+          FT_TRACE2(( "adjusting num_locations to %ld\n",
+                      face->num_locations ));
+        }
+        else
+        {
+          face->root.num_glyphs = face->num_locations
+                                    ? (FT_Long)face->num_locations - 1 : 0;
+
+          FT_TRACE2(( "adjusting num_glyphs to %ld\n",
+                      face->root.num_glyphs ));
+        }
+      }
+    }
+
+    /*
+     * Extract the frame.  We don't need to decompress it since
+     * we are able to parse it directly.
+     */
+    if ( FT_FRAME_EXTRACT( table_len, face->glyph_locations ) )
+      goto Exit;
+
+    FT_TRACE2(( "loaded\n" ));
+
+  Exit:
+    return error;
+  }
+
+
+  FT_LOCAL_DEF( FT_ULong )
+  tt_face_get_location( TT_Face   face,
+                        FT_UInt   gindex,
+                        FT_UInt  *asize )
+  {
+    FT_ULong  pos1, pos2;
+    FT_Byte*  p;
+    FT_Byte*  p_limit;
+
+
+    pos1 = pos2 = 0;
+
+    if ( gindex < face->num_locations )
+    {
+      if ( face->header.Index_To_Loc_Format != 0 )
+      {
+        p       = face->glyph_locations + gindex * 4;
+        p_limit = face->glyph_locations + face->num_locations * 4;
+
+        pos1 = FT_NEXT_ULONG( p );
+        pos2 = pos1;
+
+        if ( p + 4 <= p_limit )
+          pos2 = FT_NEXT_ULONG( p );
+      }
+      else
+      {
+        p       = face->glyph_locations + gindex * 2;
+        p_limit = face->glyph_locations + face->num_locations * 2;
+
+        pos1 = FT_NEXT_USHORT( p );
+        pos2 = pos1;
+
+        if ( p + 2 <= p_limit )
+          pos2 = FT_NEXT_USHORT( p );
+
+        pos1 <<= 1;
+        pos2 <<= 1;
+      }
+    }
+
+    /* Check broken location data. */
+    if ( pos1 > face->glyf_len )
+    {
+      FT_TRACE1(( "tt_face_get_location:"
+                  " too large offset (0x%08lx) found for glyph index %d,\n",
+                  pos1, gindex ));
+      FT_TRACE1(( "                     "
+                  " exceeding the end of `glyf' table (0x%08lx)\n",
+                  face->glyf_len ));
+      *asize = 0;
+      return 0;
+    }
+
+    if ( pos2 > face->glyf_len )
+    {
+      /* We try to sanitize the last `loca' entry. */
+      if ( gindex == face->num_locations - 2 )
+      {
+        FT_TRACE1(( "tt_face_get_location:"
+                    " too large size (%ld bytes) found for glyph index %d,\n",
+                    pos2 - pos1, gindex ));
+        FT_TRACE1(( "                     "
+                    " truncating at the end of `glyf' table to %ld bytes\n",
+                    face->glyf_len - pos1 ));
+        pos2 = face->glyf_len;
+      }
+      else
+      {
+        FT_TRACE1(( "tt_face_get_location:"
+                    " too large offset (0x%08lx) found for glyph index %d,\n",
+                    pos2, gindex + 1 ));
+        FT_TRACE1(( "                     "
+                    " exceeding the end of `glyf' table (0x%08lx)\n",
+                    face->glyf_len ));
+        *asize = 0;
+        return 0;
+      }
+    }
+
+    /* The `loca' table must be ordered; it refers to the length of */
+    /* an entry as the difference between the current and the next  */
+    /* position.  However, there do exist (malformed) fonts which   */
+    /* don't obey this rule, so we are only able to provide an      */
+    /* upper bound for the size.                                    */
+    /*                                                              */
+    /* We get (intentionally) a wrong, non-zero result in case the  */
+    /* `glyf' table is missing.                                     */
+    if ( pos2 >= pos1 )
+      *asize = (FT_UInt)( pos2 - pos1 );
+    else
+      *asize = (FT_UInt)( face->glyf_len - pos1 );
+
+    return pos1;
+  }
+
+
+  FT_LOCAL_DEF( void )
+  tt_face_done_loca( TT_Face  face )
+  {
+    FT_Stream  stream = face->root.stream;
+
+
+    FT_FRAME_RELEASE( face->glyph_locations );
+    face->num_locations = 0;
+  }
+
+
+
+  /**************************************************************************
+   *
+   * @Function:
+   *   tt_face_load_cvt
+   *
+   * @Description:
+   *   Load the control value table into a face object.
+   *
+   * @InOut:
+   *   face ::
+   *     A handle to the target face object.
+   *
+   * @Input:
+   *   stream ::
+   *     A handle to the input stream.
+   *
+   * @Return:
+   *   FreeType error code.  0 means success.
+   */
+  FT_LOCAL_DEF( FT_Error )
+  tt_face_load_cvt( TT_Face    face,
+                    FT_Stream  stream )
+  {
+#ifdef TT_USE_BYTECODE_INTERPRETER
+
+    FT_Error   error;
+    FT_Memory  memory = stream->memory;
+    FT_ULong   table_len;
+
+
+    FT_TRACE2(( "CVT " ));
+
+    error = face->goto_table( face, TTAG_cvt, stream, &table_len );
+    if ( error )
+    {
+      FT_TRACE2(( "is missing\n" ));
+
+      face->cvt_size = 0;
+      face->cvt      = NULL;
+      error          = FT_Err_Ok;
+
+      goto Exit;
+    }
+
+    face->cvt_size = table_len / 2;
+
+    if ( FT_QNEW_ARRAY( face->cvt, face->cvt_size ) )
+      goto Exit;
+
+    if ( FT_FRAME_ENTER( face->cvt_size * 2L ) )
+      goto Exit;
+
+    {
+      FT_Int32*  cur   = face->cvt;
+      FT_Int32*  limit = cur + face->cvt_size;
+
+
+      for ( ; cur < limit; cur++ )
+        *cur = FT_GET_SHORT() * 64;
+    }
+
+    FT_FRAME_EXIT();
+    FT_TRACE2(( "loaded\n" ));
+
+#ifdef TT_CONFIG_OPTION_GX_VAR_SUPPORT
+    if ( face->doblend )
+      error = tt_face_vary_cvt( face, stream );
+#endif
+
+  Exit:
+    return error;
+
+#else /* !TT_USE_BYTECODE_INTERPRETER */
+
+    FT_UNUSED( face   );
+    FT_UNUSED( stream );
+
+    return FT_Err_Ok;
+
+#endif
+  }
+
+
+  /**************************************************************************
+   *
+   * @Function:
+   *   tt_face_load_fpgm
+   *
+   * @Description:
+   *   Load the font program.
+   *
+   * @InOut:
+   *   face ::
+   *     A handle to the target face object.
+   *
+   * @Input:
+   *   stream ::
+   *     A handle to the input stream.
+   *
+   * @Return:
+   *   FreeType error code.  0 means success.
+   */
+  FT_LOCAL_DEF( FT_Error )
+  tt_face_load_fpgm( TT_Face    face,
+                     FT_Stream  stream )
+  {
+#ifdef TT_USE_BYTECODE_INTERPRETER
+
+    FT_Error  error;
+    FT_ULong  table_len;
+
+
+    FT_TRACE2(( "Font program " ));
+
+    /* The font program is optional */
+    error = face->goto_table( face, TTAG_fpgm, stream, &table_len );
+    if ( error )
+    {
+      face->font_program      = NULL;
+      face->font_program_size = 0;
+      error                   = FT_Err_Ok;
+
+      FT_TRACE2(( "is missing\n" ));
+    }
+    else
+    {
+      face->font_program_size = table_len;
+      if ( FT_FRAME_EXTRACT( table_len, face->font_program ) )
+        goto Exit;
+
+      FT_TRACE2(( "loaded, %12ld bytes\n", face->font_program_size ));
+    }
+
+  Exit:
+    return error;
+
+#else /* !TT_USE_BYTECODE_INTERPRETER */
+
+    FT_UNUSED( face   );
+    FT_UNUSED( stream );
+
+    return FT_Err_Ok;
+
+#endif
+  }
+
+
+  /**************************************************************************
+   *
+   * @Function:
+   *   tt_face_load_prep
+   *
+   * @Description:
+   *   Load the cvt program.
+   *
+   * @InOut:
+   *   face ::
+   *     A handle to the target face object.
+   *
+   * @Input:
+   *   stream ::
+   *     A handle to the input stream.
+   *
+   * @Return:
+   *   FreeType error code.  0 means success.
