@@ -1,10 +1,12 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1994, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -21,12 +23,16 @@
  * questions.
  */
 
-package p;
+package java.lang;
 
-public interface I {
-    String stringField = "I";
-    long longField = 10l;
+/**
+ * Thrown if an application tries to create an array with negative size.
+ *
+ * @since   1.0
+ */
+public class NegativeArraySizeException extends RuntimeException {
+    @java.io.Serial
+    private static final long serialVersionUID = -8960118058596991861L;
 
-    String stringField3 = "I3";
-    long longField3 = 13L;
-}
+    /**
+     * Constructs a {@code NegativeArraySizeExcepti
