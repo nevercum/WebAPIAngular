@@ -132,3 +132,35 @@ public class OopMaps {
 
         @Contended
         Object o05;
+
+        @Contended
+        Object o06;
+
+        @Contended
+        Object o07;
+   }
+
+   public static class R1 extends R0 {
+        int i3;
+        int i4;
+
+        Object o08;
+        Object o09;
+
+        @Contended
+        Object o10;
+
+        @Contended
+        Object o11;
+
+        @Contended
+        Object o12;
+
+        @Contended
+        Object o13;
+
+        @Contended
+        Object o14;
+   }
+
+}
