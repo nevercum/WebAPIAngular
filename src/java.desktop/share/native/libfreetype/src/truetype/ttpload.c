@@ -453,3 +453,212 @@
    *
    * @Return:
    *   FreeType error code.  0 means success.
+   */
+  FT_LOCAL_DEF( FT_Error )
+  tt_face_load_prep( TT_Face    face,
+                     FT_Stream  stream )
+  {
+#ifdef TT_USE_BYTECODE_INTERPRETER
+
+    FT_Error  error;
+    FT_ULong  table_len;
+
+
+    FT_TRACE2(( "Prep program " ));
+
+    error = face->goto_table( face, TTAG_prep, stream, &table_len );
+    if ( error )
+    {
+      face->cvt_program      = NULL;
+      face->cvt_program_size = 0;
+      error                  = FT_Err_Ok;
+
+      FT_TRACE2(( "is missing\n" ));
+    }
+    else
+    {
+      face->cvt_program_size = table_len;
+      if ( FT_FRAME_EXTRACT( table_len, face->cvt_program ) )
+        goto Exit;
+
+      FT_TRACE2(( "loaded, %12ld bytes\n", face->cvt_program_size ));
+    }
+
+  Exit:
+    return error;
+
+#else /* !TT_USE_BYTECODE_INTERPRETER */
+
+    FT_UNUSED( face   );
+    FT_UNUSED( stream );
+
+    return FT_Err_Ok;
+
+#endif
+  }
+
+
+  FT_COMPARE_DEF( int )
+  compare_ppem( const void*  a,
+                const void*  b )
+  {
+    return **(FT_Byte**)a - **(FT_Byte**)b;
+  }
+
+
+  /**************************************************************************
+   *
+   * @Function:
+   *   tt_face_load_hdmx
+   *
+   * @Description:
+   *   Load the `hdmx' table into the face object.
+   *
+   * @Input:
+   *   face ::
+   *     A handle to the target face object.
+   *
+   *   stream ::
+   *     A handle to the input stream.
+   *
+   * @Return:
+   *   FreeType error code.  0 means success.
+   */
+
+  FT_LOCAL_DEF( FT_Error )
+  tt_face_load_hdmx( TT_Face    face,
+                     FT_Stream  stream )
+  {
+    FT_Error   error;
+    FT_Memory  memory = stream->memory;
+    FT_UInt    nn, num_records;
+    FT_ULong   table_size, record_size;
+    FT_Byte*   p;
+    FT_Byte*   limit;
+
+
+    /* this table is optional */
+    error = face->goto_table( face, TTAG_hdmx, stream, &table_size );
+    if ( error || table_size < 8 )
+      return FT_Err_Ok;
+
+    if ( FT_FRAME_EXTRACT( table_size, face->hdmx_table ) )
+      goto Exit;
+
+    p     = face->hdmx_table;
+    limit = p + table_size;
+
+    /* Given that `hdmx' tables are losing its importance (for example, */
+    /* variation fonts introduced in OpenType 1.8 must not have this    */
+    /* table) we no longer test for a correct `version' field.          */
+    p          += 2;
+    num_records = FT_NEXT_USHORT( p );
+    record_size = FT_NEXT_ULONG( p );
+
+    /* There are at least two fonts, HANNOM-A and HANNOM-B version */
+    /* 2.0 (2005), which get this wrong: The upper two bytes of    */
+    /* the size value are set to 0xFF instead of 0x00.  We catch   */
+    /* and fix this.                                               */
+
+    if ( record_size >= 0xFFFF0000UL )
+      record_size &= 0xFFFFU;
+
+    FT_TRACE2(( "Hdmx " ));
+
+    /* The limit for `num_records' is a heuristic value. */
+    if ( num_records > 255 || num_records == 0 )
+    {
+      FT_TRACE2(( "with unreasonable %u records rejected\n", num_records ));
+      goto Fail;
+    }
+
+    /* Out-of-spec tables are rejected.  The record size must be */
+    /* equal to the number of glyphs + 2 + 32-bit padding.       */
+    if ( (FT_Long)record_size != ( ( face->root.num_glyphs + 2 + 3 ) & ~3 ) )
+    {
+      FT_TRACE2(( "with record size off by %ld bytes rejected\n",
+                  (FT_Long)record_size -
+                    ( ( face->root.num_glyphs + 2 + 3 ) & ~3 ) ));
+      goto Fail;
+    }
+
+    if ( FT_QNEW_ARRAY( face->hdmx_records, num_records ) )
+      goto Fail;
+
+    for ( nn = 0; nn < num_records; nn++ )
+    {
+      if ( p + record_size > limit )
+        break;
+      face->hdmx_records[nn] = p;
+      p                     += record_size;
+    }
+
+    /* The records must be already sorted by ppem but it does not */
+    /* hurt to make sure so that the binary search works later.   */
+    ft_qsort( face->hdmx_records, nn, sizeof ( FT_Byte* ), compare_ppem );
+
+    face->hdmx_record_count = nn;
+    face->hdmx_table_size   = table_size;
+    face->hdmx_record_size  = record_size;
+
+    FT_TRACE2(( "%ux%lu loaded\n", num_records, record_size ));
+
+  Exit:
+    return error;
+
+  Fail:
+    FT_FRAME_RELEASE( face->hdmx_table );
+    face->hdmx_table_size = 0;
+    goto Exit;
+  }
+
+
+  FT_LOCAL_DEF( void )
+  tt_face_free_hdmx( TT_Face  face )
+  {
+    FT_Stream  stream = face->root.stream;
+    FT_Memory  memory = stream->memory;
+
+
+    FT_FREE( face->hdmx_records );
+    FT_FRAME_RELEASE( face->hdmx_table );
+  }
+
+
+  /**************************************************************************
+   *
+   * Return the advance width table for a given pixel size if it is found
+   * in the font's `hdmx' table (if any).  The records must be sorted for
+   * the binary search to work properly.
+   */
+  FT_LOCAL_DEF( FT_Byte* )
+  tt_face_get_device_metrics( TT_Face  face,
+                              FT_UInt  ppem,
+                              FT_UInt  gindex )
+  {
+    FT_UInt   min    = 0;
+    FT_UInt   max    = face->hdmx_record_count;
+    FT_UInt   mid;
+    FT_Byte*  result = NULL;
+
+
+    while ( min < max )
+    {
+      mid = ( min + max ) >> 1;
+
+      if ( face->hdmx_records[mid][0] > ppem )
+        max = mid;
+      else if ( face->hdmx_records[mid][0] < ppem )
+        min = mid + 1;
+      else
+      {
+        result = face->hdmx_records[mid] + 2 + gindex;
+        break;
+      }
+    }
+
+    return result;
+  }
+
+
+/* END */
