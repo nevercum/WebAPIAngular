@@ -36,4 +36,41 @@
  */
 
 @ExpectedClass(className = "AccessToPrivateInnerClassConstructorsTest",
-        expectedMethods = {"<init>()", "main(java.lang.String[])", "f
+        expectedMethods = {"<init>()", "main(java.lang.String[])", "f()", "g()"})
+@ExpectedClass(className = "AccessToPrivateInnerClassConstructorsTest$1",
+        expectedMethods = {"<init>()"})
+@ExpectedClass(className = "AccessToPrivateInnerClassConstructorsTest$A",
+        expectedMethods = {
+                "<init>(AccessToPrivateInnerClassConstructorsTest)",
+                "<init>(AccessToPrivateInnerClassConstructorsTest, " +
+                       "AccessToPrivateInnerClassConstructorsTest$1)"},
+        expectedNumberOfSyntheticMethods = 0)
+@ExpectedClass(className = "AccessToPrivateInnerClassConstructorsTest$1Local",
+        expectedMethods = {"<init>(AccessToPrivateInnerClassConstructorsTest)"})
+@ExpectedClass(className = "AccessToPrivateInnerClassConstructorsTest$2Local",
+        expectedMethods = {"<init>(AccessToPrivateInnerClassConstructorsTest)"})
+public class AccessToPrivateInnerClassConstructorsTest {
+
+    public static void main(String... args) {
+        new AccessToPrivateInnerClassConstructorsTest().f();
+    }
+
+    private class A {
+        private A() { }
+        private A(AccessToPrivateInnerClassConstructorsTest$1 o) { }
+    }
+
+    void f() {
+        new A();
+        new A(null);
+
+        class Local {};
+        new Local();
+    }
+
+    void g() {
+        class Local {};
+        new Local();
+    }
+}
+class AccessToPrivateInnerClassConstructorsTest$1 {}
