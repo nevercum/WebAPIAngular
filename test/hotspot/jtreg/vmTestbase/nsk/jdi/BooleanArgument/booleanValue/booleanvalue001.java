@@ -174,3 +174,27 @@ public class booleanvalue001 {
                       "result: booleanValue() != false \n");
         }
 
+        argument.setValue("false");
+        argument.setValue(true);
+        if (!argument.booleanValue()) {
+            exitCode = exitCode2;
+            out.println(sErr2 +
+                      "check: true -> 'false' = true \n" +
+                      "result: booleanValue() != true \n");
+        }
+
+        argument.setValue("false");
+        argument.setValue(false);
+        if (argument.booleanValue()) {
+            exitCode = exitCode2;
+            out.println(sErr2 +
+                      "check: false -> 'false' = false \n" +
+                      "result: booleanValue() != false \n");
+        }
+
+        if (exitCode != exitCode0)
+            out.println("TEST FAILED");
+
+        return exitCode;
+    }
+}
