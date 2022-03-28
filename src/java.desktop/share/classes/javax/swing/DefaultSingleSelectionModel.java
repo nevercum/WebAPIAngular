@@ -135,4 +135,58 @@ Serializable {
      * is created lazily.
      * @see EventListenerList
      */
-    protected void fireStateChanged() 
+    protected void fireStateChanged() {
+        // Guaranteed to return a non-null array
+        Object[] listeners = listenerList.getListenerList();
+        // Process the listeners last to first, notifying
+        // those that are interested in this event
+        for (int i = listeners.length-2; i>=0; i-=2) {
+            if (listeners[i]==ChangeListener.class) {
+                // Lazily create the event:
+                if (changeEvent == null)
+                    changeEvent = new ChangeEvent(this);
+                ((ChangeListener)listeners[i+1]).stateChanged(changeEvent);
+            }
+        }
+    }
+
+    /**
+     * Returns an array of all the objects currently registered as
+     * <code><em>Foo</em>Listener</code>s
+     * upon this model.
+     * <code><em>Foo</em>Listener</code>s
+     * are registered using the <code>add<em>Foo</em>Listener</code> method.
+     * <p>
+     * You can specify the <code>listenerType</code> argument
+     * with a class literal, such as <code><em>Foo</em>Listener.class</code>.
+     * For example, you can query a <code>DefaultSingleSelectionModel</code>
+     * instance <code>m</code>
+     * for its change listeners
+     * with the following code:
+     *
+     * <pre>ChangeListener[] cls = (ChangeListener[])(m.getListeners(ChangeListener.class));</pre>
+     *
+     * If no such listeners exist,
+     * this method returns an empty array.
+     *
+     * @param <T>  the type of {@code EventListener} class being requested
+     * @param listenerType  the type of listeners requested;
+     *          this parameter should specify an interface
+     *          that descends from <code>java.util.EventListener</code>
+     * @return an array of all objects registered as
+     *          <code><em>Foo</em>Listener</code>s
+     *          on this model,
+     *          or an empty array if no such
+     *          listeners have been added
+     * @throws ClassCastException if <code>listenerType</code> doesn't
+     *          specify a class or interface that implements
+     *          <code>java.util.EventListener</code>
+     *
+     * @see #getChangeListeners
+     *
+     * @since 1.3
+     */
+    public <T extends EventListener> T[] getListeners(Class<T> listenerType) {
+        return listenerList.getListeners(listenerType);
+    }
+}
