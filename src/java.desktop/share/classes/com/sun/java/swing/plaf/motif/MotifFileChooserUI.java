@@ -159,4 +159,167 @@ public class MotifFileChooserUI extends BasicFileChooserUI {
         return pathField.getText();
     }
 
-    pub
+    public void setDirectoryName(String dirname) {
+        pathField.setText(dirname);
+    }
+
+    public void ensureFileIsVisible(JFileChooser fc, File f) {
+        // PENDING(jeff)
+    }
+
+    public void rescanCurrentDirectory(JFileChooser fc) {
+        getModel().validateFileCache();
+    }
+
+    public PropertyChangeListener createPropertyChangeListener(JFileChooser fc) {
+        return new PropertyChangeListener() {
+            public void propertyChange(PropertyChangeEvent e) {
+                String prop = e.getPropertyName();
+                if(prop.equals(JFileChooser.SELECTED_FILE_CHANGED_PROPERTY)) {
+                    File f = (File) e.getNewValue();
+                    if(f != null) {
+                        setFileName(getFileChooser().getName(f));
+                    }
+                } else if (prop.equals(JFileChooser.SELECTED_FILES_CHANGED_PROPERTY)) {
+                    File[] files = (File[]) e.getNewValue();
+                    JFileChooser fc = getFileChooser();
+                    if (files != null && files.length > 0 && (files.length > 1 || fc.isDirectorySelectionEnabled()
+                            || !files[0].isDirectory())) {
+                        setFileName(fileNameString(files));
+                    }
+                } else if (prop.equals(JFileChooser.FILE_FILTER_CHANGED_PROPERTY)) {
+                    fileList.clearSelection();
+                } else if(prop.equals(JFileChooser.DIRECTORY_CHANGED_PROPERTY)) {
+                    directoryList.clearSelection();
+                    ListSelectionModel sm = directoryList.getSelectionModel();
+                    if (sm instanceof DefaultListSelectionModel) {
+                        ((DefaultListSelectionModel)sm).moveLeadSelectionIndex(0);
+                        sm.setAnchorSelectionIndex(0);
+                    }
+                    fileList.clearSelection();
+                    sm = fileList.getSelectionModel();
+                    if (sm instanceof DefaultListSelectionModel) {
+                        ((DefaultListSelectionModel)sm).moveLeadSelectionIndex(0);
+                        sm.setAnchorSelectionIndex(0);
+                    }
+                    File currentDirectory = getFileChooser().getCurrentDirectory();
+                    if(currentDirectory != null) {
+                        try {
+                            setDirectoryName(ShellFolder.getNormalizedFile((File)e.getNewValue()).getPath());
+                        } catch (IOException ioe) {
+                            setDirectoryName(((File)e.getNewValue()).getAbsolutePath());
+                        }
+                        if ((getFileChooser().getFileSelectionMode() == JFileChooser.DIRECTORIES_ONLY) && !getFileChooser().isMultiSelectionEnabled()) {
+                            setFileName(getDirectoryName());
+                        }
+                    }
+                } else if(prop.equals(JFileChooser.FILE_SELECTION_MODE_CHANGED_PROPERTY)) {
+                    if (fileNameLabel != null) {
+                        populateFileNameLabel();
+                    }
+                    directoryList.clearSelection();
+                } else if (prop.equals(JFileChooser.MULTI_SELECTION_ENABLED_CHANGED_PROPERTY)) {
+                    if(getFileChooser().isMultiSelectionEnabled()) {
+                        fileList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+                    } else {
+                        fileList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                        fileList.clearSelection();
+                        getFileChooser().setSelectedFiles(null);
+                    }
+                } else if (prop.equals(JFileChooser.ACCESSORY_CHANGED_PROPERTY)) {
+                    if(getAccessoryPanel() != null) {
+                        if(e.getOldValue() != null) {
+                            getAccessoryPanel().remove((JComponent) e.getOldValue());
+                        }
+                        JComponent accessory = (JComponent) e.getNewValue();
+                        if(accessory != null) {
+                            getAccessoryPanel().add(accessory, BorderLayout.CENTER);
+                            getAccessoryPanel().setPreferredSize(PREF_ACC_SIZE);
+                            getAccessoryPanel().setMaximumSize(MAX_SIZE);
+                        } else {
+                            getAccessoryPanel().setPreferredSize(ZERO_ACC_SIZE);
+                            getAccessoryPanel().setMaximumSize(ZERO_ACC_SIZE);
+                        }
+                    }
+                } else if (prop.equals(JFileChooser.APPROVE_BUTTON_TEXT_CHANGED_PROPERTY) ||
+                        prop.equals(JFileChooser.APPROVE_BUTTON_TOOL_TIP_TEXT_CHANGED_PROPERTY) ||
+                        prop.equals(JFileChooser.DIALOG_TYPE_CHANGED_PROPERTY)) {
+                    approveButton.setText(getApproveButtonText(getFileChooser()));
+                    approveButton.setToolTipText(getApproveButtonToolTipText(getFileChooser()));
+                } else if (prop.equals(JFileChooser.CONTROL_BUTTONS_ARE_SHOWN_CHANGED_PROPERTY)) {
+                    doControlButtonsChanged(e);
+                } else if (prop.equals("componentOrientation")) {
+                    ComponentOrientation o = (ComponentOrientation)e.getNewValue();
+                    JFileChooser cc = (JFileChooser)e.getSource();
+                    if (o != (ComponentOrientation)e.getOldValue()) {
+                        cc.applyComponentOrientation(o);
+                    }
+                }
+            }
+        };
+    }
+
+    //
+    // ComponentUI Interface Implementation methods
+    //
+    public static ComponentUI createUI(JComponent c) {
+        return new MotifFileChooserUI((JFileChooser)c);
+    }
+
+    public void installUI(JComponent c) {
+        super.installUI(c);
+    }
+
+    public void uninstallUI(JComponent c) {
+        c.removePropertyChangeListener(filterComboBoxModel);
+        approveButton.removeActionListener(getApproveSelectionAction());
+        filenameTextField.removeActionListener(getApproveSelectionAction());
+        super.uninstallUI(c);
+    }
+
+    public void installComponents(JFileChooser fc) {
+        fc.setLayout(new BorderLayout(10, 10));
+        fc.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+
+        @SuppressWarnings("serial") // anonymous class
+        JPanel interior = new JPanel() {
+            public Insets getInsets() {
+                return insets;
+            }
+        };
+        interior.setInheritsPopupMenu(true);
+        align(interior);
+        interior.setLayout(new BoxLayout(interior, BoxLayout.PAGE_AXIS));
+
+        fc.add(interior, BorderLayout.CENTER);
+
+        // PENDING(jeff) - I18N
+        JLabel l = new JLabel(pathLabelText);
+        l.setDisplayedMnemonic(pathLabelMnemonic);
+        align(l);
+        interior.add(l);
+
+        File currentDirectory = fc.getCurrentDirectory();
+        String curDirName = null;
+        if(currentDirectory != null) {
+            curDirName = currentDirectory.getPath();
+        }
+
+        @SuppressWarnings("serial") // anonymous class
+        JTextField tmp1 = new JTextField(curDirName, 35) {
+            public Dimension getMaximumSize() {
+                Dimension d = super.getMaximumSize();
+                d.height = getPreferredSize().height;
+                return d;
+            }
+        };
+        pathField = tmp1;
+        pathField.setInheritsPopupMenu(true);
+        l.setLabelFor(pathField);
+        align(pathField);
+
+        // Change to folder on return
+        pathField.addActionListener(getUpdateAction());
+        interior.add(pathField);
+
+        interior.ad
