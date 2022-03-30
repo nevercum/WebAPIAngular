@@ -322,4 +322,197 @@ public class MotifFileChooserUI extends BasicFileChooserUI {
         pathField.addActionListener(getUpdateAction());
         interior.add(pathField);
 
-        interior.ad
+        interior.add(Box.createRigidArea(vstrut10));
+
+
+        // CENTER: left, right accessory
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.LINE_AXIS));
+        align(centerPanel);
+
+        // left panel - Filter & folderList
+        JPanel leftPanel = new JPanel();
+        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.PAGE_AXIS));
+        align(leftPanel);
+
+        // add the filter PENDING(jeff) - I18N
+        l = new JLabel(filterLabelText);
+        l.setDisplayedMnemonic(filterLabelMnemonic);
+        align(l);
+        leftPanel.add(l);
+
+        @SuppressWarnings("serial") // anonymous class
+        JComboBox<FileFilter> tmp2 = new JComboBox<FileFilter>() {
+            public Dimension getMaximumSize() {
+                Dimension d = super.getMaximumSize();
+                d.height = getPreferredSize().height;
+                return d;
+            }
+        };
+        filterComboBox = tmp2;
+        filterComboBox.setInheritsPopupMenu(true);
+        l.setLabelFor(filterComboBox);
+        filterComboBoxModel = createFilterComboBoxModel();
+        filterComboBox.setModel(filterComboBoxModel);
+        filterComboBox.setRenderer(createFilterComboBoxRenderer());
+        fc.addPropertyChangeListener(filterComboBoxModel);
+        align(filterComboBox);
+        leftPanel.add(filterComboBox);
+
+        // leftPanel.add(Box.createRigidArea(vstrut10));
+
+        // Add the Folder List PENDING(jeff) - I18N
+        l = new JLabel(foldersLabelText);
+        l.setDisplayedMnemonic(foldersLabelMnemonic);
+        align(l);
+        leftPanel.add(l);
+        JScrollPane sp = createDirectoryList();
+        sp.getVerticalScrollBar().setFocusable(false);
+        sp.getHorizontalScrollBar().setFocusable(false);
+        sp.setInheritsPopupMenu(true);
+        l.setLabelFor(sp.getViewport().getView());
+        leftPanel.add(sp);
+        leftPanel.setInheritsPopupMenu(true);
+
+
+        // create files list
+        JPanel rightPanel = new JPanel();
+        align(rightPanel);
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.PAGE_AXIS));
+        rightPanel.setInheritsPopupMenu(true);
+
+        l = new JLabel(filesLabelText);
+        l.setDisplayedMnemonic(filesLabelMnemonic);
+        align(l);
+        rightPanel.add(l);
+        sp = createFilesList();
+        l.setLabelFor(sp.getViewport().getView());
+        rightPanel.add(sp);
+        sp.setInheritsPopupMenu(true);
+
+        centerPanel.add(leftPanel);
+        centerPanel.add(Box.createRigidArea(hstrut10));
+        centerPanel.add(rightPanel);
+        centerPanel.setInheritsPopupMenu(true);
+
+        JComponent accessoryPanel = getAccessoryPanel();
+        JComponent accessory = fc.getAccessory();
+        if(accessoryPanel != null) {
+            if(accessory == null) {
+                accessoryPanel.setPreferredSize(ZERO_ACC_SIZE);
+                accessoryPanel.setMaximumSize(ZERO_ACC_SIZE);
+            } else {
+                getAccessoryPanel().add(accessory, BorderLayout.CENTER);
+                accessoryPanel.setPreferredSize(PREF_ACC_SIZE);
+                accessoryPanel.setMaximumSize(MAX_SIZE);
+            }
+            align(accessoryPanel);
+            centerPanel.add(accessoryPanel);
+            accessoryPanel.setInheritsPopupMenu(true);
+        }
+        interior.add(centerPanel);
+        interior.add(Box.createRigidArea(vstrut10));
+
+        // add the filename field PENDING(jeff) - I18N
+        fileNameLabel = new JLabel();
+        populateFileNameLabel();
+        align(fileNameLabel);
+        interior.add(fileNameLabel);
+
+        @SuppressWarnings("serial") // anonymous class
+        JTextField tmp3 = new JTextField(35) {
+            public Dimension getMaximumSize() {
+                Dimension d = super.getMaximumSize();
+                d.height = getPreferredSize().height;
+                return d;
+            }
+        };
+        filenameTextField = tmp3;
+        filenameTextField.setInheritsPopupMenu(true);
+        fileNameLabel.setLabelFor(filenameTextField);
+        filenameTextField.addActionListener(getApproveSelectionAction());
+        align(filenameTextField);
+        filenameTextField.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        interior.add(filenameTextField);
+
+        bottomPanel = getBottomPanel();
+        bottomPanel.add(new JSeparator(), BorderLayout.NORTH);
+
+        // Add buttons
+        JPanel buttonPanel = new JPanel();
+        align(buttonPanel);
+        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.LINE_AXIS));
+        buttonPanel.add(Box.createGlue());
+
+        @SuppressWarnings("serial") // anonymous class
+        JButton tmp4 = new JButton(getApproveButtonText(fc)) {
+            public Dimension getMaximumSize() {
+                return new Dimension(MAX_SIZE.width, this.getPreferredSize().height);
+            }
+        };
+        approveButton = tmp4;
+        approveButton.setMnemonic(getApproveButtonMnemonic(fc));
+        approveButton.setToolTipText(getApproveButtonToolTipText(fc));
+        approveButton.setInheritsPopupMenu(true);
+        align(approveButton);
+        approveButton.setMargin(buttonMargin);
+        approveButton.addActionListener(getApproveSelectionAction());
+        buttonPanel.add(approveButton);
+        buttonPanel.add(Box.createGlue());
+
+        @SuppressWarnings("serial") // anonymous class
+        JButton updateButton = new JButton(updateButtonText) {
+            public Dimension getMaximumSize() {
+                return new Dimension(MAX_SIZE.width, this.getPreferredSize().height);
+            }
+        };
+        updateButton.setMnemonic(updateButtonMnemonic);
+        updateButton.setToolTipText(updateButtonToolTipText);
+        updateButton.setInheritsPopupMenu(true);
+        align(updateButton);
+        updateButton.setMargin(buttonMargin);
+        updateButton.addActionListener(getUpdateAction());
+        buttonPanel.add(updateButton);
+        buttonPanel.add(Box.createGlue());
+
+        @SuppressWarnings("serial") // anonymous class
+        JButton cancelButton = new JButton(cancelButtonText) {
+            public Dimension getMaximumSize() {
+                return new Dimension(MAX_SIZE.width, this.getPreferredSize().height);
+            }
+        };
+        cancelButton.setMnemonic(cancelButtonMnemonic);
+        cancelButton.setToolTipText(cancelButtonToolTipText);
+        cancelButton.setInheritsPopupMenu(true);
+        align(cancelButton);
+        cancelButton.setMargin(buttonMargin);
+        cancelButton.addActionListener(getCancelSelectionAction());
+        buttonPanel.add(cancelButton);
+        buttonPanel.add(Box.createGlue());
+
+        @SuppressWarnings("serial") // anonymous class
+        JButton helpButton = new JButton(helpButtonText) {
+            public Dimension getMaximumSize() {
+                return new Dimension(MAX_SIZE.width, this.getPreferredSize().height);
+            }
+        };
+        helpButton.setMnemonic(helpButtonMnemonic);
+        helpButton.setToolTipText(helpButtonToolTipText);
+        align(helpButton);
+        helpButton.setMargin(buttonMargin);
+        helpButton.setEnabled(false);
+        helpButton.setInheritsPopupMenu(true);
+        buttonPanel.add(helpButton);
+        buttonPanel.add(Box.createGlue());
+        buttonPanel.setInheritsPopupMenu(true);
+
+        bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
+        bottomPanel.setInheritsPopupMenu(true);
+        if (fc.getControlButtonsAreShown()) {
+           fc.add(bottomPanel, BorderLayout.SOUTH);
+        }
+    }
+
+    protected JPanel getBottomPanel() {
+        if (bottomPanel == null) {
+            bottomPanel = new JPanel(new BorderLa
