@@ -705,4 +705,169 @@ public class MotifFileChooserUI extends BasicFileChooserUI {
         // PENDING(jeff) - this is inefficient - should sent out
         // incremental adjustment values instead of saying that the
         // whole list has changed.
-        public
+        public void fireContentsChanged() {
+            fireContentsChanged(this, 0, getModel().getDirectories().size()-1);
+        }
+
+        // PENDING(jeff) - fire the correct interval changed - currently sending
+        // out that everything has changed
+        public void contentsChanged(ListDataEvent e) {
+            fireContentsChanged();
+        }
+
+    }
+
+    @SuppressWarnings("serial") // Superclass is not serializable across versions
+    protected class MotifFileListModel extends AbstractListModel<File> implements ListDataListener {
+        public MotifFileListModel() {
+            getModel().addListDataListener(this);
+        }
+
+        public int getSize() {
+            return getModel().getFiles().size();
+        }
+
+        public boolean contains(Object o) {
+            return getModel().getFiles().contains(o);
+        }
+
+        public int indexOf(Object o) {
+            return getModel().getFiles().indexOf(o);
+        }
+
+        public File getElementAt(int index) {
+            return getModel().getFiles().elementAt(index);
+        }
+
+        public void intervalAdded(ListDataEvent e) {
+            fireIntervalAdded(this, e.getIndex0(), e.getIndex1());
+        }
+
+        public void intervalRemoved(ListDataEvent e) {
+            fireIntervalRemoved(this, e.getIndex0(), e.getIndex1());
+        }
+
+        // PENDING(jeff) - this is inefficient - should sent out
+        // incremental adjustment values instead of saying that the
+        // whole list has changed.
+        public void fireContentsChanged() {
+            fireContentsChanged(this, 0, getModel().getFiles().size()-1);
+        }
+
+        // PENDING(jeff) - fire the interval changed
+        public void contentsChanged(ListDataEvent e) {
+            fireContentsChanged();
+        }
+
+    }
+
+    //
+    // DataModel for Types Comboxbox
+    //
+    protected FilterComboBoxModel createFilterComboBoxModel() {
+        return new FilterComboBoxModel();
+    }
+
+    //
+    // Renderer for Types ComboBox
+    //
+    protected FilterComboBoxRenderer createFilterComboBoxRenderer() {
+        return new FilterComboBoxRenderer();
+    }
+
+
+    /**
+     * Render different type sizes and styles.
+     */
+    @SuppressWarnings("serial") // Superclass is not serializable across versions
+    public class FilterComboBoxRenderer extends DefaultListCellRenderer {
+        public Component getListCellRendererComponent(JList<?> list,
+            Object value, int index, boolean isSelected,
+            boolean cellHasFocus) {
+
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+            if (value instanceof FileFilter fileFilter) {
+                setText(fileFilter.getDescription());
+            }
+
+            return this;
+        }
+    }
+
+    /**
+     * Data model for a type-face selection combo-box.
+     */
+    @SuppressWarnings("serial") // Superclass is not serializable across versions
+    protected class FilterComboBoxModel extends AbstractListModel<FileFilter> implements ComboBoxModel<FileFilter>,
+            PropertyChangeListener {
+        protected FileFilter[] filters;
+        protected FilterComboBoxModel() {
+            super();
+            filters = getFileChooser().getChoosableFileFilters();
+        }
+
+        public void propertyChange(PropertyChangeEvent e) {
+            String prop = e.getPropertyName();
+            if(prop.equals(JFileChooser.CHOOSABLE_FILE_FILTER_CHANGED_PROPERTY)) {
+                filters = (FileFilter[]) e.getNewValue();
+                fireContentsChanged(this, -1, -1);
+            } else if (prop.equals(JFileChooser.FILE_FILTER_CHANGED_PROPERTY)) {
+                fireContentsChanged(this, -1, -1);
+            }
+        }
+
+        public void setSelectedItem(Object filter) {
+            if(filter != null) {
+                getFileChooser().setFileFilter((FileFilter) filter);
+                fireContentsChanged(this, -1, -1);
+            }
+        }
+
+        public Object getSelectedItem() {
+            // Ensure that the current filter is in the list.
+            // NOTE: we shouldnt' have to do this, since JFileChooser adds
+            // the filter to the choosable filters list when the filter
+            // is set. Lets be paranoid just in case someone overrides
+            // setFileFilter in JFileChooser.
+            FileFilter currentFilter = getFileChooser().getFileFilter();
+            boolean found = false;
+            if(currentFilter != null) {
+                for (FileFilter filter : filters) {
+                    if (filter == currentFilter) {
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    getFileChooser().addChoosableFileFilter(currentFilter);
+                }
+            }
+            return getFileChooser().getFileFilter();
+        }
+
+        public int getSize() {
+            if(filters != null) {
+                return filters.length;
+            } else {
+                return 0;
+            }
+        }
+
+        public FileFilter getElementAt(int index) {
+            if(index > getSize() - 1) {
+                // This shouldn't happen. Try to recover gracefully.
+                return getFileChooser().getFileFilter();
+            }
+            if(filters != null) {
+                return filters[index];
+            } else {
+                return null;
+            }
+        }
+    }
+
+    protected JButton getApproveButton(JFileChooser fc) {
+        return approveButton;
+    }
+
+}
