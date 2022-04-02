@@ -515,4 +515,194 @@ public class MotifFileChooserUI extends BasicFileChooserUI {
 
     protected JPanel getBottomPanel() {
         if (bottomPanel == null) {
-            bottomPanel = new JPanel(new BorderLa
+            bottomPanel = new JPanel(new BorderLayout(0, 4));
+        }
+        return bottomPanel;
+    }
+
+    private void doControlButtonsChanged(PropertyChangeEvent e) {
+        if (getFileChooser().getControlButtonsAreShown()) {
+            getFileChooser().add(bottomPanel,BorderLayout.SOUTH);
+        } else {
+            getFileChooser().remove(getBottomPanel());
+        }
+    }
+
+    public void uninstallComponents(JFileChooser fc) {
+        fc.removeAll();
+        bottomPanel = null;
+        if (filterComboBoxModel != null) {
+            fc.removePropertyChangeListener(filterComboBoxModel);
+        }
+    }
+
+    protected void installStrings(JFileChooser fc) {
+        super.installStrings(fc);
+
+        Locale l = fc.getLocale();
+
+        enterFolderNameLabelText = UIManager.getString("FileChooser.enterFolderNameLabelText",l);
+        enterFolderNameLabelMnemonic = getMnemonic("FileChooser.enterFolderNameLabelMnemonic", l);
+        enterFileNameLabelText = UIManager.getString("FileChooser.enterFileNameLabelText",l);
+        enterFileNameLabelMnemonic = getMnemonic("FileChooser.enterFileNameLabelMnemonic", l);
+
+        filesLabelText = UIManager.getString("FileChooser.filesLabelText",l);
+        filesLabelMnemonic = getMnemonic("FileChooser.filesLabelMnemonic", l);
+
+        foldersLabelText = UIManager.getString("FileChooser.foldersLabelText",l);
+        foldersLabelMnemonic = getMnemonic("FileChooser.foldersLabelMnemonic", l);
+
+        pathLabelText = UIManager.getString("FileChooser.pathLabelText",l);
+        pathLabelMnemonic = getMnemonic("FileChooser.pathLabelMnemonic", l);
+
+        filterLabelText = UIManager.getString("FileChooser.filterLabelText",l);
+        filterLabelMnemonic = getMnemonic("FileChooser.filterLabelMnemonic", l);
+    }
+
+    private Integer getMnemonic(String key, Locale l) {
+        return SwingUtilities2.getUIDefaultsInt(key, l);
+    }
+
+    protected void installIcons(JFileChooser fc) {
+        // Since motif doesn't have button icons, leave this empty
+        // which overrides the supertype icon loading
+    }
+
+    protected void uninstallIcons(JFileChooser fc) {
+        // Since motif doesn't have button icons, leave this empty
+        // which overrides the supertype icon loading
+    }
+
+    protected JScrollPane createFilesList() {
+        fileList = new JList<File>();
+
+        if(getFileChooser().isMultiSelectionEnabled()) {
+            fileList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        } else {
+            fileList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        }
+
+        fileList.setModel(new MotifFileListModel());
+        fileList.getSelectionModel().removeSelectionInterval(0, 0);
+        fileList.setCellRenderer(new FileCellRenderer());
+        fileList.addListSelectionListener(createListSelectionListener(getFileChooser()));
+        fileList.addMouseListener(createDoubleClickListener(getFileChooser(), fileList));
+        fileList.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) {
+                JFileChooser chooser = getFileChooser();
+                if (SwingUtilities.isLeftMouseButton(e) && !chooser.isMultiSelectionEnabled()) {
+                    int index = SwingUtilities2.loc2IndexFileList(fileList, e.getPoint());
+                    if (index >= 0) {
+                        File file = fileList.getModel().getElementAt(index);
+                        setFileName(chooser.getName(file));
+                    }
+                }
+            }
+        });
+        align(fileList);
+        JScrollPane scrollpane = new JScrollPane(fileList);
+        scrollpane.setPreferredSize(prefListSize);
+        scrollpane.setMaximumSize(MAX_SIZE);
+        align(scrollpane);
+        fileList.setInheritsPopupMenu(true);
+        scrollpane.setInheritsPopupMenu(true);
+        return scrollpane;
+    }
+
+    protected JScrollPane createDirectoryList() {
+        directoryList = new JList<File>();
+        align(directoryList);
+
+        directoryList.setCellRenderer(new DirectoryCellRenderer());
+        directoryList.setModel(new MotifDirectoryListModel());
+        directoryList.getSelectionModel().removeSelectionInterval(0, 0);
+        directoryList.addMouseListener(createDoubleClickListener(getFileChooser(), directoryList));
+        directoryList.addListSelectionListener(createListSelectionListener(getFileChooser()));
+        directoryList.setInheritsPopupMenu(true);
+
+        JScrollPane scrollpane = new JScrollPane(directoryList);
+        scrollpane.setMaximumSize(MAX_SIZE);
+        scrollpane.setPreferredSize(prefListSize);
+        scrollpane.setInheritsPopupMenu(true);
+        align(scrollpane);
+        return scrollpane;
+    }
+
+    @Override
+    public Dimension getPreferredSize(JComponent c) {
+        Dimension prefSize =
+            (getFileChooser().getAccessory() != null) ? WITH_ACCELERATOR_PREF_SIZE : PREF_SIZE;
+        Dimension d = c.getLayout().preferredLayoutSize(c);
+        if (d != null) {
+            return new Dimension(d.width < prefSize.width ? prefSize.width : d.width,
+                                 d.height < prefSize.height ? prefSize.height : d.height);
+        } else {
+            return prefSize;
+        }
+    }
+
+    @Override
+    public Dimension getMinimumSize(JComponent x) {
+        return new Dimension(MIN_WIDTH, MIN_HEIGHT);
+    }
+
+    @Override
+    public Dimension getMaximumSize(JComponent x) {
+        return new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE);
+    }
+
+    protected void align(JComponent c) {
+        c.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        c.setAlignmentY(JComponent.TOP_ALIGNMENT);
+    }
+
+    @SuppressWarnings("serial") // Superclass is not serializable across versions
+    protected class FileCellRenderer extends DefaultListCellRenderer  {
+        public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                      boolean isSelected, boolean cellHasFocus) {
+
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            setText(getFileChooser().getName((File) value));
+            setInheritsPopupMenu(true);
+            return this;
+        }
+    }
+
+    @SuppressWarnings("serial") // Superclass is not serializable across versions
+    protected class DirectoryCellRenderer extends DefaultListCellRenderer  {
+        public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                      boolean isSelected, boolean cellHasFocus) {
+
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            setText(getFileChooser().getName((File) value));
+            setInheritsPopupMenu(true);
+            return this;
+        }
+    }
+
+    @SuppressWarnings("serial") // Superclass is not serializable across versions
+    protected class MotifDirectoryListModel extends AbstractListModel<File> implements ListDataListener {
+        public MotifDirectoryListModel() {
+            getModel().addListDataListener(this);
+        }
+
+        public int getSize() {
+            return getModel().getDirectories().size();
+        }
+
+        public File getElementAt(int index) {
+            return getModel().getDirectories().elementAt(index);
+        }
+
+        public void intervalAdded(ListDataEvent e) {
+            fireIntervalAdded(this, e.getIndex0(), e.getIndex1());
+        }
+
+        public void intervalRemoved(ListDataEvent e) {
+            fireIntervalRemoved(this, e.getIndex0(), e.getIndex1());
+        }
+
+        // PENDING(jeff) - this is inefficient - should sent out
+        // incremental adjustment values instead of saying that the
+        // whole list has changed.
+        public
