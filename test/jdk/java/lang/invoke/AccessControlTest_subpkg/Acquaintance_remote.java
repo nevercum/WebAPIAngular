@@ -21,4 +21,22 @@ public class Acquaintance_remote {
     static /*package*/ void pkg_in_remote() { }
     private static     void pri_in_remote() { }
 
-    public static class 
+    public static class Remote_subclass extends AccessControlTest {
+        static Lookup lookup_in_subclass() {
+            return MethodHandles.lookup();
+        }
+        public static      void pub_in_subclass() { }
+        protected static   void pro_in_subclass() { }
+        static /*package*/ void pkg_in_subclass() { }
+        private static     void pri_in_subclass() { }
+    }
+    static /*package*/ class Remote_hidden {
+        static Lookup lookup_in_hidden() {
+            return MethodHandles.lookup();
+        }
+        public static      void pub_in_hidden() { }
+        protected static   void pro_in_hidden() { }
+        static /*package*/ void pkg_in_hidden() { }
+        private static     void pri_in_hidden() { }
+    }
+}
