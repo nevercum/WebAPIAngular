@@ -70,4 +70,37 @@ public class TestRecordedEvent {
 
             List<ValueDescriptor> descriptors = event.getFields();
 
-            Sys
+            System.out.println("Descriptors");
+            for (ValueDescriptor descriptor : descriptors) {
+                System.out.println(descriptor.getName());
+                System.out.println(descriptor.getTypeName());
+            }
+            System.out.println("Descriptors end");
+
+            Object recordedClass = event.getValue("clzField");
+            Asserts.assertTrue(recordedClass instanceof RecordedClass, "Expected Recorded Class got " + recordedClass);
+
+            Object recordedInt = event.getValue("intField");
+            Asserts.assertTrue(recordedInt instanceof Integer);
+
+            Object recordedString = event.getValue("stringField");
+            System.out.println("recordedString class: " + recordedString.getClass());
+            Asserts.assertTrue(recordedString instanceof String);
+
+            Object myClass = event.getValue("myClass");
+            Asserts.assertTrue(myClass instanceof RecordedClass, "Expected Recorded Class got " + recordedClass);
+
+            RecordedClass myRecClass = (RecordedClass) myClass;
+            Asserts.assertEquals(MyClass.class.getName(), myRecClass.getName(), "Got " + myRecClass.getName());
+
+            Object recordedClassLoader = myRecClass.getValue("classLoader");
+            Asserts.assertTrue(recordedClassLoader instanceof RecordedClassLoader, "Expected Recorded ClassLoader got " + recordedClassLoader);
+
+            RecordedClassLoader myRecClassLoader = (RecordedClassLoader) recordedClassLoader;
+            ClassLoader cl = MyClass.class.getClassLoader();
+            Asserts.assertEquals(cl.getClass().getName(), myRecClassLoader.getType().getName(), "Expected Recorded ClassLoader type to equal loader type");
+
+            Asserts.assertNotNull(myRecClass.getModifiers());
+        }
+    }
+}
