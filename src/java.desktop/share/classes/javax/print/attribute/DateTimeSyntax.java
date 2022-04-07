@@ -106,3 +106,34 @@ public abstract class DateTimeSyntax implements Serializable, Cloneable {
      * object. To be equivalent, all of the following conditions must be true:
      * <ol type=1>
      *   <li>{@code object} is not {@code null}.
+     *   <li>{@code object} is an instance of class {@code DateTimeSyntax}.
+     *   <li>This date-time attribute's {@code java.util.Date} value and
+     *   {@code object}'s {@code java.util.Date} value are equal.
+     * </ol>
+     *
+     * @param  object {@code Object} to compare to
+     * @return {@code true} if {@code object} is equivalent to this date-time
+     *         attribute, {@code false} otherwise
+     */
+    public boolean equals(Object object) {
+        return object instanceof DateTimeSyntax other &&
+                value.equals(other.value);
+    }
+
+    /**
+     * Returns a hash code value for this date-time attribute. The hashcode is
+     * that of this attribute's {@code java.util.Date} value.
+     */
+    public int hashCode() {
+        return value.hashCode();
+    }
+
+    /**
+     * Returns a string value corresponding to this date-time attribute. The
+     * string value is just this attribute's {@code java.util.Date} value
+     * converted to a string.
+     */
+    public String toString() {
+        return "" + value;
+    }
+}
