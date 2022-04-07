@@ -335,4 +335,261 @@ bool DirectivesParser::set_option_flag(JSON_TYPE t, JSON_VAL* v, const key* opti
             return false;
           }
         } else if (strncmp(option_key->name, "PrintIdealPhase", 15) == 0) {
-          uint6
+          uint64_t mask = 0;
+          PhaseNameValidator validator(s, mask);
+
+          if (!validator.is_valid()) {
+            error(VALUE_ERROR, "Unrecognized phase name detected in PrintIdealPhase: %s", validator.what());
+            return false;
+          }
+          set->set_ideal_phase_mask(mask);
+        }
+      }
+      break;
+
+    default:
+      assert(0, "Should not reach here.");
+    }
+  return true;
+}
+
+bool DirectivesParser::set_option(JSON_TYPE t, JSON_VAL* v) {
+
+  const key* option_key = pop_key();
+  const key* enclosing_key = current_key();
+
+  if (option_key->type == value_array_key.type) {
+    // Multi value array, we are really setting the value
+    // for the key one step further up.
+    option_key = pop_key();
+    enclosing_key = current_key();
+
+    // Repush option_key and multi value marker, since
+    // we need to keep them until all multi values are set.
+    push_key(option_key);
+    push_key(&value_array_key);
+  }
+
+  switch (option_key->type) {
+  case type_flag:
+  {
+    if (current_directiveset == nullptr) {
+      assert(depth == 2, "Must not have active directive set");
+
+      if (!set_option_flag(t, v, option_key, current_directive->_c1_store)) {
+        return false;
+      }
+      if (!set_option_flag(t, v, option_key, current_directive->_c2_store)) {
+        return false;
+      }
+    } else {
+      assert(depth > 2, "Must have active current directive set");
+      if (!set_option_flag(t, v, option_key, current_directiveset)) {
+        return false;
+      }
+    }
+    break;
+  }
+
+  case type_match:
+    if (t != JSON_STRING) {
+      error(VALUE_ERROR, "Key of type %s needs a value of type string", option_key->name);
+      return false;
+    }
+    if (enclosing_key->type != type_directives) {
+      error(SYNTAX_ERROR, "Match keyword can only exist inside a directive");
+      return false;
+    }
+    {
+      char* s = NEW_C_HEAP_ARRAY(char, v->str.length + 1, mtCompiler);
+      strncpy(s, v->str.start, v->str.length);
+      s[v->str.length] = '\0';
+
+      const char* error_msg = nullptr;
+      if (!current_directive->add_match(s, error_msg)) {
+        assert (error_msg != nullptr, "Must have valid error message");
+        error(VALUE_ERROR, "Method pattern error: %s", error_msg);
+      }
+      FREE_C_HEAP_ARRAY(char, s);
+    }
+    break;
+
+  case type_inline:
+    if (t != JSON_STRING) {
+      error(VALUE_ERROR, "Key of type %s needs a value of type string", option_key->name);
+      return false;
+    }
+    {
+      //char* s = strndup(v->str.start, v->str.length);
+      char* s = NEW_C_HEAP_ARRAY(char, v->str.length + 1, mtCompiler);
+      strncpy(s, v->str.start, v->str.length);
+      s[v->str.length] = '\0';
+
+      const char* error_msg = nullptr;
+      if (current_directiveset == nullptr) {
+        if (current_directive->_c1_store->parse_and_add_inline(s, error_msg)) {
+          if (!current_directive->_c2_store->parse_and_add_inline(s, error_msg)) {
+            assert (error_msg != nullptr, "Must have valid error message");
+            error(VALUE_ERROR, "Method pattern error: %s", error_msg);
+          }
+        } else {
+          assert (error_msg != nullptr, "Must have valid error message");
+          error(VALUE_ERROR, "Method pattern error: %s", error_msg);
+        }
+      } else {
+        if (!current_directiveset->parse_and_add_inline(s, error_msg)) {
+          assert (error_msg != nullptr, "Must have valid error message");
+          error(VALUE_ERROR, "Method pattern error: %s", error_msg);
+        }
+      }
+      FREE_C_HEAP_ARRAY(char, s);
+    }
+    break;
+
+  case type_c1:
+    current_directiveset = current_directive->_c1_store;
+    if (t != JSON_TRUE && t != JSON_FALSE) {
+      error(VALUE_ERROR, "Key of type %s needs a true or false value", option_key->name);
+      return false;
+    }
+    break;
+
+  case type_c2:
+    current_directiveset = current_directive->_c2_store;
+    if (t != JSON_TRUE && t != JSON_FALSE) {
+      error(VALUE_ERROR, "Key of type %s needs a true or false value", option_key->name);
+      return false;
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  return true;
+}
+
+bool DirectivesParser::callback(JSON_TYPE t, JSON_VAL* v, uint rlimit) {
+  const key* k;
+
+  if (depth == 0) {
+    switch (t) {
+      case JSON_ARRAY_BEGIN:
+        return push_key(&dir_array_key);
+
+      case JSON_OBJECT_BEGIN:
+        // push synthetic dir_array
+        push_key(&dir_array_key);
+        assert(depth == 1, "Make sure the stack are aligned with the directives");
+        break;
+
+      default:
+        error(SYNTAX_ERROR, "DirectivesParser can only start with an array containing directive objects, or one single directive.");
+        return false;
+      }
+  }
+  if (depth == 1) {
+    switch (t) {
+      case JSON_OBJECT_BEGIN:
+        // Parsing a new directive.
+        current_directive = new CompilerDirectives();
+        return push_key(&dir_key);
+
+      case JSON_ARRAY_END:
+        k = pop_key();
+
+        if (k->type != type_dir_array) {
+          error(SYNTAX_ERROR, "Expected end of directives array");
+          return false;
+        }
+        return true;
+
+    default:
+      error(SYNTAX_ERROR, "DirectivesParser can only start with an array containing directive objects, or one single directive.");
+      return false;
+    }
+  } else {
+    switch (t) {
+    case JSON_OBJECT_BEGIN:
+      k = current_key();
+      switch (k->type) {
+      case type_c1:
+        current_directiveset = current_directive->_c1_store;
+        return true;
+      case type_c2:
+        current_directiveset = current_directive->_c2_store;
+        return true;
+
+      case type_dir_array:
+        return push_key(&dir_key);
+
+      default:
+        error(SYNTAX_ERROR, "The key '%s' does not allow an object to follow.", k->name);
+        return false;
+      }
+      return false;
+
+    case JSON_OBJECT_END:
+      k = pop_key();
+      switch (k->type) {
+      case type_c1:
+      case type_c2:
+        // This is how we now if options apply to a single or both directive sets
+        current_directiveset = nullptr;
+        break;
+
+      case type_directives:
+        // Check, finish and push to stack!
+        if (current_directive->match() == nullptr) {
+          error(INTERNAL_ERROR, "Directive missing required match.");
+          return false;
+        }
+        current_directive->finalize(_st);
+        push_tmp(current_directive);
+        current_directive = nullptr;
+        break;
+
+      default:
+        error(INTERNAL_ERROR, "Object end with wrong key type on stack: %s.", k->name);
+        ShouldNotReachHere();
+        return false;
+      }
+      return true;
+
+    case JSON_ARRAY_BEGIN:
+      k = current_key();
+      if (!(k->allow_array_value)) {
+        if (k->type == type_dir_array) {
+          error(SYNTAX_ERROR, "Array not allowed inside top level array, expected directive object.");
+        } else {
+          error(VALUE_ERROR, "The key '%s' does not allow an array of values.", k->name);
+        }
+        return false;
+      }
+      return push_key(&value_array_key);
+
+    case JSON_ARRAY_END:
+      k = pop_key(); // Pop multi value marker
+      assert(k->type == value_array_key.type, "array end for level != 0 should terminate multi value");
+      k = pop_key(); // Pop key for option that was set
+      return true;
+
+    case JSON_KEY:
+      return push_key(v->str.start, v->str.length);
+
+    case JSON_STRING:
+    case JSON_NUMBER_INT:
+    case JSON_NUMBER_FLOAT:
+    case JSON_TRUE:
+    case JSON_FALSE:
+    case JSON_NULL:
+      return set_option(t, v);
+
+    default:
+      error(INTERNAL_ERROR, "Unknown JSON type: %d.", t);
+      ShouldNotReachHere();
+      return false;
+    }
+  }
+}
+
