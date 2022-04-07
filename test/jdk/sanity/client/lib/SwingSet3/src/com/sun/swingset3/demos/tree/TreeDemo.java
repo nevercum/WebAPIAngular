@@ -121,4 +121,23 @@ public class TreeDemo extends JPanel {
                             record.add(new DefaultMutableTreeNode(line.substring(2)));
                         }
                         break;
-             
+                    default:
+                        break;
+                }
+                line = reader.readLine();
+            }
+        } catch (IOException ignored) {
+        }
+
+        JTree tree = new JTree(top) {
+            @Override
+            public Insets getInsets() {
+                return new Insets(5, 5, 5, 5);
+            }
+        };
+
+        tree.setEditable(true);
+
+        return tree;
+    }
+}
