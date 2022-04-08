@@ -185,4 +185,26 @@ public abstract class MXBeanMapping {
     throws InvalidObjectException;
 
     /**
-     * <p
+     * <p>Convert an instance of the Java type into the Open Type.
+     * @param javaValue the value to be converted.
+     * @return the converted value.
+     * @throws OpenDataException if the value cannot be converted.
+     */
+    public abstract Object toOpenValue(Object javaValue)
+    throws OpenDataException;
+
+
+    /**
+     * <p>Throw an appropriate InvalidObjectException if we will not
+     * be able to convert back from the open data to the original Java
+     * object.  The {@link #fromOpenValue fromOpenValue} throws an
+     * exception if a given open data value cannot be converted.  This
+     * method throws an exception if <em>no</em> open data values can
+     * be converted.  The default implementation of this method never
+     * throws an exception.  Subclasses can override it as
+     * appropriate.</p>
+     * @throws InvalidObjectException if {@code fromOpenValue} will throw
+     * an exception no matter what its argument is.
+     */
+    public void checkReconstructible() throws InvalidObjectException {}
+}
