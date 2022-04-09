@@ -158,4 +158,63 @@ public enum MemberFactory implements Function<Class<?>, AccessibleObject> {
                 try {
                     return declaringClass.getDeclaredConstructor(factory.parameterTypes);
                 } catch (NoSuchMethodException e) {
-                    // a fault in test - fail fa
+                    // a fault in test - fail fast
+                    throw new RuntimeException(e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * We define groups of MemberFactory(s) for members that commonly
+     * exhibit same access restrictions in various cases in order to allow
+     * specifying groups instead of individual members in the test cases,
+     * making them less verbose.
+     */
+    public enum Group {
+        // all members
+        ALL(MemberFactory.values()),
+        // all private members
+        PRIVATE_MEMBERS(PRIVATE_INSTANCE_FIELD, PRIVATE_INSTANCE_METHOD,
+                        PRIVATE_STATIC_FIELD, PRIVATE_STATIC_METHOD,
+                        PRIVATE_CONSTRUCTOR),
+        // all package members
+        PACKAGE_MEMBERS(PACKAGE_INSTANCE_FIELD, PACKAGE_INSTANCE_METHOD,
+                        PACKAGE_STATIC_FIELD, PACKAGE_STATIC_METHOD,
+                        PACKAGE_CONSTRUCTOR),
+        // all protected members
+        PROTECTED_MEMBERS(PROTECTED_INSTANCE_FIELD, PROTECTED_INSTANCE_METHOD,
+                          PROTECTED_STATIC_FIELD, PROTECTED_STATIC_METHOD,
+                          PROTECTED_CONSTRUCTOR),
+        // all public members
+        PUBLIC_MEMBERS(PUBLIC_INSTANCE_FIELD, PUBLIC_INSTANCE_METHOD,
+                       PUBLIC_STATIC_FIELD, PUBLIC_STATIC_METHOD,
+                       PUBLIC_CONSTRUCTOR),
+        // instance field and method pairs
+        PRIVATE_INSTANCE_F_M(PRIVATE_INSTANCE_FIELD, PRIVATE_INSTANCE_METHOD),
+        PACKAGE_INSTANCE_F_M(PACKAGE_INSTANCE_FIELD, PACKAGE_INSTANCE_METHOD),
+        PROTECTED_INSTANCE_F_M(PROTECTED_INSTANCE_FIELD, PROTECTED_INSTANCE_METHOD),
+        PUBLIC_INSTANCE_F_M(PUBLIC_INSTANCE_FIELD, PUBLIC_INSTANCE_METHOD),
+        // static field and method pairs
+        PRIVATE_STATIC_F_M(PRIVATE_STATIC_FIELD, PRIVATE_STATIC_METHOD),
+        PACKAGE_STATIC_F_M(PACKAGE_STATIC_FIELD, PACKAGE_STATIC_METHOD),
+        PROTECTED_STATIC_F_M(PROTECTED_STATIC_FIELD, PROTECTED_STATIC_METHOD),
+        PUBLIC_STATIC_F_M(PUBLIC_STATIC_FIELD, PUBLIC_STATIC_METHOD),
+        // constructor singles
+        PRIVATE_C(PRIVATE_CONSTRUCTOR),
+        PACKAGE_C(PACKAGE_CONSTRUCTOR),
+        PROTECTED_C(PROTECTED_CONSTRUCTOR),
+        PUBLIC_C(PUBLIC_CONSTRUCTOR);
+
+        final EnumSet<MemberFactory> members;
+
+        Group(MemberFactory... members) {
+            this.members = EnumSet.copyOf(Arrays.asList(members));
+        }
+
+        public static EnumSet<Group> asSet(Group... groups) {
+            return groups.length == 0 ? EnumSet.noneOf(Group.class)
+                                      : EnumSet.copyOf(Arrays.asList(groups));
+        }
+    }
+}
