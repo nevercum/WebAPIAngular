@@ -76,4 +76,33 @@ public class EmptyCollectionSerialization {
     }
 
     @DataProvider(name = "SerializableSingletons", parallel = true)
-    public static Iterator<Object[]> navigableMapProvider
+    public static Iterator<Object[]> navigableMapProvider() {
+        return makeSingletons().iterator();
+    }
+
+    public static Collection<Object[]> makeSingletons() {
+        Object[][] params = {
+            {"Collections.EMPTY_LIST",
+             (Supplier) () -> Collections.EMPTY_LIST},
+            {"Collections.EMPTY_MAP",
+             (Supplier) () -> Collections.EMPTY_MAP},
+            {"Collections.EMPTY_SET",
+             (Supplier) () -> Collections.EMPTY_SET},
+            {"Collections.emptyList()",
+             (Supplier) () -> Collections.emptyList()},
+            {"Collections.emptyMap()",
+             (Supplier) () -> Collections.emptyMap()},
+            {"Collections.emptySet()",
+             (Supplier) () -> Collections.emptySet()},
+            {"Collections.emptySortedSet()",
+             (Supplier) () -> Collections.emptySortedSet()},
+            {"Collections.emptySortedMap()",
+             (Supplier) () -> Collections.emptySortedMap()},
+            {"Collections.emptyNavigableSet()",
+             (Supplier) () -> Collections.emptyNavigableSet()},
+            {"Collections.emptyNavigableMap()",
+             (Supplier) () -> Collections.emptyNavigableMap()},
+        };
+        return Arrays.asList(params);
+    }
+}
