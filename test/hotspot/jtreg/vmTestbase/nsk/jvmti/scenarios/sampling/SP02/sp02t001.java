@@ -220,4 +220,140 @@ class sp02t001ThreadWaiting extends sp02t001Thread {
     }
 
     public void testedMethod() {
-        
+        sp02t001.log.display(getName() + ": testedMethod()");
+
+        synchronized (waitingMonitor) {
+
+            // notify about starting
+            synchronized (startingMonitor) {
+                startingMonitor.notifyAll();
+            }
+
+            // wait on monitor
+            try {
+                waitingMonitor.wait();
+            } catch (InterruptedException ignore) {
+                // just finish
+            }
+        }
+    }
+
+    public boolean checkReady() {
+        // wait until waitingMonitor released on wait()
+        synchronized (waitingMonitor) {
+        }
+        return true;
+    }
+
+    public void letFinish() {
+        synchronized (waitingMonitor) {
+            waitingMonitor.notifyAll();
+        }
+    }
+}
+
+class sp02t001ThreadSleeping extends sp02t001Thread {
+    public sp02t001ThreadSleeping(String name) {
+        super(name);
+    }
+
+    public void testedMethod() {
+        sp02t001.log.display(getName() + ": testedMethod()");
+
+        // sleep for a loooong time
+        long timeout = 7 * 24 * 60 * 60 * 1000; // one week in milliseconds
+
+        // notify about starting
+        synchronized (startingMonitor) {
+            startingMonitor.notifyAll();
+        }
+
+        try {
+            sleep(timeout);
+        } catch (InterruptedException ignore) {
+            // just finish
+        }
+    }
+
+    public void letFinish() {
+        interrupt();
+    }
+}
+
+class sp02t001ThreadRunningInterrupted extends sp02t001Thread {
+    private Object waitingMonitor = new Object();
+    private volatile boolean shouldFinish = false;
+
+    public sp02t001ThreadRunningInterrupted(String name) {
+        super(name);
+    }
+
+    public void testedMethod() {
+        sp02t001.log.display(getName() + ": testedMethod()");
+
+        synchronized (waitingMonitor) {
+
+            // notify about starting
+            synchronized (startingMonitor) {
+                startingMonitor.notifyAll();
+            }
+
+            // wait on watingMonitor until interrupted
+            try {
+                waitingMonitor.wait();
+            } catch (InterruptedException ignore) {
+                // just continue
+            }
+        }
+
+        // run in a loop
+        int i = 0;
+        int n = 1000;
+        while (!shouldFinish) {
+            if (n <= 0) {
+                n = 1000;
+            }
+            if (i > n) {
+                i = 0;
+                n = n - 1;
+            }
+            i = i + 1;
+        }
+    }
+
+    public boolean checkReady() {
+        // interrupt thread on wait()
+        synchronized (waitingMonitor) {
+            interrupt();
+        }
+
+        return true;
+    }
+
+    public void letFinish() {
+        shouldFinish = true;
+    }
+}
+
+class sp02t001ThreadRunningNative extends sp02t001Thread {
+    public sp02t001ThreadRunningNative(String name) {
+        super(name);
+    }
+
+    public void run() {
+        // notify about starting
+        synchronized (startingMonitor) {
+            startingMonitor.notifyAll();
+        }
+
+        // call tested mathod
+        sp02t001.log.display(getName() + ": run(): before call to testedMethod");
+        testedMethod();
+        sp02t001.log.display(getName() + ": run():  after call to testedMethod");
+    }
+
+    public native void testedMethod();
+
+    public native boolean checkReady();
+    public native void letFinish();
+}
