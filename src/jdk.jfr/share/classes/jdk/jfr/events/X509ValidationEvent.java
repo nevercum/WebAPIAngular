@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,22 +23,26 @@
  * questions.
  */
 
-/**
- * Defines JDK extensions to the GSS-API and an implementation of the SASL
- * GSSAPI mechanism.
- *
- * @moduleGraph
- * @since 9
- */
-module jdk.security.jgss {
-    requires java.logging;
-    requires java.security.sasl;
+package jdk.jfr.events;
 
-    requires transitive java.security.jgss;
+import jdk.jfr.*;
+import jdk.jfr.internal.MirrorEvent;
 
-    exports com.sun.security.jgss;
+@Category({"Java Development Kit", "Security"})
+@Label("X509 Validation")
+@Name("jdk.X509Validation")
+@Description("Serial numbers from X.509 Certificates forming chain of trust")
+@MirrorEvent(className = "jdk.internal.event.X509ValidationEvent")
+public final class X509ValidationEvent extends AbstractJDKEvent {
+    @CertificateId
+    @Label("Certificate Id")
+    @Unsigned
+    public long certificateId;
 
-    provides java.security.Provider with
-        com.sun.security.sasl.gsskerb.JdkSASL;
+    @Label("Certificate Position")
+    @Description("Certificate position in chain of trust, 1 = trust anchor")
+    public int certificatePosition;
+
+    @Label("Validation Counter")
+    public long validationCounter;
 }
-
