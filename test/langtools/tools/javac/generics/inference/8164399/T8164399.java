@@ -1,12 +1,11 @@
+
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,24 +22,27 @@
  * questions.
  */
 
-package jdk.internal.net.http.common;
-
-import java.io.IOException;
-
-/**
- * Signals that an end of file or end of stream has been reached
- * unexpectedly before any protocol specific data has been received.
+/*
+ * @test
+ * @bug 8164399
+ * @summary inference of thrown variable does not work correctly
+ * @compile T8164399.java
  */
-public final class ConnectionExpiredException extends IOException {
-    private static final long serialVersionUID = 0;
 
-    /**
-     * Constructs a {@code ConnectionExpiredException} with a detail message of
-     * "subscription is finished" and the given cause.
-     *
-     * @param   cause the throwable cause
-     */
-    public ConnectionExpiredException(Throwable cause) {
-        super("subscription is finished", cause);
+abstract class T8164399 {
+
+    interface ThrowableRunnable<E extends Throwable> {
+       void compute() throws E;
+    }
+
+    public abstract < E extends Exception> void computeException(ThrowableRunnable<E> process) throws E;
+
+
+    public static <T, E extends Throwable> T compute(ThrowableRunnable<E> action) throws E {
+        return null;
+    }
+
+    {
+        computeException(() -> compute(() -> {}));
     }
 }

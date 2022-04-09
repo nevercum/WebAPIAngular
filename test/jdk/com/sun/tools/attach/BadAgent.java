@@ -1,12 +1,11 @@
+
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,24 +22,16 @@
  * questions.
  */
 
-package jdk.internal.net.http.common;
-
-import java.io.IOException;
-
-/**
- * Signals that an end of file or end of stream has been reached
- * unexpectedly before any protocol specific data has been received.
+/*
+ *
+ *
+ * A "bad" agent. Used by the unit tests for the attach mechanism to test
+ * the behaviour when agentmain throws an exception.
  */
-public final class ConnectionExpiredException extends IOException {
-    private static final long serialVersionUID = 0;
+public class BadAgent {
 
-    /**
-     * Constructs a {@code ConnectionExpiredException} with a detail message of
-     * "subscription is finished" and the given cause.
-     *
-     * @param   cause the throwable cause
-     */
-    public ConnectionExpiredException(Throwable cause) {
-        super("subscription is finished", cause);
+    public static void agentmain(String args) {
+        throw new RuntimeException("Something bad happened - Bye!");
     }
+
 }

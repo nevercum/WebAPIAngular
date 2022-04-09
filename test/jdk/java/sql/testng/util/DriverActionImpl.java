@@ -1,12 +1,11 @@
+
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -22,25 +21,24 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package util;
 
-package jdk.internal.net.http.common;
-
-import java.io.IOException;
+import java.sql.DriverAction;
 
 /**
- * Signals that an end of file or end of stream has been reached
- * unexpectedly before any protocol specific data has been received.
+ * Simple implementation of DriverAction which calls back into the Driver when
+ * release is called.
  */
-public final class ConnectionExpiredException extends IOException {
-    private static final long serialVersionUID = 0;
+class DriverActionImpl implements DriverAction {
 
-    /**
-     * Constructs a {@code ConnectionExpiredException} with a detail message of
-     * "subscription is finished" and the given cause.
-     *
-     * @param   cause the throwable cause
-     */
-    public ConnectionExpiredException(Throwable cause) {
-        super("subscription is finished", cause);
+    public DriverActionImpl(StubDriverDA d) {
+        driver = d;
+    }
+
+    private final StubDriverDA driver;
+
+    @Override
+    public void deregister() {
+        driver.release();
     }
 }
