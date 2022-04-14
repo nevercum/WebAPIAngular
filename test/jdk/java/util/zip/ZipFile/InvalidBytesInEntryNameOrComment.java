@@ -99,4 +99,85 @@ public class InvalidBytesInEntryNameOrComment {
      * ZipException with "bad entry name or comment"
      */
     @Test
-    public vo
+    public void shouldRejectInvalidComment() throws IOException {
+        ZipException ex = expectThrows(ZipException.class, () -> {
+            new ZipFile(invalidComment.toFile());
+        });
+        assertEquals(ex.getMessage(), BAD_ENTRY_NAME_OR_COMMENT);
+    }
+
+    /**
+     * Make a valid ZIP file used as a template for invalid files
+     */
+    private byte[] templateZIP() throws IOException {
+        ByteArrayOutputStream bout = new ByteArrayOutputStream();
+        try (ZipOutputStream zo = new ZipOutputStream(bout)) {
+            ZipEntry commentEntry = new ZipEntry("file");
+            commentEntry.setComment("Comment");
+            zo.putNextEntry(commentEntry);
+        }
+        return bout.toByteArray();
+    }
+
+    /**
+     * Make a ZIP with invalid bytes in the CEN name field
+     */
+    private Path invalidName(String name, byte[] template) throws IOException {
+        ByteBuffer buffer = copyTemplate(template);
+        int off = cenStart(buffer);
+        // Name field starts here
+        int noff = off + CEN_HDR;
+
+        // Write invalid bytes
+        buffer.put(noff, INVALID_UTF8_BYTE_SEQUENCE, 0, INVALID_UTF8_BYTE_SEQUENCE.length);
+        return writeFile(name, buffer);
+
+    }
+
+    /**
+     * Make a copy of the ZIP template and wrap it in a little-endian
+     * ByteBuffer
+     */
+    private ByteBuffer copyTemplate(byte[] template) {
+        return ByteBuffer.wrap(Arrays.copyOf(template, template.length))
+                .order(ByteOrder.LITTLE_ENDIAN);
+    }
+
+    /**
+     * Make a ZIP with invalid bytes in the CEN comment field
+     */
+    private Path invalidComment(String name, byte[] template) throws IOException {
+        ByteBuffer buffer = copyTemplate(template);
+        int off = cenStart(buffer);
+        // Need to skip past the length of the name and extra fields
+        int nlen = buffer.getShort(off + NLEN);
+        int elen = buffer.getShort(off + ELEN);
+
+        // Comment field starts here
+        int coff = off + CEN_HDR + nlen + elen;
+
+        // Write invalid bytes
+        buffer.put(coff, INVALID_UTF8_BYTE_SEQUENCE, 0, INVALID_UTF8_BYTE_SEQUENCE.length);
+        return writeFile(name, buffer);
+    }
+
+
+    /**
+     * Finds the offset of the start of the CEN directory
+      */
+    private int cenStart(ByteBuffer buffer) {
+        return buffer.getInt(buffer.capacity() - EOC_OFF);
+    }
+
+    /**
+     * Utility to write a ByteBuffer to disk
+     */
+    private Path writeFile(String name, ByteBuffer buffer) throws IOException {
+        Path zip = Path.of(name);
+        try (FileChannel ch = new FileOutputStream(zip.toFile()).getChannel()) {
+            buffer.rewind();
+            ch.write(buffer);
+        }
+        return zip;
+    }
+}
