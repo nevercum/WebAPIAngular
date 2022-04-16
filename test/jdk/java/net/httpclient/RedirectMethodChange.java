@@ -200,4 +200,117 @@ public class RedirectMethodChange implements HttpServerAdapters {
         targetURI = "https://" + httpsTestServer.serverAuthority() + "/https1/redirect/rmt";
         handler = new RedirMethodChgeHandler(targetURI);
         httpsTestServer.addHandler(handler,"/https1/");
-        httpsURI = "https://" + httpsTestServer.serverAuthority() + "/htt
+        httpsURI = "https://" + httpsTestServer.serverAuthority() + "/https1/test/rmt";
+
+        http2TestServer = HttpTestServer.of(new Http2TestServer("localhost", false, 0));
+        targetURI = "http://" + http2TestServer.serverAuthority() + "/http2/redirect/rmt";
+        handler = new RedirMethodChgeHandler(targetURI);
+        http2TestServer.addHandler(handler, "/http2/");
+        http2URI = "http://" + http2TestServer.serverAuthority() + "/http2/test/rmt";
+
+        https2TestServer = HttpTestServer.of(new Http2TestServer("localhost", true, sslContext));
+        targetURI = "https://" + https2TestServer.serverAuthority() + "/https2/redirect/rmt";
+        handler = new RedirMethodChgeHandler(targetURI);
+        https2TestServer.addHandler(handler, "/https2/");
+        https2URI = "https://" + https2TestServer.serverAuthority() + "/https2/test/rmt";
+
+        httpTestServer.start();
+        httpsTestServer.start();
+        http2TestServer.start();
+        https2TestServer.start();
+    }
+
+    @AfterTest
+    public void teardown() throws Exception {
+        httpTestServer.stop();
+        httpsTestServer.stop();
+        http2TestServer.stop();
+        https2TestServer.stop();
+    }
+
+    /**
+     * Stateful handler.
+     *
+     * Request to "<protocol>/test/rmt" is first, with the following checked
+     * headers:
+     *   X-Redirect-Code: nnn    <the redirect code to send back>
+     *   X-Expect-Method: the method that the client should use for the next request
+     *
+     * The following request should be to "<protocol>/redirect/rmt" and should
+     * use the method indicated previously. If all ok, return a 200 response.
+     * Otherwise 50X error.
+     */
+    static class RedirMethodChgeHandler implements HttpTestHandler {
+
+        boolean inTest;
+        String expectedMethod;
+
+        final String targetURL;
+        RedirMethodChgeHandler(String targetURL) {
+            this.targetURL = targetURL;
+        }
+
+        boolean readAndCheckBody(HttpTestExchange e) throws IOException {
+            String method = e.getRequestMethod();
+            String requestBody;
+            try (InputStream is = e.getRequestBody()) {
+                requestBody = new String(is.readAllBytes(), US_ASCII);
+            }
+            if ((method.equals("POST") || method.equals("PUT"))
+                    && !requestBody.equals(POST_BODY)) {
+                Throwable ex = new RuntimeException("Unexpected request body for "
+                        + method + ": [" + requestBody +"]");
+                ex.printStackTrace();
+                e.sendResponseHeaders(503, 0);
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public synchronized void handle(HttpTestExchange he) throws IOException {
+            boolean newtest = he.getRequestURI().getPath().endsWith("/test/rmt");
+            if ((newtest && inTest) || (!newtest && !inTest)) {
+                Throwable ex = new RuntimeException("Unexpected newtest:" + newtest
+                        + ", inTest:" + inTest +  ", for " + he.getRequestURI());
+                ex.printStackTrace();
+                he.sendResponseHeaders(500, 0);
+                return;
+            }
+
+            if (newtest) {
+                HttpTestRequestHeaders hdrs = he.getRequestHeaders();
+                String value = hdrs.firstValue("X-Redirect-Code").get();
+                int redirectCode = Integer.parseInt(value);
+                expectedMethod = hdrs.firstValue("X-Expect-Method").get();
+                if (!readAndCheckBody(he))
+                    return;
+                HttpTestResponseHeaders headersbuilder = he.getResponseHeaders();
+                headersbuilder.addHeader("Location", targetURL);
+                he.sendResponseHeaders(redirectCode, 0);
+                inTest = true;
+            } else {
+                // should be the redirect
+                if (!he.getRequestURI().getPath().endsWith("/redirect/rmt")) {
+                    Throwable ex = new RuntimeException("Unexpected redirected request, got:"
+                            + he.getRequestURI());
+                    ex.printStackTrace();
+                    he.sendResponseHeaders(501, 0);
+                } else if (!he.getRequestMethod().equals(expectedMethod)) {
+                    Throwable ex = new RuntimeException("Expected: " + expectedMethod
+                            + " Got: " + he.getRequestMethod());
+                    ex.printStackTrace();
+                    he.sendResponseHeaders(504, 0);
+                } else {
+                    if (!readAndCheckBody(he))
+                        return;
+                    he.sendResponseHeaders(200, RESPONSE.length());
+                    try (OutputStream os = he.getResponseBody()) {
+                        os.write(RESPONSE.getBytes(US_ASCII));
+                    }
+                }
+                inTest = false;
+            }
+        }
+    }
+}
