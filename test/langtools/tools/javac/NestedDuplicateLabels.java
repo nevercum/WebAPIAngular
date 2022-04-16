@@ -8,4 +8,7 @@
  */
 
 class NestedDuplicateLabels {
-    void m
+    void method() {
+    foo: { { foo: {} } }
+    }
+}
