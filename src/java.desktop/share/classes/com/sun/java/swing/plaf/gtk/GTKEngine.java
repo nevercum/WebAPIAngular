@@ -82,4 +82,151 @@ class GTKEngine {
         TOOL_TIP, TREE, TREE_CELL, VIEWPORT, VPROGRESS_BAR,
         VSCROLL_BAR, VSCROLL_BAR_BUTTON_UP, VSCROLL_BAR_BUTTON_DOWN,
         VSCROLL_BAR_TRACK, VSCROLL_BAR_THUMB,
-        VSEPARATOR, VSLIDE
+        VSEPARATOR, VSLIDER, VSLIDER_TRACK, VSLIDER_THUMB,
+        VSPLIT_PANE_DIVIDER
+    }
+
+    /**
+     * Representation of GtkSettings properties.
+     * When we need more settings we can add them here and
+     * to all implementations of getGTKSetting().
+     */
+    static enum Settings {
+        GTK_FONT_NAME,
+        GTK_ICON_SIZES,
+        GTK_CURSOR_BLINK,
+        GTK_CURSOR_BLINK_TIME
+    }
+
+    /* Custom regions are needed for representing regions that don't exist
+     * in the original Region class.
+     */
+    static class CustomRegion extends Region {
+        /*
+         * TITLED_BORDER Region is mapped to GtkFrame class which can draw
+         * titled borders around components.
+         */
+        static Region TITLED_BORDER = new CustomRegion("TitledBorder");
+
+        private CustomRegion(String name) {
+            super(name, null, false);
+        }
+    }
+
+
+    private static HashMap<Region, Object> regionToWidgetTypeMap;
+    private ImageCache cache = new ImageCache(CACHE_SIZE);
+    private int x0, y0, w0, h0;
+    private Graphics graphics;
+    private Object[] cacheArgs;
+
+    private native void native_paint_arrow(
+            int widgetType, int state, int shadowType, String detail,
+            int x, int y, int width, int height, int arrowType);
+    private native void native_paint_box(
+            int widgetType, int state, int shadowType, String detail,
+            int x, int y, int width, int height, int synthState, int dir);
+    private native void native_paint_box_gap(
+            int widgetType, int state, int shadowType, String detail,
+            int x, int y, int width, int height,
+            int gapSide, int gapX, int gapWidth);
+    private native void native_paint_check(
+            int widgetType, int synthState, String detail,
+            int x, int y, int width, int height);
+    private native void native_paint_expander(
+            int widgetType, int state, String detail,
+            int x, int y, int width, int height, int expanderStyle);
+    private native void native_paint_extension(
+            int widgetType, int state, int shadowType, String detail,
+            int x, int y, int width, int height, int placement);
+    private native void native_paint_flat_box(
+            int widgetType, int state, int shadowType, String detail,
+            int x, int y, int width, int height, boolean hasFocus);
+    private native void native_paint_focus(
+            int widgetType, int state, String detail,
+            int x, int y, int width, int height);
+    private native void native_paint_handle(
+            int widgetType, int state, int shadowType, String detail,
+            int x, int y, int width, int height, int orientation);
+    private native void native_paint_hline(
+            int widgetType, int state, String detail,
+            int x, int y, int width, int height);
+    private native void native_paint_option(
+            int widgetType, int synthState, String detail,
+            int x, int y, int width, int height);
+    private native void native_paint_shadow(
+            int widgetType, int state, int shadowType, String detail,
+            int x, int y, int width, int height, int synthState, int dir);
+    private native void native_paint_slider(
+            int widgetType, int state, int shadowType, String detail, int x,
+            int y, int width, int height, int orientation, boolean hasFocus);
+    private native void native_paint_vline(
+            int widgetType, int state, String detail,
+            int x, int y, int width, int height);
+    private native void native_paint_background(
+            int widgetType, int state, int x, int y, int width, int height);
+    private native Object native_get_gtk_setting(int property);
+    private native void nativeSetRangeValue(int widgetType, double value,
+                                            double min, double max,
+                                            double visible);
+
+    private native void nativeStartPainting(int w, int h);
+    private native int nativeFinishPainting(int[] buffer, int width, int height);
+    private native void native_switch_theme();
+
+    static {
+        // Make sure the awt toolkit is loaded so we have access to native
+        // methods.
+        Toolkit.getDefaultToolkit();
+
+        // Initialize regionToWidgetTypeMap
+        regionToWidgetTypeMap = new HashMap<Region, Object>(50);
+        regionToWidgetTypeMap.put(Region.ARROW_BUTTON, new WidgetType[] {
+            WidgetType.SPINNER_ARROW_BUTTON,
+            WidgetType.COMBO_BOX_ARROW_BUTTON,
+            WidgetType.HSCROLL_BAR_BUTTON_LEFT,
+            WidgetType.HSCROLL_BAR_BUTTON_RIGHT,
+            WidgetType.VSCROLL_BAR_BUTTON_UP,
+            WidgetType.VSCROLL_BAR_BUTTON_DOWN});
+        regionToWidgetTypeMap.put(Region.BUTTON, WidgetType.BUTTON);
+        regionToWidgetTypeMap.put(Region.CHECK_BOX, WidgetType.CHECK_BOX);
+        regionToWidgetTypeMap.put(Region.CHECK_BOX_MENU_ITEM,
+                                  WidgetType.CHECK_BOX_MENU_ITEM);
+        regionToWidgetTypeMap.put(Region.COLOR_CHOOSER, WidgetType.COLOR_CHOOSER);
+        regionToWidgetTypeMap.put(Region.FILE_CHOOSER, WidgetType.OPTION_PANE);
+        regionToWidgetTypeMap.put(Region.COMBO_BOX, WidgetType.COMBO_BOX);
+        regionToWidgetTypeMap.put(Region.DESKTOP_ICON, WidgetType.DESKTOP_ICON);
+        regionToWidgetTypeMap.put(Region.DESKTOP_PANE, WidgetType.DESKTOP_PANE);
+        regionToWidgetTypeMap.put(Region.EDITOR_PANE, WidgetType.EDITOR_PANE);
+        regionToWidgetTypeMap.put(Region.FORMATTED_TEXT_FIELD, new WidgetType[] {
+            WidgetType.FORMATTED_TEXT_FIELD, WidgetType.SPINNER_TEXT_FIELD});
+        regionToWidgetTypeMap.put(GTKRegion.HANDLE_BOX, WidgetType.HANDLE_BOX);
+        regionToWidgetTypeMap.put(Region.INTERNAL_FRAME,
+                                  WidgetType.INTERNAL_FRAME);
+        regionToWidgetTypeMap.put(Region.INTERNAL_FRAME_TITLE_PANE,
+                                  WidgetType.INTERNAL_FRAME_TITLE_PANE);
+        regionToWidgetTypeMap.put(Region.LABEL, new WidgetType[] {
+            WidgetType.LABEL, WidgetType.COMBO_BOX_TEXT_FIELD});
+        regionToWidgetTypeMap.put(Region.LIST, WidgetType.LIST);
+        regionToWidgetTypeMap.put(Region.MENU, WidgetType.MENU);
+        regionToWidgetTypeMap.put(Region.MENU_BAR, WidgetType.MENU_BAR);
+        regionToWidgetTypeMap.put(Region.MENU_ITEM, WidgetType.MENU_ITEM);
+        regionToWidgetTypeMap.put(Region.MENU_ITEM_ACCELERATOR,
+                                  WidgetType.MENU_ITEM_ACCELERATOR);
+        regionToWidgetTypeMap.put(Region.OPTION_PANE, WidgetType.OPTION_PANE);
+        regionToWidgetTypeMap.put(Region.PANEL, WidgetType.PANEL);
+        regionToWidgetTypeMap.put(Region.PASSWORD_FIELD,
+                                  WidgetType.PASSWORD_FIELD);
+        regionToWidgetTypeMap.put(Region.POPUP_MENU, WidgetType.POPUP_MENU);
+        regionToWidgetTypeMap.put(Region.POPUP_MENU_SEPARATOR,
+                                  WidgetType.POPUP_MENU_SEPARATOR);
+        regionToWidgetTypeMap.put(Region.PROGRESS_BAR, new WidgetType[] {
+            WidgetType.HPROGRESS_BAR, WidgetType.VPROGRESS_BAR});
+        regionToWidgetTypeMap.put(Region.RADIO_BUTTON, WidgetType.RADIO_BUTTON);
+        regionToWidgetTypeMap.put(Region.RADIO_BUTTON_MENU_ITEM,
+                                  WidgetType.RADIO_BUTTON_MENU_ITEM);
+        regionToWidgetTypeMap.put(Region.ROOT_PANE, WidgetType.ROOT_PANE);
+        regionToWidgetTypeMap.put(Region.SCROLL_BAR, new WidgetType[] {
+            WidgetType.HSCROLL_BAR, WidgetType.VSCROLL_BAR});
+        regionToWidgetTypeMap.put(Region.SCROLL_BAR_THUMB, new WidgetType[] {
+            WidgetType.HSCROLL_
