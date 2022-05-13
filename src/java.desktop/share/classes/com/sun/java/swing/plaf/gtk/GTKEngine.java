@@ -229,4 +229,166 @@ class GTKEngine {
         regionToWidgetTypeMap.put(Region.SCROLL_BAR, new WidgetType[] {
             WidgetType.HSCROLL_BAR, WidgetType.VSCROLL_BAR});
         regionToWidgetTypeMap.put(Region.SCROLL_BAR_THUMB, new WidgetType[] {
-            WidgetType.HSCROLL_
+            WidgetType.HSCROLL_BAR_THUMB, WidgetType.VSCROLL_BAR_THUMB});
+        regionToWidgetTypeMap.put(Region.SCROLL_BAR_TRACK, new WidgetType[] {
+            WidgetType.HSCROLL_BAR_TRACK, WidgetType.VSCROLL_BAR_TRACK});
+        regionToWidgetTypeMap.put(Region.SCROLL_PANE, WidgetType.SCROLL_PANE);
+        regionToWidgetTypeMap.put(Region.SEPARATOR, new WidgetType[] {
+            WidgetType.HSEPARATOR, WidgetType.VSEPARATOR});
+        regionToWidgetTypeMap.put(Region.SLIDER, new WidgetType[] {
+            WidgetType.HSLIDER, WidgetType.VSLIDER});
+        regionToWidgetTypeMap.put(Region.SLIDER_THUMB, new WidgetType[] {
+            WidgetType.HSLIDER_THUMB, WidgetType.VSLIDER_THUMB});
+        regionToWidgetTypeMap.put(Region.SLIDER_TRACK, new WidgetType[] {
+            WidgetType.HSLIDER_TRACK, WidgetType.VSLIDER_TRACK});
+        regionToWidgetTypeMap.put(Region.SPINNER, WidgetType.SPINNER);
+        regionToWidgetTypeMap.put(Region.SPLIT_PANE, WidgetType.SPLIT_PANE);
+        regionToWidgetTypeMap.put(Region.SPLIT_PANE_DIVIDER, new WidgetType[] {
+            WidgetType.HSPLIT_PANE_DIVIDER, WidgetType.VSPLIT_PANE_DIVIDER});
+        regionToWidgetTypeMap.put(Region.TABBED_PANE, WidgetType.TABBED_PANE);
+        regionToWidgetTypeMap.put(Region.TABBED_PANE_CONTENT,
+                                  WidgetType.TABBED_PANE_CONTENT);
+        regionToWidgetTypeMap.put(Region.TABBED_PANE_TAB,
+                                  WidgetType.TABBED_PANE_TAB);
+        regionToWidgetTypeMap.put(Region.TABBED_PANE_TAB_AREA,
+                                  WidgetType.TABBED_PANE_TAB_AREA);
+        regionToWidgetTypeMap.put(Region.TABLE, WidgetType.TABLE);
+        regionToWidgetTypeMap.put(Region.TABLE_HEADER, WidgetType.TABLE_HEADER);
+        regionToWidgetTypeMap.put(Region.TEXT_AREA, WidgetType.TEXT_AREA);
+        regionToWidgetTypeMap.put(Region.TEXT_FIELD, new WidgetType[] {
+            WidgetType.TEXT_FIELD, WidgetType.COMBO_BOX_TEXT_FIELD});
+        regionToWidgetTypeMap.put(Region.TEXT_PANE, WidgetType.TEXT_PANE);
+        regionToWidgetTypeMap.put(CustomRegion.TITLED_BORDER, WidgetType.TITLED_BORDER);
+        regionToWidgetTypeMap.put(Region.TOGGLE_BUTTON, WidgetType.TOGGLE_BUTTON);
+        regionToWidgetTypeMap.put(Region.TOOL_BAR, WidgetType.TOOL_BAR);
+        regionToWidgetTypeMap.put(Region.TOOL_BAR_CONTENT, WidgetType.TOOL_BAR);
+        regionToWidgetTypeMap.put(Region.TOOL_BAR_DRAG_WINDOW,
+                                  WidgetType.TOOL_BAR_DRAG_WINDOW);
+        regionToWidgetTypeMap.put(Region.TOOL_BAR_SEPARATOR,
+                                  WidgetType.TOOL_BAR_SEPARATOR);
+        regionToWidgetTypeMap.put(Region.TOOL_TIP, WidgetType.TOOL_TIP);
+        regionToWidgetTypeMap.put(Region.TREE, WidgetType.TREE);
+        regionToWidgetTypeMap.put(Region.TREE_CELL, WidgetType.TREE_CELL);
+        regionToWidgetTypeMap.put(Region.VIEWPORT, WidgetType.VIEWPORT);
+    }
+
+    /** Translate Region and JComponent into WidgetType ordinals */
+    static WidgetType getWidgetType(JComponent c, Region id) {
+        Object value = regionToWidgetTypeMap.get(id);
+
+        if (value instanceof WidgetType) {
+            return (WidgetType)value;
+        }
+
+        WidgetType[] widgets = (WidgetType[])value;
+        if (c == null ) {
+            return widgets[0];
+        }
+
+        if (c instanceof JScrollBar) {
+            return (((JScrollBar)c).getOrientation() == JScrollBar.HORIZONTAL) ?
+                widgets[0] : widgets[1];
+        } else if (c instanceof JSeparator) {
+            JSeparator separator = (JSeparator)c;
+
+            /* We should return correct WidgetType if the separator is inserted
+             * in Menu/PopupMenu/ToolBar. BugID: 6465603
+             */
+            if (separator.getParent() instanceof JPopupMenu) {
+                return WidgetType.POPUP_MENU_SEPARATOR;
+            } else if (separator.getParent() instanceof JToolBar) {
+                return WidgetType.TOOL_BAR_SEPARATOR;
+            }
+
+            return (separator.getOrientation() == JSeparator.HORIZONTAL) ?
+                widgets[0] : widgets[1];
+        } else if (c instanceof JSlider) {
+            return (((JSlider)c).getOrientation() == JSlider.HORIZONTAL) ?
+                widgets[0] : widgets[1];
+        } else if (c instanceof JProgressBar) {
+            return (((JProgressBar)c).getOrientation() == JProgressBar.HORIZONTAL) ?
+                widgets[0] : widgets[1];
+        } else if (c instanceof JSplitPane) {
+            return (((JSplitPane)c).getOrientation() == JSplitPane.HORIZONTAL_SPLIT) ?
+                widgets[1] : widgets[0];
+        } else if (id == Region.LABEL) {
+            /*
+             * For all ListCellRenderers we will use COMBO_BOX_TEXT_FIELD widget
+             * type because we can get correct insets. List items however won't be
+             * drawn as a text entry (see GTKPainter.paintLabelBackground).
+             */
+            if (c instanceof ListCellRenderer) {
+                return widgets[1];
+            } else {
+                return widgets[0];
+            }
+        } else if (id == Region.TEXT_FIELD) {
+            String name = c.getName();
+            if (name != null && name.startsWith("ComboBox")) {
+                return widgets[1];
+            } else {
+                return widgets[0];
+            }
+        } else if (id == Region.FORMATTED_TEXT_FIELD) {
+            String name = c.getName();
+            if (name != null && name.startsWith("Spinner")) {
+                return widgets[1];
+            } else {
+                return widgets[0];
+            }
+        } else if (id == Region.ARROW_BUTTON) {
+            if (c.getParent() instanceof JScrollBar) {
+                Integer prop = (Integer)
+                    c.getClientProperty("__arrow_direction__");
+                int dir = (prop != null) ?
+                    prop.intValue() : SwingConstants.WEST;
+                switch (dir) {
+                case SwingConstants.WEST:
+                    return WidgetType.HSCROLL_BAR_BUTTON_LEFT;
+                case SwingConstants.EAST:
+                    return WidgetType.HSCROLL_BAR_BUTTON_RIGHT;
+                case SwingConstants.NORTH:
+                    return WidgetType.VSCROLL_BAR_BUTTON_UP;
+                case SwingConstants.SOUTH:
+                    return WidgetType.VSCROLL_BAR_BUTTON_DOWN;
+                default:
+                    return null;
+                }
+            } else if (c.getParent() instanceof JComboBox) {
+                return WidgetType.COMBO_BOX_ARROW_BUTTON;
+            } else {
+                return WidgetType.SPINNER_ARROW_BUTTON;
+            }
+        }
+
+        return null;
+    }
+
+    private static int getTextDirection(SynthContext context) {
+        TextDirection dir = TextDirection.NONE;
+        JComponent comp = context.getComponent();
+        if (comp != null) {
+            ComponentOrientation co = comp.getComponentOrientation();
+            if (co != null) {
+                dir = co.isLeftToRight() ?
+                    TextDirection.LTR : TextDirection.RTL;
+            }
+        }
+        return dir.ordinal();
+    }
+
+    public void paintArrow(Graphics g, SynthContext context,
+            Region id, int state, ShadowType shadowType, ArrowType direction,
+            String detail, int x, int y, int w, int h) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_arrow(widget, state, shadowType.ordinal(),
+                detail, x - x0, y - y0, w, h, direction.ordinal());
+    }
+
+    public void paintBox(Graphics g, SynthContext context,
+            Region id, int state, ShadowType shadowType,
+            String detail, int x, int y, int w, int h) {
+
+        int gtkSt
