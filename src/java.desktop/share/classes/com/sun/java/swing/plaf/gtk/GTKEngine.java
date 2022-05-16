@@ -391,4 +391,174 @@ class GTKEngine {
             Region id, int state, ShadowType shadowType,
             String detail, int x, int y, int w, int h) {
 
-        int gtkSt
+        int gtkState =
+            GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int synthState = context.getComponentState();
+        int dir = getTextDirection(context);
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_box(widget, gtkState, shadowType.ordinal(),
+                         detail, x - x0, y - y0, w, h, synthState, dir);
+    }
+
+    public void paintBoxGap(Graphics g, SynthContext context,
+            Region id, int state, ShadowType shadowType,
+            String detail, int x, int y, int w, int h,
+            PositionType boxGapType, int tabBegin, int size) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_box_gap(widget, state, shadowType.ordinal(), detail,
+                x - x0, y - y0, w, h, boxGapType.ordinal(), tabBegin, size);
+    }
+
+    public void paintCheck(Graphics g, SynthContext context,
+            Region id, String detail, int x, int y, int w, int h) {
+
+        int synthState = context.getComponentState();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_check(widget, synthState, detail, x - x0, y - y0, w, h);
+    }
+
+    public void paintExpander(Graphics g, SynthContext context,
+            Region id, int state, ExpanderStyle expanderStyle, String detail,
+            int x, int y, int w, int h) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_expander(widget, state, detail, x - x0, y - y0, w, h,
+                              expanderStyle.ordinal());
+    }
+
+    public void paintExtension(Graphics g, SynthContext context,
+            Region id, int state, ShadowType shadowType, String detail,
+            int x, int y, int w, int h, PositionType placement, int tabIndex) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_extension(widget, state, shadowType.ordinal(), detail,
+                               x - x0, y - y0, w, h, placement.ordinal());
+    }
+
+    public void paintFlatBox(Graphics g, SynthContext context,
+            Region id, int state, ShadowType shadowType, String detail,
+            int x, int y, int w, int h, ColorType colorType) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_flat_box(widget, state, shadowType.ordinal(), detail,
+                              x - x0, y - y0, w, h,
+                              context.getComponent().hasFocus());
+    }
+
+    public void paintFocus(Graphics g, SynthContext context,
+            Region id, int state, String detail, int x, int y, int w, int h) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_focus(widget, state, detail, x - x0, y - y0, w, h);
+    }
+
+    public void paintHandle(Graphics g, SynthContext context,
+            Region id, int state, ShadowType shadowType, String detail,
+            int x, int y, int w, int h, Orientation orientation) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_handle(widget, state, shadowType.ordinal(), detail,
+                            x - x0, y - y0, w, h, orientation.ordinal());
+    }
+
+    public void paintHline(Graphics g, SynthContext context,
+            Region id, int state, String detail, int x, int y, int w, int h) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_hline(widget, state, detail, x - x0, y - y0, w, h);
+    }
+
+    public void paintOption(Graphics g, SynthContext context,
+            Region id, String detail, int x, int y, int w, int h) {
+
+        int synthState = context.getComponentState();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_option(widget, synthState, detail, x - x0, y - y0, w, h);
+    }
+
+    public void paintShadow(Graphics g, SynthContext context,
+            Region id, int state, ShadowType shadowType, String detail,
+            int x, int y, int w, int h) {
+
+        int gtkState =
+            GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int synthState = context.getComponentState();
+        Container parent = context.getComponent().getParent();
+        if(GTKLookAndFeel.is3()) {
+            if (parent != null && parent.getParent() instanceof JComboBox) {
+                if (parent.getParent().hasFocus()) {
+                    synthState |= SynthConstants.FOCUSED;
+                }
+            }
+        }
+        int dir = getTextDirection(context);
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_shadow(widget, gtkState, shadowType.ordinal(), detail,
+                            x - x0, y - y0, w, h, synthState, dir);
+    }
+
+    public void paintSlider(Graphics g, SynthContext context,
+            Region id, int state, ShadowType shadowType, String detail, int x,
+            int y, int w, int h, Orientation orientation, boolean hasFocus) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_slider(widget, state, shadowType.ordinal(), detail,
+                         x - x0, y - y0, w, h, orientation.ordinal(), hasFocus);
+    }
+
+    public void paintVline(Graphics g, SynthContext context,
+            Region id, int state, String detail, int x, int y, int w, int h) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_vline(widget, state, detail, x - x0, y - y0, w, h);
+    }
+
+    public void paintBackground(Graphics g, SynthContext context,
+            Region id, int state, Color color, int x, int y, int w, int h) {
+
+        state = GTKLookAndFeel.synthStateToGTKStateType(state).ordinal();
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        native_paint_background(widget, state, x - x0, y - y0, w, h);
+    }
+
+    private static final ColorModel[] COLOR_MODELS = {
+        // Transparency.OPAQUE
+        new DirectColorModel(24, 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000),
+        // Transparency.BITMASK
+        new DirectColorModel(25, 0x00ff0000, 0x0000ff00, 0x000000ff, 0x01000000),
+        // Transparency.TRANSLUCENT
+        ColorModel.getRGBdefault(),
+    };
+
+    private static final int[][] BAND_OFFSETS = {
+        { 0x00ff0000, 0x0000ff00, 0x000000ff },             // OPAQUE
+        { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x01000000 }, // BITMASK
+        { 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 }  // TRANSLUCENT
+    };
+
+
+    /**
+     * Paint a cached image identified by its size and a set of additional
+     * arguments, if there's one.
+     *
+     * @return true if a cached image has been painted, false otherwise
+     */
+    public boolean paintCachedImage(Graphics g,
+            int x, int y, int w, int h, Object... args) {
+        if (w <= 0 || h <= 0) {
+            return true;
+        }
+
+        // look for cached image
+        Image img = cache.getImage(getClass(), null, w, h, args);
+        if
