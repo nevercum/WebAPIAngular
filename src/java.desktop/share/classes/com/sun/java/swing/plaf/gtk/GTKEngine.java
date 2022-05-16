@@ -561,4 +561,86 @@ class GTKEngine {
 
         // look for cached image
         Image img = cache.getImage(getClass(), null, w, h, args);
-        if
+        if (img != null) {
+            g.drawImage(img, x, y, null);
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * Allocate a native offscreen buffer of the specified size.
+     */
+    public void startPainting(Graphics g,
+            int x, int y, int w, int h, Object... args) {
+        nativeStartPainting(w, h);
+        x0 = x;
+        y0 = y;
+        w0 = w;
+        h0 = h;
+        graphics = g;
+        cacheArgs = args;
+    }
+
+    /**
+     * Convenience method that delegates to finishPainting() with
+     * caching enabled.
+     */
+    public BufferedImage finishPainting() {
+        return finishPainting(true);
+    }
+
+    /**
+     * Called to indicate that painting is finished. We create a new
+     * BufferedImage from the offscreen buffer, (optionally) cache it,
+     * and paint it.
+     */
+    public BufferedImage finishPainting(boolean useCache) {
+        DataBufferInt dataBuffer = new DataBufferInt(w0 * h0);
+        // Note that stealData() requires a markDirty() afterwards
+        // since we modify the data in it.
+        int transparency =
+            nativeFinishPainting(SunWritableRaster.stealData(dataBuffer, 0),
+                                 w0, h0);
+        SunWritableRaster.markDirty(dataBuffer);
+
+        int[] bands = BAND_OFFSETS[transparency - 1];
+        WritableRaster raster = Raster.createPackedRaster(
+                dataBuffer, w0, h0, w0, bands, null);
+
+        ColorModel cm = COLOR_MODELS[transparency - 1];
+        BufferedImage img = new BufferedImage(cm, raster, false, null);
+        if (useCache) {
+            cache.setImage(getClass(), null, w0, h0, cacheArgs, img);
+        }
+        graphics.drawImage(img, x0, y0, null);
+        return img;
+    }
+
+    /**
+     * Notify native layer of theme change, and flush cache
+     */
+    public void themeChanged() {
+        synchronized(sun.awt.UNIXToolkit.GTK_LOCK) {
+            native_switch_theme();
+        }
+        cache.flush();
+    }
+
+    /* GtkSettings enum mirrors that in gtk2_interface.h */
+    public Object getSetting(Settings property) {
+        synchronized(sun.awt.UNIXToolkit.GTK_LOCK) {
+            return native_get_gtk_setting(property.ordinal());
+        }
+    }
+
+    /**
+     * Sets up the GtkAdjustment values for the native GtkRange widget
+     * associated with the given region (e.g. SLIDER, SCROLL_BAR).
+     */
+    void setRangeValue(SynthContext context, Region id,
+                       double value, double min, double max, double visible) {
+        int widget = getWidgetType(context.getComponent(), id).ordinal();
+        nativeSetRangeValue(widget, value, min, max, visible);
+    }
+}
