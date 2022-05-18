@@ -66,4 +66,78 @@ public final class DebugInfo {
     }
 
     /**
-     * @retu
+     * @return {@code true} if this debug information has a frame
+     */
+    public boolean hasFrame() {
+        return getBytecodePosition() instanceof BytecodeFrame;
+    }
+
+    /**
+     * Gets the deoptimization information for each inlined frame (if available).
+     *
+     * @return {@code null} if no frame de-opt info is {@linkplain #hasFrame() available}
+     */
+    public BytecodeFrame frame() {
+        if (hasFrame()) {
+            return (BytecodeFrame) getBytecodePosition();
+        }
+        return null;
+    }
+
+    @Override
+    public String toString() {
+        return CodeUtil.append(new StringBuilder(100), this, null).toString();
+    }
+
+    /**
+     * @return The code position (including all inlined methods) of this debug info. If this is a
+     *         {@link BytecodeFrame} instance, then it is also the deoptimization information for
+     *         each inlined frame.
+     */
+    public BytecodePosition getBytecodePosition() {
+        return bytecodePosition;
+    }
+
+    public ReferenceMap getReferenceMap() {
+        return referenceMap;
+    }
+
+    public VirtualObject[] getVirtualObjectMapping() {
+        return virtualObjectMapping;
+    }
+
+    /**
+     * Sets the map from the registers (in the caller's frame) to the slots where they are saved in
+     * the current frame.
+     */
+    public void setCalleeSaveInfo(RegisterSaveLayout calleeSaveInfo) {
+        this.calleeSaveInfo = calleeSaveInfo;
+    }
+
+    /**
+     * Gets the map from the registers (in the caller's frame) to the slots where they are saved in
+     * the current frame. If no such information is available, {@code null} is returned.
+     */
+    public RegisterSaveLayout getCalleeSaveInfo() {
+        return calleeSaveInfo;
+    }
+
+    @Override
+    public int hashCode() {
+        throw new UnsupportedOperationException("hashCode");
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj instanceof DebugInfo) {
+            DebugInfo that = (DebugInfo) obj;
+            if (Objects.equals(this.bytecodePosition, that.bytecodePosition) && Objects.equals(this.calleeSaveInfo, that.calleeSaveInfo) && Objects.equals(this.referenceMap, that.referenceMap)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
