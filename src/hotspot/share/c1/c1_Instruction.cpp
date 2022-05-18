@@ -309,4 +309,240 @@ void StateSplit::state_values_do(ValueVisitor* f) {
 
 
 void BlockBegin::state_values_do(ValueVisitor* f) {
-  StateSpl
+  StateSplit::state_values_do(f);
+
+  if (is_set(BlockBegin::exception_entry_flag)) {
+    for (int i = 0; i < number_of_exception_states(); i++) {
+      exception_state_at(i)->values_do(f);
+    }
+  }
+}
+
+
+// Implementation of Invoke
+
+
+Invoke::Invoke(Bytecodes::Code code, ValueType* result_type, Value recv, Values* args,
+               ciMethod* target, ValueStack* state_before)
+  : StateSplit(result_type, state_before)
+  , _code(code)
+  , _recv(recv)
+  , _args(args)
+  , _target(target)
+{
+  set_flag(TargetIsLoadedFlag,   target->is_loaded());
+  set_flag(TargetIsFinalFlag,    target_is_loaded() && target->is_final_method());
+
+  assert(args != NULL, "args must exist");
+#ifdef ASSERT
+  AssertValues assert_value;
+  values_do(&assert_value);
+#endif
+
+  // provide an initial guess of signature size.
+  _signature = new BasicTypeList(number_of_arguments() + (has_receiver() ? 1 : 0));
+  if (has_receiver()) {
+    _signature->append(as_BasicType(receiver()->type()));
+  }
+  for (int i = 0; i < number_of_arguments(); i++) {
+    ValueType* t = argument_at(i)->type();
+    BasicType bt = as_BasicType(t);
+    _signature->append(bt);
+  }
+}
+
+
+void Invoke::state_values_do(ValueVisitor* f) {
+  StateSplit::state_values_do(f);
+  if (state_before() != NULL) state_before()->values_do(f);
+  if (state()        != NULL) state()->values_do(f);
+}
+
+ciType* Invoke::declared_type() const {
+  ciSignature* declared_signature = state()->scope()->method()->get_declared_signature_at_bci(state()->bci());
+  ciType *t = declared_signature->return_type();
+  assert(t->basic_type() != T_VOID, "need return value of void method?");
+  return t;
+}
+
+// Implementation of Constant
+intx Constant::hash() const {
+  if (state_before() == NULL) {
+    switch (type()->tag()) {
+    case intTag:
+      return HASH2(name(), type()->as_IntConstant()->value());
+    case addressTag:
+      return HASH2(name(), type()->as_AddressConstant()->value());
+    case longTag:
+      {
+        jlong temp = type()->as_LongConstant()->value();
+        return HASH3(name(), high(temp), low(temp));
+      }
+    case floatTag:
+      return HASH2(name(), jint_cast(type()->as_FloatConstant()->value()));
+    case doubleTag:
+      {
+        jlong temp = jlong_cast(type()->as_DoubleConstant()->value());
+        return HASH3(name(), high(temp), low(temp));
+      }
+    case objectTag:
+      assert(type()->as_ObjectType()->is_loaded(), "can't handle unloaded values");
+      return HASH2(name(), type()->as_ObjectType()->constant_value());
+    case metaDataTag:
+      assert(type()->as_MetadataType()->is_loaded(), "can't handle unloaded values");
+      return HASH2(name(), type()->as_MetadataType()->constant_value());
+    default:
+      ShouldNotReachHere();
+    }
+  }
+  return 0;
+}
+
+bool Constant::is_equal(Value v) const {
+  if (v->as_Constant() == NULL) return false;
+
+  switch (type()->tag()) {
+    case intTag:
+      {
+        IntConstant* t1 =    type()->as_IntConstant();
+        IntConstant* t2 = v->type()->as_IntConstant();
+        return (t1 != NULL && t2 != NULL &&
+                t1->value() == t2->value());
+      }
+    case longTag:
+      {
+        LongConstant* t1 =    type()->as_LongConstant();
+        LongConstant* t2 = v->type()->as_LongConstant();
+        return (t1 != NULL && t2 != NULL &&
+                t1->value() == t2->value());
+      }
+    case floatTag:
+      {
+        FloatConstant* t1 =    type()->as_FloatConstant();
+        FloatConstant* t2 = v->type()->as_FloatConstant();
+        return (t1 != NULL && t2 != NULL &&
+                jint_cast(t1->value()) == jint_cast(t2->value()));
+      }
+    case doubleTag:
+      {
+        DoubleConstant* t1 =    type()->as_DoubleConstant();
+        DoubleConstant* t2 = v->type()->as_DoubleConstant();
+        return (t1 != NULL && t2 != NULL &&
+                jlong_cast(t1->value()) == jlong_cast(t2->value()));
+      }
+    case objectTag:
+      {
+        ObjectType* t1 =    type()->as_ObjectType();
+        ObjectType* t2 = v->type()->as_ObjectType();
+        return (t1 != NULL && t2 != NULL &&
+                t1->is_loaded() && t2->is_loaded() &&
+                t1->constant_value() == t2->constant_value());
+      }
+    case metaDataTag:
+      {
+        MetadataType* t1 =    type()->as_MetadataType();
+        MetadataType* t2 = v->type()->as_MetadataType();
+        return (t1 != NULL && t2 != NULL &&
+                t1->is_loaded() && t2->is_loaded() &&
+                t1->constant_value() == t2->constant_value());
+      }
+    default:
+      return false;
+  }
+}
+
+Constant::CompareResult Constant::compare(Instruction::Condition cond, Value right) const {
+  Constant* rc = right->as_Constant();
+  // other is not a constant
+  if (rc == NULL) return not_comparable;
+
+  ValueType* lt = type();
+  ValueType* rt = rc->type();
+  // different types
+  if (lt->base() != rt->base()) return not_comparable;
+  switch (lt->tag()) {
+  case intTag: {
+    int x = lt->as_IntConstant()->value();
+    int y = rt->as_IntConstant()->value();
+    switch (cond) {
+    case If::eql: return x == y ? cond_true : cond_false;
+    case If::neq: return x != y ? cond_true : cond_false;
+    case If::lss: return x <  y ? cond_true : cond_false;
+    case If::leq: return x <= y ? cond_true : cond_false;
+    case If::gtr: return x >  y ? cond_true : cond_false;
+    case If::geq: return x >= y ? cond_true : cond_false;
+    default     : break;
+    }
+    break;
+  }
+  case longTag: {
+    jlong x = lt->as_LongConstant()->value();
+    jlong y = rt->as_LongConstant()->value();
+    switch (cond) {
+    case If::eql: return x == y ? cond_true : cond_false;
+    case If::neq: return x != y ? cond_true : cond_false;
+    case If::lss: return x <  y ? cond_true : cond_false;
+    case If::leq: return x <= y ? cond_true : cond_false;
+    case If::gtr: return x >  y ? cond_true : cond_false;
+    case If::geq: return x >= y ? cond_true : cond_false;
+    default     : break;
+    }
+    break;
+  }
+  case objectTag: {
+    ciObject* xvalue = lt->as_ObjectType()->constant_value();
+    ciObject* yvalue = rt->as_ObjectType()->constant_value();
+    assert(xvalue != NULL && yvalue != NULL, "not constants");
+    if (xvalue->is_loaded() && yvalue->is_loaded()) {
+      switch (cond) {
+      case If::eql: return xvalue == yvalue ? cond_true : cond_false;
+      case If::neq: return xvalue != yvalue ? cond_true : cond_false;
+      default     : break;
+      }
+    }
+    break;
+  }
+  case metaDataTag: {
+    ciMetadata* xvalue = lt->as_MetadataType()->constant_value();
+    ciMetadata* yvalue = rt->as_MetadataType()->constant_value();
+    assert(xvalue != NULL && yvalue != NULL, "not constants");
+    if (xvalue->is_loaded() && yvalue->is_loaded()) {
+      switch (cond) {
+      case If::eql: return xvalue == yvalue ? cond_true : cond_false;
+      case If::neq: return xvalue != yvalue ? cond_true : cond_false;
+      default     : break;
+      }
+    }
+    break;
+  }
+  default:
+    break;
+  }
+  return not_comparable;
+}
+
+
+// Implementation of BlockBegin
+
+void BlockBegin::set_end(BlockEnd* new_end) { // Assumes that no predecessor of new_end still has it as its successor
+  assert(new_end != NULL, "Should not reset block new_end to NULL");
+  if (new_end == _end) return;
+
+  // Remove this block as predecessor of its current successors
+  if (_end != NULL) {
+    for (int i = 0; i < number_of_sux(); i++) {
+      sux_at(i)->remove_predecessor(this);
+    }
+  }
+
+  _end = new_end;
+
+  // Add this block as predecessor of its new successors
+  for (int i = 0; i < number_of_sux(); i++) {
+    sux_at(i)->add_predecessor(this);
+  }
+}
+
+
+void BlockBegin::disconnect_edge(BlockBegin* from, BlockBegin* to) {
+  // disconnect any edges 
