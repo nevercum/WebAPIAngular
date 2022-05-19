@@ -545,4 +545,220 @@ void BlockBegin::set_end(BlockEnd* new_end) { // Assumes that no predecessor of 
 
 
 void BlockBegin::disconnect_edge(BlockBegin* from, BlockBegin* to) {
-  // disconnect any edges 
+  // disconnect any edges between from and to
+#ifndef PRODUCT
+  if (PrintIR && Verbose) {
+    tty->print_cr("Disconnected edge B%d -> B%d", from->block_id(), to->block_id());
+  }
+#endif
+  for (int s = 0; s < from->number_of_sux();) {
+    BlockBegin* sux = from->sux_at(s);
+    if (sux == to) {
+      int index = sux->_predecessors.find(from);
+      if (index >= 0) {
+        sux->_predecessors.remove_at(index);
+      }
+      from->end()->remove_sux_at(s);
+    } else {
+      s++;
+    }
+  }
+}
+
+
+void BlockBegin::substitute_sux(BlockBegin* old_sux, BlockBegin* new_sux) {
+  // modify predecessors before substituting successors
+  for (int i = 0; i < number_of_sux(); i++) {
+    if (sux_at(i) == old_sux) {
+      // remove old predecessor before adding new predecessor
+      // otherwise there is a dead predecessor in the list
+      new_sux->remove_predecessor(old_sux);
+      new_sux->add_predecessor(this);
+    }
+  }
+  old_sux->remove_predecessor(this);
+  end()->substitute_sux(old_sux, new_sux);
+}
+
+
+
+// In general it is not possible to calculate a value for the field "depth_first_number"
+// of the inserted block, without recomputing the values of the other blocks
+// in the CFG. Therefore the value of "depth_first_number" in BlockBegin becomes meaningless.
+BlockBegin* BlockBegin::insert_block_between(BlockBegin* sux) {
+  int bci = sux->bci();
+  // critical edge splitting may introduce a goto after a if and array
+  // bound check elimination may insert a predicate between the if and
+  // goto. The bci of the goto can't be the one of the if otherwise
+  // the state and bci are inconsistent and a deoptimization triggered
+  // by the predicate would lead to incorrect execution/a crash.
+  BlockBegin* new_sux = new BlockBegin(bci);
+
+  // mark this block (special treatment when block order is computed)
+  new_sux->set(critical_edge_split_flag);
+
+  // This goto is not a safepoint.
+  Goto* e = new Goto(sux, false);
+  new_sux->set_next(e, bci);
+  new_sux->set_end(e);
+  // setup states
+  ValueStack* s = end()->state();
+  new_sux->set_state(s->copy(s->kind(), bci));
+  e->set_state(s->copy(s->kind(), bci));
+  assert(new_sux->state()->locals_size() == s->locals_size(), "local size mismatch!");
+  assert(new_sux->state()->stack_size() == s->stack_size(), "stack size mismatch!");
+  assert(new_sux->state()->locks_size() == s->locks_size(), "locks size mismatch!");
+
+  // link predecessor to new block
+  end()->substitute_sux(sux, new_sux);
+
+  // The ordering needs to be the same, so remove the link that the
+  // set_end call above added and substitute the new_sux for this
+  // block.
+  sux->remove_predecessor(new_sux);
+
+  // the successor could be the target of a switch so it might have
+  // multiple copies of this predecessor, so substitute the new_sux
+  // for the first and delete the rest.
+  bool assigned = false;
+  BlockList& list = sux->_predecessors;
+  for (int i = 0; i < list.length(); i++) {
+    BlockBegin** b = list.adr_at(i);
+    if (*b == this) {
+      if (assigned) {
+        list.remove_at(i);
+        // reprocess this index
+        i--;
+      } else {
+        assigned = true;
+        *b = new_sux;
+      }
+      // link the new block back to it's predecessors.
+      new_sux->add_predecessor(this);
+    }
+  }
+  assert(assigned == true, "should have assigned at least once");
+  return new_sux;
+}
+
+
+void BlockBegin::add_predecessor(BlockBegin* pred) {
+  _predecessors.append(pred);
+}
+
+
+void BlockBegin::remove_predecessor(BlockBegin* pred) {
+  int idx;
+  while ((idx = _predecessors.find(pred)) >= 0) {
+    _predecessors.remove_at(idx);
+  }
+}
+
+
+void BlockBegin::add_exception_handler(BlockBegin* b) {
+  assert(b != NULL && (b->is_set(exception_entry_flag)), "exception handler must exist");
+  // add only if not in the list already
+  if (!_exception_handlers.contains(b)) _exception_handlers.append(b);
+}
+
+int BlockBegin::add_exception_state(ValueStack* state) {
+  assert(is_set(exception_entry_flag), "only for xhandlers");
+  if (_exception_states == NULL) {
+    _exception_states = new ValueStackStack(4);
+  }
+  _exception_states->append(state);
+  return _exception_states->length() - 1;
+}
+
+
+void BlockBegin::iterate_preorder(boolArray& mark, BlockClosure* closure) {
+  if (!mark.at(block_id())) {
+    mark.at_put(block_id(), true);
+    closure->block_do(this);
+    BlockEnd* e = end(); // must do this after block_do because block_do may change it!
+    { for (int i = number_of_exception_handlers() - 1; i >= 0; i--) exception_handler_at(i)->iterate_preorder(mark, closure); }
+    { for (int i = e->number_of_sux            () - 1; i >= 0; i--) e->sux_at           (i)->iterate_preorder(mark, closure); }
+  }
+}
+
+
+void BlockBegin::iterate_postorder(boolArray& mark, BlockClosure* closure) {
+  if (!mark.at(block_id())) {
+    mark.at_put(block_id(), true);
+    BlockEnd* e = end();
+    { for (int i = number_of_exception_handlers() - 1; i >= 0; i--) exception_handler_at(i)->iterate_postorder(mark, closure); }
+    { for (int i = e->number_of_sux            () - 1; i >= 0; i--) e->sux_at           (i)->iterate_postorder(mark, closure); }
+    closure->block_do(this);
+  }
+}
+
+
+void BlockBegin::iterate_preorder(BlockClosure* closure) {
+  int mark_len = number_of_blocks();
+  boolArray mark(mark_len, mark_len, false);
+  iterate_preorder(mark, closure);
+}
+
+
+void BlockBegin::iterate_postorder(BlockClosure* closure) {
+  int mark_len = number_of_blocks();
+  boolArray mark(mark_len, mark_len, false);
+  iterate_postorder(mark, closure);
+}
+
+
+void BlockBegin::block_values_do(ValueVisitor* f) {
+  for (Instruction* n = this; n != NULL; n = n->next()) n->values_do(f);
+}
+
+
+#ifndef PRODUCT
+   #define TRACE_PHI(code) if (PrintPhiFunctions) { code; }
+#else
+   #define TRACE_PHI(coce)
+#endif
+
+
+bool BlockBegin::try_merge(ValueStack* new_state, bool has_irreducible_loops) {
+  TRACE_PHI(tty->print_cr("********** try_merge for block B%d", block_id()));
+
+  // local variables used for state iteration
+  int index;
+  Value new_value, existing_value;
+
+  ValueStack* existing_state = state();
+  if (existing_state == NULL) {
+    TRACE_PHI(tty->print_cr("first call of try_merge for this block"));
+
+    if (is_set(BlockBegin::was_visited_flag)) {
+      // this actually happens for complicated jsr/ret structures
+      return false; // BAILOUT in caller
+    }
+
+    // copy state because it is altered
+    new_state = new_state->copy(ValueStack::BlockBeginState, bci());
+
+    // Use method liveness to invalidate dead locals
+    MethodLivenessResult liveness = new_state->scope()->method()->liveness_at_bci(bci());
+    if (liveness.is_valid()) {
+      assert((int)liveness.size() == new_state->locals_size(), "error in use of liveness");
+
+      for_each_local_value(new_state, index, new_value) {
+        if (!liveness.at(index) || new_value->type()->is_illegal()) {
+          new_state->invalidate_local(index);
+          TRACE_PHI(tty->print_cr("invalidating dead local %d", index));
+        }
+      }
+    }
+
+    if (is_set(BlockBegin::parser_loop_header_flag)) {
+      TRACE_PHI(tty->print_cr("loop header block, initializing phi functions"));
+
+      for_each_stack_value(new_state, index, new_value) {
+        new_state->setup_phi_for_stack(this, index);
+        TRACE_PHI(tty->print_cr("creating phi-function %c%d for stack %d", new_state->stack_at(index)->type()->tchar(), new_state->stack_at(index)->id(), index));
+      }
+
+      BitMap& requires_phi_function = new_state->scope()->requires_phi_function();
+      for_each_local_value(new_state, index, new_value) {
+        bool requires_phi = requires_phi_function.at(index) || (new_value->type()->is_doub
