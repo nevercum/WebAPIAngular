@@ -761,4 +761,230 @@ bool BlockBegin::try_merge(ValueStack* new_state, bool has_irreducible_loops) {
 
       BitMap& requires_phi_function = new_state->scope()->requires_phi_function();
       for_each_local_value(new_state, index, new_value) {
-        bool requires_phi = requires_phi_function.at(index) || (new_value->type()->is_doub
+        bool requires_phi = requires_phi_function.at(index) || (new_value->type()->is_double_word() && requires_phi_function.at(index + 1));
+        if (requires_phi || !SelectivePhiFunctions || has_irreducible_loops) {
+          new_state->setup_phi_for_local(this, index);
+          TRACE_PHI(tty->print_cr("creating phi-function %c%d for local %d", new_state->local_at(index)->type()->tchar(), new_state->local_at(index)->id(), index));
+        }
+      }
+    }
+
+    // initialize state of block
+    set_state(new_state);
+
+  } else if (existing_state->is_same(new_state)) {
+    TRACE_PHI(tty->print_cr("existing state found"));
+
+    assert(existing_state->scope() == new_state->scope(), "not matching");
+    assert(existing_state->locals_size() == new_state->locals_size(), "not matching");
+    assert(existing_state->stack_size() == new_state->stack_size(), "not matching");
+
+    if (is_set(BlockBegin::was_visited_flag)) {
+      TRACE_PHI(tty->print_cr("loop header block, phis must be present"));
+
+      if (!is_set(BlockBegin::parser_loop_header_flag)) {
+        // this actually happens for complicated jsr/ret structures
+        return false; // BAILOUT in caller
+      }
+
+      for_each_local_value(existing_state, index, existing_value) {
+        Value new_value = new_state->local_at(index);
+        if (new_value == NULL || new_value->type()->tag() != existing_value->type()->tag()) {
+          Phi* existing_phi = existing_value->as_Phi();
+          if (existing_phi == NULL) {
+            return false; // BAILOUT in caller
+          }
+          // Invalidate the phi function here. This case is very rare except for
+          // JVMTI capability "can_access_local_variables".
+          // In really rare cases we will bail out in LIRGenerator::move_to_phi.
+          existing_phi->make_illegal();
+          existing_state->invalidate_local(index);
+          TRACE_PHI(tty->print_cr("invalidating local %d because of type mismatch", index));
+        }
+
+        if (existing_value != new_state->local_at(index) && existing_value->as_Phi() == NULL) {
+          TRACE_PHI(tty->print_cr("required phi for local %d is missing, irreducible loop?", index));
+          return false; // BAILOUT in caller
+        }
+      }
+
+#ifdef ASSERT
+      // check that all necessary phi functions are present
+      for_each_stack_value(existing_state, index, existing_value) {
+        assert(existing_value->as_Phi() != NULL && existing_value->as_Phi()->block() == this, "phi function required");
+      }
+      for_each_local_value(existing_state, index, existing_value) {
+        assert(existing_value == new_state->local_at(index) || (existing_value->as_Phi() != NULL && existing_value->as_Phi()->as_Phi()->block() == this), "phi function required");
+      }
+#endif
+
+    } else {
+      TRACE_PHI(tty->print_cr("creating phi functions on demand"));
+
+      // create necessary phi functions for stack
+      for_each_stack_value(existing_state, index, existing_value) {
+        Value new_value = new_state->stack_at(index);
+        Phi* existing_phi = existing_value->as_Phi();
+
+        if (new_value != existing_value && (existing_phi == NULL || existing_phi->block() != this)) {
+          existing_state->setup_phi_for_stack(this, index);
+          TRACE_PHI(tty->print_cr("creating phi-function %c%d for stack %d", existing_state->stack_at(index)->type()->tchar(), existing_state->stack_at(index)->id(), index));
+        }
+      }
+
+      // create necessary phi functions for locals
+      for_each_local_value(existing_state, index, existing_value) {
+        Value new_value = new_state->local_at(index);
+        Phi* existing_phi = existing_value->as_Phi();
+
+        if (new_value == NULL || new_value->type()->tag() != existing_value->type()->tag()) {
+          existing_state->invalidate_local(index);
+          TRACE_PHI(tty->print_cr("invalidating local %d because of type mismatch", index));
+        } else if (new_value != existing_value && (existing_phi == NULL || existing_phi->block() != this)) {
+          existing_state->setup_phi_for_local(this, index);
+          TRACE_PHI(tty->print_cr("creating phi-function %c%d for local %d", existing_state->local_at(index)->type()->tchar(), existing_state->local_at(index)->id(), index));
+        }
+      }
+    }
+
+    assert(existing_state->caller_state() == new_state->caller_state(), "caller states must be equal");
+
+  } else {
+    assert(false, "stack or locks not matching (invalid bytecodes)");
+    return false;
+  }
+
+  TRACE_PHI(tty->print_cr("********** try_merge for block B%d successful", block_id()));
+
+  return true;
+}
+
+
+#ifndef PRODUCT
+void BlockBegin::print_block() {
+  InstructionPrinter ip;
+  print_block(ip, false);
+}
+
+
+void BlockBegin::print_block(InstructionPrinter& ip, bool live_only) {
+  ip.print_instr(this); tty->cr();
+  ip.print_stack(this->state()); tty->cr();
+  ip.print_inline_level(this);
+  ip.print_head();
+  for (Instruction* n = next(); n != NULL; n = n->next()) {
+    if (!live_only || n->is_pinned() || n->use_count() > 0) {
+      ip.print_line(n);
+    }
+  }
+  tty->cr();
+}
+#endif // PRODUCT
+
+
+// Implementation of BlockList
+
+void BlockList::iterate_forward (BlockClosure* closure) {
+  const int l = length();
+  for (int i = 0; i < l; i++) closure->block_do(at(i));
+}
+
+
+void BlockList::iterate_backward(BlockClosure* closure) {
+  for (int i = length() - 1; i >= 0; i--) closure->block_do(at(i));
+}
+
+
+void BlockList::values_do(ValueVisitor* f) {
+  for (int i = length() - 1; i >= 0; i--) at(i)->block_values_do(f);
+}
+
+
+#ifndef PRODUCT
+void BlockList::print(bool cfg_only, bool live_only) {
+  InstructionPrinter ip;
+  for (int i = 0; i < length(); i++) {
+    BlockBegin* block = at(i);
+    if (cfg_only) {
+      ip.print_instr(block); tty->cr();
+    } else {
+      block->print_block(ip, live_only);
+    }
+  }
+}
+#endif // PRODUCT
+
+
+// Implementation of BlockEnd
+
+void BlockEnd::substitute_sux(BlockBegin* old_sux, BlockBegin* new_sux) {
+  substitute(*_sux, old_sux, new_sux);
+}
+
+// Implementation of Phi
+
+// Normal phi functions take their operands from the last instruction of the
+// predecessor. Special handling is needed for xhanlder entries because there
+// the state of arbitrary instructions are needed.
+
+Value Phi::operand_at(int i) const {
+  ValueStack* state;
+  if (_block->is_set(BlockBegin::exception_entry_flag)) {
+    state = _block->exception_state_at(i);
+  } else {
+    state = _block->pred_at(i)->end()->state();
+  }
+  assert(state != NULL, "");
+
+  if (is_local()) {
+    return state->local_at(local_index());
+  } else {
+    return state->stack_at(stack_index());
+  }
+}
+
+
+int Phi::operand_count() const {
+  if (_block->is_set(BlockBegin::exception_entry_flag)) {
+    return _block->number_of_exception_states();
+  } else {
+    return _block->number_of_preds();
+  }
+}
+
+#ifdef ASSERT
+// Constructor of Assert
+Assert::Assert(Value x, Condition cond, bool unordered_is_true, Value y) : Instruction(illegalType)
+  , _x(x)
+  , _cond(cond)
+  , _y(y)
+{
+  set_flag(UnorderedIsTrueFlag, unordered_is_true);
+  assert(x->type()->tag() == y->type()->tag(), "types must match");
+  pin();
+
+  stringStream strStream;
+  Compilation::current()->method()->print_name(&strStream);
+
+  stringStream strStream1;
+  InstructionPrinter ip1(1, &strStream1);
+  ip1.print_instr(x);
+
+  stringStream strStream2;
+  InstructionPrinter ip2(1, &strStream2);
+  ip2.print_instr(y);
+
+  stringStream ss;
+  ss.print("Assertion %s %s %s in method %s", strStream1.freeze(), ip2.cond_name(cond), strStream2.freeze(), strStream.freeze());
+
+  _message = ss.as_string();
+}
+#endif
+
+void RangeCheckPredicate::check_state() {
+  assert(state()->kind() != ValueStack::EmptyExceptionState && state()->kind() != ValueStack::ExceptionState, "will deopt with empty state");
+}
+
+void ProfileInvoke::state_values_do(ValueVisitor* f) {
+  if (state() != NULL) state()->values_do(f);
+}
