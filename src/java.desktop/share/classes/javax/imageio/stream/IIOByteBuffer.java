@@ -98,3 +98,47 @@ public class IIOByteBuffer {
      *
      * @see #getData
      * @see #getLength
+     * @see #setOffset
+     */
+    public int getOffset() {
+        return offset;
+    }
+
+    /**
+     * Updates the value that will be returned by subsequent calls
+     * to the {@code getOffset} method.
+     *
+     * @param offset an int containing the new offset value.
+     *
+     * @see #getOffset
+     */
+    public void setOffset(int offset) {
+        this.offset = offset;
+    }
+
+    /**
+     * Returns the length of the data of interest within the byte
+     * array returned by {@code getData}.
+     *
+     * @return an int length.
+     *
+     * @see #getData
+     * @see #getOffset
+     * @see #setLength
+     */
+    public int getLength() {
+        return length;
+    }
+
+    /**
+     * Updates the value that will be returned by subsequent calls
+     * to the {@code getLength} method.
+     *
+     * @param length an int containing the new length value.
+     *
+     * @see #getLength
+     */
+    public void setLength(int length) {
+        this.length = length;
+    }
+}
