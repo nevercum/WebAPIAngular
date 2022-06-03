@@ -97,4 +97,25 @@ public class XSNotationDecl implements XSNotationDeclaration {
      * Optional. Annotation.
      */
     public XSAnnotation getAnnotation() {
-        return (fAnnotations != null) ?
+        return (fAnnotations != null) ? (XSAnnotation) fAnnotations.item(0) : null;
+    }
+
+    /**
+     * Optional. Annotations.
+     */
+    public XSObjectList getAnnotations() {
+        return (fAnnotations != null) ? fAnnotations : XSObjectListImpl.EMPTY_LIST;
+    }
+
+    /**
+     * @see org.apache.xerces.xs.XSObject#getNamespaceItem()
+     */
+    public XSNamespaceItem getNamespaceItem() {
+        return fNamespaceItem;
+    }
+
+    void setNamespaceItem(XSNamespaceItem namespaceItem) {
+        fNamespaceItem = namespaceItem;
+    }
+
+} // class XSNotationDecl
