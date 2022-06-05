@@ -305,4 +305,122 @@ JNIEXPORT jint JNI_OnLoad_setnotif001(JavaVM *jvm, char *options, void *reserved
     return JNI_VERSION_1_8;
 }
 #endif
-jint  Agent_Initialize(JavaVM *jvm, char *optio
+jint  Agent_Initialize(JavaVM *jvm, char *options, void *reserved) {
+    jint res;
+    jvmtiError err;
+
+    if (options != NULL && strcmp(options, "printdump") == 0) {
+        printdump = JNI_TRUE;
+    }
+
+    memset(enbl_scale, 0, SCALE_SIZE);
+    memset(ev_scale, 0, SCALE_SIZE);
+
+    res = jvm->GetEnv((void **) &jvmti, JVMTI_VERSION_1_1);
+    if (res != JNI_OK || jvmti == NULL) {
+        printf("Wrong result of a valid call to GetEnv !\n");
+        return JNI_ERR;
+    }
+
+    err = jvmti->GetPotentialCapabilities(&caps);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(GetPotentialCapabilities) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return JNI_ERR;
+    }
+
+    err = jvmti->AddCapabilities(&caps);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(AddCapabilities) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return JNI_ERR;
+    }
+
+    err = jvmti->GetCapabilities(&caps);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(GetCapabilities) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return JNI_ERR;
+    }
+
+    err = jvmti->CreateRawMonitor("_access_lock", &access_lock);
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(CreateRawMonitor) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return JNI_ERR;
+    }
+
+    callbacks.VMInit = &VMInit;
+    callbacks.ThreadStart = &ThreadStart;
+    callbacks.ThreadEnd = &ThreadEnd;
+    callbacks.ClassLoad = &ClassLoad;
+    callbacks.ClassPrepare = &ClassPrepare;
+
+    if (caps.can_generate_method_entry_events) {
+        callbacks.MethodEntry = &MethodEntry;
+    }
+    if (caps.can_generate_method_exit_events) {
+        callbacks.MethodExit = &MethodExit;
+    }
+    if (caps.can_generate_breakpoint_events) {
+        callbacks.Breakpoint = &Breakpoint;
+    }
+    if (caps.can_generate_single_step_events) {
+        callbacks.SingleStep = &SingleStep;
+    }
+    if (caps.can_generate_frame_pop_events) {
+        callbacks.FramePop = &FramePop;
+    }
+    if (caps.can_generate_exception_events) {
+        callbacks.Exception = &Exception;
+        callbacks.ExceptionCatch = &ExceptionCatch;
+    }
+    if (caps.can_generate_field_access_events) {
+        callbacks.FieldAccess = &FieldAccess;
+    }
+    if (caps.can_generate_field_modification_events) {
+        callbacks.FieldModification = &FieldModification;
+    }
+    err = jvmti->SetEventCallbacks(&callbacks, sizeof(callbacks));
+    if (err != JVMTI_ERROR_NONE) {
+        printf("(SetEventCallbacks) unexpected error: %s (%d)\n",
+               TranslateError(err), err);
+        return JNI_ERR;
+    }
+
+    enable(jvmti, JVMTI_EVENT_VM_INIT);
+
+    return JNI_OK;
+}
+
+JNIEXPORT void JNICALL
+Java_nsk_jvmti_SetEventNotificationMode_setnotif001_enableEv(JNIEnv *env,
+        jclass cls, jobject framePopThread) {
+    setWatches(jvmti, env, cls);
+    notifyFramePopThread = env->NewGlobalRef(framePopThread);
+    enable(jvmti, JVMTI_EVENT_METHOD_ENTRY);
+    enable(jvmti, JVMTI_EVENT_METHOD_EXIT);
+    enable(jvmti, JVMTI_EVENT_THREAD_START);
+    enable(jvmti, JVMTI_EVENT_THREAD_END);
+}
+
+JNIEXPORT jint JNICALL
+Java_nsk_jvmti_SetEventNotificationMode_setnotif001_getRes(JNIEnv *env,
+        jclass cls) {
+    jint i;
+
+    for (i = 0; i < SCALE_SIZE; i++) {
+        jvmtiEvent kind = (jvmtiEvent) i;
+        if (enbl_scale[i] == 1 && ev_scale[i] == 0) {
+            printf("No notification: event %s (%d)\n", TranslateEvent(kind), i);
+            result = STATUS_FAILED;
+        }
+        if (printdump == JNI_TRUE && ev_scale[i] > 0) {
+            printf(">>> %s (%d), notifications: %d\n",
+                   TranslateEvent(kind), i, ev_scale[i]);
+        }
+    }
+    return result;
+}
+
+}
