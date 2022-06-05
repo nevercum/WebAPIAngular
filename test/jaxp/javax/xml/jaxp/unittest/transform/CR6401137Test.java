@@ -82,4 +82,15 @@ public class CR6401137Test {
             transformer = tFactory.newTransformer(source);
 
             ByteArrayOutputStream result_output_stream = new ByteArrayOutputStream();
-            Result result = new StreamResult(res
+            Result result = new StreamResult(result_output_stream);
+            transformer.transform(xml_source, result);
+            result_output_stream.close();
+
+            // expected success
+        } catch (Exception e) {
+            // unexpected failure
+            e.printStackTrace();
+            Assert.fail(e.toString());
+        }
+    }
+}
