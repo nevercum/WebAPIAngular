@@ -87,4 +87,129 @@ plurals.xml and ordinals.xml. See those files and the LDML spec for more informa
     </grammaticalFeatures>
     <grammaticalFeatures targets="nominal" locales="de">
       <grammaticalCase values="nominative genitive dative accusative"/>
- 
+      <grammaticalGender values="masculine feminine neuter"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="hi pa">
+      <grammaticalCase values="nominative oblique"/>
+      <grammaticalGender values="masculine feminine"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="ur">
+      <grammaticalCase values="nominative oblique"/>
+      <grammaticalCase scope="units"/>
+      <grammaticalGender values="masculine feminine"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="ml"> <!-- Holding back on ml until we get more reliable information -->
+      <grammaticalCase values="nominative genitive dative accusative instrumental locative comitative locativecopulative sociative"/>
+      <grammaticalCase scope="units"/> 
+      <grammaticalGender values="animate inanimate feminine neuter"/>
+      <grammaticalGender scope="units"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="mr">
+      <grammaticalCase values="nominative accusative dative ergative locative ablative genitive"/>
+      <grammaticalGender values="masculine feminine neuter"/>
+      <!-- Genitive agrees in gender, case and number with the antecedent. -->
+      <!-- Oblique can be further inflected by semantics-defining suffixes. -->
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="gu">
+      <grammaticalCase values="nominative genitive accusative dative locative instrumental vocative"/>
+      <grammaticalCase  scope="units"/>
+      <grammaticalGender values="masculine feminine neuter"/>
+      <grammaticalGender scope="units"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="kn">
+      <grammaticalCase values="nominative genitive accusative dative locative instrumental vocative"/>
+      <grammaticalCase scope="units" values="nominative genitive accusative dative locative"/>
+      <grammaticalGender values="masculine feminine neuter"/>
+      <grammaticalGender scope="units" values="neuter"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="he">
+      <grammaticalGender values="masculine feminine"/>
+      <grammaticalDefiniteness values="definite indefinite construct"/>
+      <!-- Note that Hebrew nouns also inflect in possessives, with agreement on person, number and gender -->
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="ar">
+      <grammaticalCase values="nominative genitive accusative"/>
+      <grammaticalCase scope="units"/>
+      <grammaticalGender values="masculine feminine"/>
+      <grammaticalDefiniteness values="definite indefinite construct"/>
+      <!-- Note that Arabic nouns also inflect in possessives, with agreement on person, number and gender -->
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="fa">
+      <grammaticalDefiniteness values="definite indefinite construct"/>
+      <!-- Note that Persian nouns also inflect in possessives, with agreement on person and number -->
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="bn">
+      <grammaticalCase values="nominative accusative genitive locative"/>
+      <grammaticalCase scope="units"/>
+      <grammaticalDefiniteness values="definite indefinite"/>
+      <!-- Gender is only used for expressing human activities/professions. -->
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="si">
+      <grammaticalCase values="nominative genitive ablative accusative dative"/>
+      <grammaticalCase scope="units"/>
+      <grammaticalGender values="masculine feminine neuter"/>
+      <grammaticalGender scope="units"/>
+      <grammaticalDefiniteness values="definite indefinite"/>
+      <!-- Neuter is only used for inanimate nouns; plurals have no definiteness marker. -->
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="is">
+      <grammaticalCase values="nominative genitive dative accusative"/>
+      <grammaticalGender values="masculine feminine neuter"/>
+      <grammaticalDefiniteness values="definite indefinite"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="da">
+      <grammaticalCase values="nominative genitive"/>
+      <grammaticalGender values="common neuter"/>
+      <grammaticalDefiniteness values="definite indefinite unspecified"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="sv">
+      <grammaticalCase values="nominative genitive"/>
+      <grammaticalGender values="common neuter"/>
+      <grammaticalDefiniteness values="definite indefinite"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="ro">
+      <grammaticalCase values="nominative genitive"/>
+      <grammaticalGender values="masculine feminine neuter"/>
+      <grammaticalDefiniteness values="definite indefinite"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="am">
+      <grammaticalCase values="nominative accusative"/>
+      <grammaticalDefiniteness values="definite indefinite"/>
+      <!-- Gender is only used for expressing human activities/professions. -->
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="nb nn no">
+      <grammaticalCase values="nominative genitive"/>
+      <grammaticalGender values="masculine feminine neuter"/>
+      <grammaticalDefiniteness values="definite indefinite"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="uk">
+      <grammaticalCase values="nominative genitive dative accusative instrumental vocative locative"/>
+      <grammaticalCase scope="units" values="nominative genitive accusative dative locative instrumental"/>
+      <grammaticalGender values="masculine feminine neuter"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="lv">
+      <grammaticalCase values="nominative genitive dative accusative vocative locative"/>
+      <grammaticalCase scope="units" values="nominative genitive dative accusative locative"/>
+      <grammaticalGender values="masculine feminine"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="lt">
+      <grammaticalCase values="nominative genitive dative accusative instrumental vocative locative"/>
+      <grammaticalCase scope="units" values="nominative genitive dative accusative instrumental locative"/>
+      <grammaticalGender values="masculine feminine"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="cs sk">
+      <grammaticalCase values="nominative genitive dative accusative instrumental vocative locative"/>
+      <grammaticalCase scope="units" values="nominative genitive dative accusative instrumental locative"/>
+      <grammaticalGender values="animate inanimate feminine neuter"/>
+      <grammaticalGender scope="units" values="inanimate feminine neuter"/>
+      <!-- Czech also inflects in polarity (negation is a prefix) -->
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="hr sr">
+      <grammaticalCase values="nominative genitive dative accusative instrumental vocative locative"/>
+      <grammaticalCase scope="units" values="nominative genitive accusative instrumental"/>
+      <grammaticalGender values="animate inanimate feminine neuter"/>
+      <grammaticalGender scope="units" values="inanimate feminine neuter"/>
+    </grammaticalFeatures>
+    <grammaticalFeatures targets="nominal" locales="ru">
+      <grammaticalCase values="nominative genitive dative accusative instrumental prepositional vocative locative"/>
+      <grammaticalCase scope="units" values="nominative accusative da
