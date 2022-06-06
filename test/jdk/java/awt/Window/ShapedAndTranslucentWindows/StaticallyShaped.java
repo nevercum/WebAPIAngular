@@ -42,4 +42,44 @@ import java.awt.*;
  *      background for clipped parts.
  *
  * @author mrkam
- * @author Dmitriy Ermashov (dm
+ * @author Dmitriy Ermashov (dmitriy.ermashov@oracle.com)
+ * @library /lib/client
+ * @build Common ExtendedRobot
+ * @run main StaticallyShaped
+ */
+
+public class StaticallyShaped extends Common {
+
+    public static void main(String[] args) throws Exception {
+        if (checkTranslucencyMode(GraphicsDevice.WindowTranslucency.PERPIXEL_TRANSPARENT))
+            for (Class<Window> windowClass: WINDOWS_TO_TEST){
+                new StaticallyShaped(windowClass).doTest();
+            }
+    }
+
+    public StaticallyShaped(Class windowClass) throws Exception{ super(windowClass); }
+
+    @Override
+    public void applyShape(){ applyStaticShape(); }
+
+    @Override
+    public void doTest() throws Exception{
+        super.doTest();
+
+        checkStaticShape();
+
+        // Drag
+        Point location = window.getLocationOnScreen();
+        robot.dragAndDrop(location.x + dl, location.y + 5, location.x + dl + random.nextInt(dl), location.y + random.nextInt(dl));
+        robot.waitForIdle(delay);
+        checkStaticShape();
+
+        // Resize
+        location = window.getLocationOnScreen();
+        robot.dragAndDrop(location.x + 4, location.y + 4, location.x + random.nextInt(2*dl)-dl, location.y + random.nextInt(2*dl)-dl);
+        robot.waitForIdle(delay);
+        checkStaticShape();
+
+        dispose();
+    }
+}
