@@ -224,4 +224,14 @@ final class NTLMServer implements SaslServer {
             case Sasl.BOUND_SERVER_NAME:
                 return target;
             case NTLM_HOSTNAME:
-              
+                return hostname;
+            default:
+                return null;
+        }
+    }
+
+    @Override
+    public void dispose() throws SaslException {
+        return;
+    }
+}
