@@ -55,4 +55,38 @@ static jclass sjc_CAccessibility = NULL;
     jobject currentAccessible = [self currentAccessibleWithENV:env];
     if (currentAccessible != NULL) {
         CommonComponentAccessibility *currentElement = [CommonComponentAccessibility createWithAccessible:currentAccessible withEnv:env withView:self->fView isCurrent:YES];
-        NSArray *children = [CommonComponentAccessibility childrenOfParent:currentElement withEnv:env withChildrenCode:sun_lwawt_macosx_CAccessibility_JAVA_AX_ALL_C
+        NSArray *children = [CommonComponentAccessibility childrenOfParent:currentElement withEnv:env withChildrenCode:sun_lwawt_macosx_CAccessibility_JAVA_AX_ALL_CHILDREN allowIgnored:YES];
+        if ([children count] != 0) {
+            return children;
+        }
+    }
+    return [super accessibilityChildren];
+}
+
+- (NSInteger)accessibilityDisclosureLevel
+{
+    int level = [self accessibleLevel];
+    return [(OutlineAccessibility *)[self accessibilityParent] isTreeRootVisible] ? level - 1 : level;
+}
+
+- (BOOL)isAccessibilityDisclosed
+{
+    return isExpanded([ThreadUtilities getJNIEnv], [self axContextWithEnv:[ThreadUtilities getJNIEnv]], self->fComponent);
+}
+
+- (NSAccessibilitySubrole)accessibilitySubrole
+{
+    return NSAccessibilityOutlineRowSubrole;
+}
+
+- (NSAccessibilityRole)accessibilityRole
+{
+    return NSAccessibilityRowRole;
+}
+
+- (BOOL)isAccessibilitySelected
+{
+    return YES;
+}
+
+@end
