@@ -246,4 +246,110 @@ public class WhiteBox {
         Consumer<ConcurrentLinkedQueue> bulkRemovalAction) {
         ConcurrentLinkedQueue q = new ConcurrentLinkedQueue();
         int n = 1 + rnd.nextInt(5);
-        for (int i = 0; i 
+        for (int i = 0; i < n; i++) q.add(i);
+        bulkRemovalAction.accept(q);
+        assertEquals(nodeCount(q), 1);
+        assertInvariants(q);
+    }
+
+    /**
+     * Actions that remove the first element, and are expected to
+     * leave at most one slack dead node at head.
+     */
+    @DataProvider
+    public Object[][] pollActions() {
+        return List.<Consumer<ConcurrentLinkedQueue>>of(
+            q -> assertNotNull(q.poll()),
+            q -> assertNotNull(q.remove()))
+            .stream().map(x -> new Object[]{ x }).toArray(Object[][]::new);
+    }
+
+    @Test(dataProvider = "pollActions")
+    public void pollActionsOneNodeSlack(
+        Consumer<ConcurrentLinkedQueue> pollAction) {
+        ConcurrentLinkedQueue q = new ConcurrentLinkedQueue();
+        int n = 1 + rnd.nextInt(5);
+        for (int i = 0; i < n; i++) q.add(i);
+        assertEquals(nodeCount(q), n + 1);
+        for (int i = 0; i < n; i++) {
+            int c = nodeCount(q);
+            boolean slack = item(head(q)) == null;
+            if (slack) assertNotNull(item(next(head(q))));
+            pollAction.accept(q);
+            assertEquals(nodeCount(q), q.isEmpty() ? 1 : c - (slack ? 2 : 0));
+        }
+        assertInvariants(q);
+    }
+
+    /**
+     * Actions that append an element, and are expected to
+     * leave at most one slack node at tail.
+     */
+    @DataProvider
+    public Object[][] addActions() {
+        return List.<Consumer<ConcurrentLinkedQueue>>of(
+            q -> q.add(1),
+            q -> q.offer(1))
+            .stream().map(x -> new Object[]{ x }).toArray(Object[][]::new);
+    }
+
+    @Test(dataProvider = "addActions")
+    public void addActionsOneNodeSlack(
+        Consumer<ConcurrentLinkedQueue> addAction) {
+        ConcurrentLinkedQueue q = new ConcurrentLinkedQueue();
+        int n = 1 + rnd.nextInt(5);
+        for (int i = 0; i < n; i++) {
+            boolean slack = next(tail(q)) != null;
+            addAction.accept(q);
+            if (slack)
+                assertNull(next(tail(q)));
+            else {
+                assertNotNull(next(tail(q)));
+                assertNull(next(next(tail(q))));
+            }
+            assertInvariants(q);
+        }
+    }
+
+    byte[] serialBytes(Object o) {
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(bos);
+            oos.writeObject(o);
+            oos.flush();
+            oos.close();
+            return bos.toByteArray();
+        } catch (Exception fail) {
+            throw new AssertionError(fail);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    <T> T serialClone(T o) {
+        try {
+            ObjectInputStream ois = new ObjectInputStream
+                (new ByteArrayInputStream(serialBytes(o)));
+            T clone = (T) ois.readObject();
+            assertNotSame(o, clone);
+            assertSame(o.getClass(), clone.getClass());
+            return clone;
+        } catch (Exception fail) {
+            throw new AssertionError(fail);
+        }
+    }
+
+    @Test
+    public void testSerialization() {
+        ConcurrentLinkedQueue q = serialClone(new ConcurrentLinkedQueue());
+        assertInvariants(q);
+    }
+
+    /** Checks conditions which should always be true. */
+    void assertInvariants(ConcurrentLinkedQueue q) {
+        assertNotNull(head(q));
+        assertNotNull(tail(q));
+        // head is never self-linked (but tail may!)
+        for (Object h; next(h = head(q)) == h; )
+            assertNotSame(h, head(q)); // must be update race
+    }
+}
