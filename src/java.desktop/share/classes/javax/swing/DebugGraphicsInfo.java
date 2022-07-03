@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2008, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,29 +23,15 @@
  * questions.
  */
 
-package build.tools.jdwpgen;
+package javax.swing;
 
+import java.awt.*;
 import java.util.*;
-import java.io.*;
 
-class MethodTypeNode extends AbstractSimpleTypeNode {
-
-    String docType() {
-        return "methodID";
-    }
-
-    String javaType() {
-        return "long";
-    }
-
-    public void genJavaWrite(PrintWriter writer, int depth,
-                             String writeLabel) {
-        genJavaDebugWrite(writer, depth, writeLabel);
-        indent(writer, depth);
-        writer.println("ps.writeMethodRef(" + writeLabel + ");");
-    }
-
-    String javaRead() {
-        return "ps.readMethodRef()";
-    }
-}
+/** Class used by DebugGraphics for maintaining information about how
+  * to render graphics calls.
+  *
+  * @author Dave Karlton
+  */
+class DebugGraphicsInfo {
+    Color        

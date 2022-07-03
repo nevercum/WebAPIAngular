@@ -1,12 +1,10 @@
 /*
- * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,29 +21,8 @@
  * questions.
  */
 
-package build.tools.jdwpgen;
+package pkg;
 
-import java.util.*;
-import java.io.*;
-
-class MethodTypeNode extends AbstractSimpleTypeNode {
-
-    String docType() {
-        return "methodID";
-    }
-
-    String javaType() {
-        return "long";
-    }
-
-    public void genJavaWrite(PrintWriter writer, int depth,
-                             String writeLabel) {
-        genJavaDebugWrite(writer, depth, writeLabel);
-        indent(writer, depth);
-        writer.println("ps.writeMethodRef(" + writeLabel + ");");
-    }
-
-    String javaRead() {
-        return "ps.readMethodRef()";
-    }
+public interface A {
+    static void m() { }
 }
