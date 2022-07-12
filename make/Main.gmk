@@ -1,0 +1,91 @@
+#
+# Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+#
+# This code is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 only, as
+# published by the Free Software Foundation.  Oracle designates this
+# particular file as subject to the "Classpath" exception as provided
+# by Oracle in the LICENSE file that accompanied this code.
+#
+# This code is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# version 2 for more details (a copy is included in the LICENSE file that
+# accompanied this code).
+#
+# You should have received a copy of the GNU General Public License version
+# 2 along with this work; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+# Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+# or visit www.oracle.com if you need additional information or have any
+# questions.
+#
+
+################################################################################
+# This is the main makefile containing most actual top level targets. It needs
+# to be called with a SPEC file defined.
+################################################################################
+
+# Declare default target
+default:
+
+ifeq ($(wildcard $(SPEC)),)
+  $(error Main.gmk needs SPEC set to a proper spec.gmk)
+endif
+
+# Now load the spec
+include $(SPEC)
+
+# Load the vital tools for all the makefiles.
+include $(TOPDIR)/make/common/MakeBase.gmk
+include $(TOPDIR)/make/common/Modules.gmk
+include $(TOPDIR)/make/common/FindTests.gmk
+
+include $(TOPDIR)/make/MainSupport.gmk
+
+# Are we requested to ignore dependencies?
+ifneq ($(findstring -only, $(MAKECMDGOALS)), )
+  DEPS := none
+endif
+
+# Declare ALL_TARGETS as an immediate variable. This variable is a list of all
+# valid top level targets. It's used to declare them all as PHONY and to
+# generate the -only targets.
+ALL_TARGETS :=
+
+# Hook to include the corresponding custom file, if present.
+$(eval $(call IncludeCustomExtension, Main.gmk))
+
+# All modules for the current target platform.
+ALL_MODULES := $(call FindAllModules)
+
+################################################################################
+################################################################################
+#
+# Recipes for all targets. Only recipes, dependencies are declared later.
+#
+################################################################################
+
+################################################################################
+# Interim/build tools targets, compiling tools used during the build
+
+$(eval $(call SetupTarget, buildtools-langtools, \
+    MAKEFILE := ToolsLangtools, \
+))
+
+$(eval $(call SetupTarget, interim-langtools, \
+    MAKEFILE := CompileInterimLangtools, \
+))
+
+$(eval $(call SetupTarget, interim-tzdb, \
+    MAKEFILE := CopyInterimTZDB, \
+))
+
+$(eval $(call SetupTarget, buildtools-jdk, \
+    MAKEFILE := CompileToolsJdk, \
+    DEPS := interim-langtools interim-tzdb, \
+))
+
+$(eval $
