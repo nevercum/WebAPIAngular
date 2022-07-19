@@ -88,4 +88,235 @@ $(eval $(call SetupTarget, buildtools-jdk, \
     DEPS := interim-langtools interim-tzdb, \
 ))
 
-$(eval $
+$(eval $(call SetupTarget, buildtools-modules, \
+    MAKEFILE := CompileModuleTools, \
+))
+
+$(eval $(call SetupTarget, buildtools-hotspot, \
+    MAKEFILE := CompileToolsHotspot, \
+))
+
+################################################################################
+# Special targets for certain modules
+
+$(eval $(call SetupTarget, generate-exported-symbols, \
+    MAKEFILE := BuildStatic, \
+    DEPS := java.base-libs jdk.jdwp.agent-libs, \
+))
+
+################################################################################
+# Gensrc targets, generating source before java compilation can be done
+#
+$(eval $(call DeclareRecipesForPhase, GENSRC, \
+    TARGET_SUFFIX := gensrc-src, \
+    FILE_PREFIX := Gensrc, \
+    CHECK_MODULES := $(ALL_MODULES), \
+))
+
+$(foreach m, $(GENSRC_MODULES), $(eval $m-gensrc: $m-gensrc-src))
+
+LANGTOOLS_GENSRC_TARGETS := $(filter $(addsuffix -%, $(LANGTOOLS_MODULES)), $(GENSRC_TARGETS))
+INTERIM_LANGTOOLS_GENSRC_TARGETS := $(filter $(addsuffix -%, \
+    $(INTERIM_LANGTOOLS_BASE_MODULES)), $(GENSRC_TARGETS))
+HOTSPOT_GENSRC_TARGETS := $(filter $(addsuffix -%, $(HOTSPOT_MODULES)), $(GENSRC_TARGETS))
+JDK_GENSRC_TARGETS := $(filter-out $(LANGTOOLS_GENSRC_TARGETS) \
+    $(HOTSPOT_GENSRC_TARGETS), $(GENSRC_TARGETS))
+
+GENSRC_MODULEINFO_MODULES := $(ALL_MODULES)
+GENSRC_MODULEINFO_TARGETS := $(addsuffix -gensrc-moduleinfo, \
+    $(GENSRC_MODULEINFO_MODULES))
+
+GENSRC_MODULES := $(GENSRC_MODULEINFO_MODULES)
+GENSRC_TARGETS += $(sort $(GENSRC_MODULEINFO_TARGETS) \
+    $(addsuffix -gensrc, $(GENSRC_MODULES)))
+
+define DeclareModuleInfoRecipe
+  $1-gensrc-moduleinfo:
+	+($(CD) $(TOPDIR)/make && $(MAKE) $(MAKE_ARGS) \
+	    -f common/modules/GensrcModuleInfo.gmk MODULE=$1)
+
+  $1-gensrc: $1-gensrc-moduleinfo
+endef
+
+$(foreach m, $(GENSRC_MODULEINFO_MODULES), $(eval $(call DeclareModuleInfoRecipe,$m)))
+
+ALL_TARGETS += $(GENSRC_TARGETS)
+
+################################################################################
+# Generate data targets
+$(eval $(call DeclareRecipesForPhase, GENDATA, \
+    TARGET_SUFFIX := gendata, \
+    FILE_PREFIX := Gendata, \
+    CHECK_MODULES := $(ALL_MODULES), \
+))
+
+ALL_TARGETS += $(GENDATA_TARGETS)
+
+################################################################################
+# Copy files targets
+$(eval $(call DeclareRecipesForPhase, COPY, \
+    TARGET_SUFFIX := copy, \
+    FILE_PREFIX := Copy, \
+    CHECK_MODULES := $(ALL_MODULES), \
+))
+
+ALL_COPY_MODULES += $(COPY_MODULES)
+ALL_COPY_TARGETS += $(COPY_TARGETS)
+
+IMPORT_COPY_MODULES := $(call FindImportedModules)
+IMPORT_COPY_TARGETS := $(addsuffix -copy, $(IMPORT_COPY_MODULES))
+ALL_COPY_MODULES += $(IMPORT_COPY_MODULES)
+ALL_COPY_TARGETS += $(IMPORT_COPY_TARGETS)
+
+define DeclareImportCopyRecipe
+  $1-copy:
+	+($(CD) $(TOPDIR)/make && $(MAKE) $(MAKE_ARGS) \
+	    -f CopyImportModules.gmk MODULE=$1)
+endef
+
+$(foreach m, $(IMPORT_COPY_MODULES), $(eval $(call DeclareImportCopyRecipe,$m)))
+
+ALL_TARGETS += $(ALL_COPY_TARGETS)
+
+################################################################################
+# Targets for compiling all java modules.
+JAVA_MODULES := $(ALL_MODULES)
+JAVA_TARGETS := $(addsuffix -java, $(JAVA_MODULES))
+
+define DeclareCompileJavaRecipe
+  $1-java:
+	+($(CD) $(TOPDIR)/make && $(MAKE) $(MAKE_ARGS) \
+	$(patsubst %,-I%/modules/$1,$(PHASE_MAKEDIRS)) \
+	    -f CompileJavaModules.gmk MODULE=$1)
+endef
+
+$(foreach m, $(JAVA_MODULES), $(eval $(call DeclareCompileJavaRecipe,$m)))
+
+ALL_TARGETS += $(JAVA_TARGETS)
+
+################################################################################
+# Targets for compiling native libraries
+$(eval $(call DeclareRecipesForPhase, LIBS, \
+    TARGET_SUFFIX := libs, \
+    FILE_PREFIX := Lib, \
+    CHECK_MODULES := $(ALL_MODULES), \
+))
+
+ALL_TARGETS += $(LIBS_TARGETS)
+
+################################################################################
+# Targets for compiling static versions of certain native libraries. These do
+# not end up in the jmods or the normal JDK image, but are instead bundled into
+# a special deliverable.
+$(eval $(call DeclareRecipesForPhase, STATIC_LIBS, \
+    TARGET_SUFFIX := static-libs, \
+    FILE_PREFIX := Lib, \
+    CHECK_MODULES := $(ALL_MODULES), \
+    EXTRA_ARGS := STATIC_LIBS=true, \
+))
+
+ALL_TARGETS += $(STATIC_LIBS_TARGETS)
+
+################################################################################
+# Targets for compiling native executables
+$(eval $(call DeclareRecipesForPhase, LAUNCHER, \
+    TARGET_SUFFIX := launchers, \
+    FILE_PREFIX := Launcher, \
+    CHECK_MODULES := $(ALL_MODULES), \
+))
+
+ALL_TARGETS += $(LAUNCHER_TARGETS)
+
+################################################################################
+# Build hotspot target
+
+HOTSPOT_VARIANT_TARGETS := $(addprefix hotspot-, $(JVM_VARIANTS))
+HOTSPOT_VARIANT_GENSRC_TARGETS := $(addsuffix -gensrc, $(HOTSPOT_VARIANT_TARGETS))
+HOTSPOT_VARIANT_LIBS_TARGETS := $(addsuffix -libs, $(HOTSPOT_VARIANT_TARGETS))
+
+define DeclareHotspotGensrcRecipe
+  hotspot-$1-gensrc:
+	$$(call LogInfo, Building JVM variant '$1' with features '$(JVM_FEATURES_$1)')
+	+($(CD) $(TOPDIR)/make/hotspot && $(MAKE) $(MAKE_ARGS) -f gensrc/GenerateSources.gmk \
+	    JVM_VARIANT=$1)
+endef
+
+$(foreach v, $(JVM_VARIANTS), $(eval $(call DeclareHotspotGensrcRecipe,$v)))
+
+define DeclareHotspotLibsRecipe
+  hotspot-$1-libs:
+	+($(CD) $(TOPDIR)/make/hotspot && $(MAKE) $(MAKE_ARGS) -f lib/CompileLibraries.gmk \
+	    JVM_VARIANT=$1)
+endef
+
+$(foreach v, $(JVM_VARIANTS), $(eval $(call DeclareHotspotLibsRecipe,$v)))
+
+$(eval $(call SetupTarget, hotspot-ide-project, \
+    MAKEFILE := ide/visualstudio/hotspot/CreateVSProject, \
+    DEPS := hotspot exploded-image, \
+    ARGS := -I$(TOPDIR)/make/hotspot, \
+))
+
+ALL_TARGETS += $(HOTSPOT_VARIANT_TARGETS) $(HOTSPOT_VARIANT_GENSRC_TARGETS) \
+    $(HOTSPOT_VARIANT_LIBS_TARGETS)
+
+################################################################################
+# Help and user support
+
+$(eval $(call SetupTarget, doctor, \
+    MAKEFILE := Doctor, \
+))
+
+################################################################################
+# Generate libs and launcher targets for creating compile_commands.json fragments
+define DeclareCompileCommandsRecipe
+  $1-compile-commands:
+	$$(call LogInfo, Generating compile_commands.json fragments for $1)
+	+($(CD) $(TOPDIR)/make && $(MAKE) $(MAKE_ARGS) -f Main.gmk $1-only \
+	    GENERATE_COMPILE_COMMANDS_ONLY=true)
+
+  COMPILE_COMMANDS_TARGETS_$2 += $1-compile-commands
+endef
+
+$(foreach t, $(HOTSPOT_VARIANT_LIBS_TARGETS), \
+  $(eval $(call DeclareCompileCommandsRecipe,$t,HOTSPOT)) \
+)
+
+$(foreach t, $(LIBS_TARGETS) $(LAUNCHER_TARGETS), \
+  $(eval $(call DeclareCompileCommandsRecipe,$t,JDK)) \
+)
+
+$(eval $(call SetupTarget, compile-commands, \
+    MAKEFILE := CompileCommands, \
+))
+
+$(eval $(call SetupTarget, compile-commands-hotspot, \
+    MAKEFILE := CompileCommands, \
+))
+
+ALL_TARGETS += $(COMPILE_COMMANDS_TARGETS_HOTSPOT) $(COMPILE_COMMANDS_TARGETS_JDK)
+
+################################################################################
+# VS Code projects
+
+$(eval $(call SetupTarget, vscode-project, \
+    MAKEFILE := ide/vscode/hotspot/CreateVSCodeProject, \
+    ARGS := VSCODE_INDEXER=cpptools, \
+    DEPS := compile-commands, \
+))
+
+$(eval $(call SetupTarget, vscode-project-clangd, \
+    MAKEFILE := ide/vscode/hotspot/CreateVSCodeProject, \
+    ARGS := VSCODE_INDEXER=clangd, \
+    DEPS := compile-commands, \
+))
+
+$(eval $(call SetupTarget, vscode-project-rtags, \
+    MAKEFILE := ide/vscode/hotspot/CreateVSCodeProject, \
+    ARGS := VSCODE_INDEXER=rtags, \
+    DEPS := compile-commands, \
+))
+
+$(eval $(call SetupTarget, vscode-project-ccls, \
+    MAKEFILE := ide/vscode/hotspot/CreateVSCodeProject, \
+    ARGS :=
