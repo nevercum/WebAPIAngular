@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,19 +21,38 @@
  * questions.
  */
 
-/*
- * @test
- * @bug 8012722
- * @summary Single comma in array initializer should parse
- * @compile SingleCommaAnnotationValue.java
- */
+import javax.swing.JComponent;
+import javax.swing.plaf.ComponentUI;
 
-public class SingleCommaAnnotationValue {
-    @Foo({}) void a() { }
-    @Foo({,}) void b() { }
-    @Foo({0}) void c() { }
-    @Foo({0,}) void d() { }
-    @Foo({0,0}) void e() { }
-    @Foo({0,0,}) void f() { }
+/**
+ * @test
+ * @bug 4339584
+ */
+public final class GetUI {
+
+    public static void main(final String[] args) {
+        CustomJComponent component = new CustomJComponent();
+        ComponentUI ui = new ComponentUI() {
+        };
+        component.setUI(ui);
+        ComponentUI actual = component.getUI();
+        if (actual != ui) {
+            System.err.println("Expected: " + ui);
+            System.err.println("Actual: " + actual);
+            throw new RuntimeException("Test failed");
+        }
+    }
+
+    private static class CustomJComponent extends JComponent {
+
+        @Override
+        public ComponentUI getUI() {
+            return super.getUI();
+        }
+
+        @Override
+        public void setUI(ComponentUI ui) {
+            super.setUI(ui);
+        }
+    }
 }
-@interface Foo { int[] value(); }
