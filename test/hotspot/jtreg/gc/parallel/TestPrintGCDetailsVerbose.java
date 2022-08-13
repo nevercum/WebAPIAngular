@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,13 +21,31 @@
  * questions.
  */
 
-#include "native_thread.cpp"
-#include "nsk_tools.cpp"
-#include "jni_tools.cpp"
-#include "jvmti_tools.cpp"
-#include "agent_tools.cpp"
-#include "jvmti_FollowRefObjects.cpp"
-#include "Injector.cpp"
-#include "JVMTITools.cpp"
-#include "agent_common.cpp"
-#include "em05t001.cpp"
+package gc.parallel;
+
+/*
+ * @test TestPrintGCDetailsVerbose
+ * @bug 8016740 8177963
+ * @summary Tests that jvm with maximally verbose GC logging does not crash when ParOldGC has no memory
+ * @requires vm.gc.Parallel
+ * @modules java.base/jdk.internal.misc
+ * @run main/othervm -Xmx50m -XX:+UseParallelGC -Xlog:gc*=trace gc.parallel.TestPrintGCDetailsVerbose
+ */
+public class TestPrintGCDetailsVerbose {
+
+    public static void main(String[] args) {
+        for (int t = 0; t <= 10; t++) {
+            byte a[][] = new byte[100000][];
+            try {
+                for (int i = 0; i < a.length; i++) {
+                    a[i] = new byte[100000];
+                }
+            } catch (OutOfMemoryError oome) {
+                a = null;
+                System.out.println("OOM!");
+                continue;
+            }
+        }
+    }
+}
+
