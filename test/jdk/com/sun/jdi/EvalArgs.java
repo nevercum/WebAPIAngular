@@ -244,4 +244,47 @@ public class EvalArgs extends JdbTest {
         jdb.command(JdbCommand.print("1"));
 
         //  Verify that passing a subclass object works
-        evalShouldNotContain("EvalArgsTarg.ffjj1(Eval
+        evalShouldNotContain("EvalArgsTarg.ffjj1(EvalArgsTarg.myjj2)", argsMatchNoMethod);
+        evalShouldNotContain("EvalArgsTarg.myjj1.toString().equals(\"jj1name\")", argsMatchNoMethod);
+
+        jdb.command(JdbCommand.print("1"));
+
+        // Overloaded methods.  These should pass
+        // because there is an exact  match.
+        evalShouldNotContain("EvalArgsTarg.ffoverload(EvalArgsTarg.jjboolean)", argsMatchNoMethod);
+
+        evalShouldNotContain("EvalArgsTarg.ffoverload(EvalArgsTarg.jjchar)", argsMatchNoMethod);
+        evalShouldNotContain("EvalArgsTarg.ffoverload(EvalArgsTarg.jjdouble)", argsMatchNoMethod);
+        evalShouldNotContain("EvalArgsTarg.ffoverload(EvalArgsTarg.jjfloat)", argsMatchNoMethod);
+        evalShouldNotContain("EvalArgsTarg.ffoverload(EvalArgsTarg.jjlong)", argsMatchNoMethod);
+        evalShouldNotContain("EvalArgsTarg.ffoverload(EvalArgsTarg.jjshort)", argsMatchNoMethod);
+        evalShouldNotContain("EvalArgsTarg.ffoverload(EvalArgsTarg.jjintArray)", argsMatchNoMethod);
+        evalShouldNotContain("EvalArgsTarg.ffoverload(EvalArgsTarg.myjj1)", argsMatchNoMethod);
+        evalShouldNotContain("EvalArgsTarg.ffoverload(EvalArgsTarg.myjj2)", argsMatchNoMethod);
+
+        jdb.command(JdbCommand.print("1"));
+        jdb.command(JdbCommand.print("\"These should fail with msg Arguments match multiple methods\""));
+
+        // These overload calls should fail because there
+        // isn't an exact match and jdb isn't smart  enough
+        // to figure out which of several possibilities
+        // should be called
+        final String argsMatchMultipleMethods = "Arguments match multiple methods";
+        evalShouldContain("EvalArgsTarg.ffoverload(EvalArgsTarg.jjbyte)", argsMatchMultipleMethods);
+
+        evalShouldContain("EvalArgsTarg.ffoverload(EvalArgsTarg.jjint)", argsMatchMultipleMethods);
+
+        jdb.command(JdbCommand.print("1"));
+        jdb.command(JdbCommand.print("\"These should fail with InvalidTypeExceptions\""));
+
+        final String invalidTypeException = "InvalidTypeException";
+        evalShouldContain("EvalArgsTarg.ffboolean(EvalArgsTarg.jjbyte)", invalidTypeException);
+        evalShouldContain("EvalArgsTarg.ffintArray(EvalArgsTarg.jjint)", invalidTypeException);
+        evalShouldContain("EvalArgsTarg.ffintArray(EvalArgsTarg.jjfloatArray)", invalidTypeException);
+        evalShouldContain("EvalArgsTarg.ffjj2(EvalArgsTarg.myjj1)", invalidTypeException);
+        evalShouldContain("EvalArgsTarg.ffjj2(EvalArgsTarg.myoranges)", invalidTypeException);
+
+        jdb.contToExit(1);
+    }
+
+}
