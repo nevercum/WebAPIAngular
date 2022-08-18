@@ -144,4 +144,25 @@ typedef jubyte  ThreeByteBgrDataType;
 #define ClearThreeByteBgrBlendFillVars(PREFIX, argb) \
     (PREFIX ## 0 = PREFIX ## 1 = PREFIX ## 2 = 0)
 
-#define InitThreeByteBgrBlendFillVarsNonPre(PREFIX, argb, CO
+#define InitThreeByteBgrBlendFillVarsNonPre(PREFIX, argb, COMP_PREFIX) \
+    do { \
+        PREFIX ## 0 = (jubyte) COMP_PREFIX ## B; \
+        PREFIX ## 1 = (jubyte) COMP_PREFIX ## G; \
+        PREFIX ## 2 = (jubyte) COMP_PREFIX ## R; \
+    } while (0)
+
+#define InitThreeByteBgrBlendFillVarsPre(PREFIX, argb, COMP_PREFIX)
+
+#define StoreThreeByteBgrBlendFill(pRas, PREFIX, x, argb, COMP_PREFIX) \
+    do { \
+        pRas[3*x+0] = PREFIX ## 0; \
+        pRas[3*x+1] = PREFIX ## 1; \
+        pRas[3*x+2] = PREFIX ## 2; \
+    } while (0)
+
+#define StoreThreeByteBgrFrom4ByteArgbComps(pRas, PREFIX, x, COMP_PREFIX) \
+    StoreThreeByteBgrFrom4ByteArgb(pRas, PREFIX, x, \
+                                   COMP_PREFIX ## A, COMP_PREFIX ## R, \
+                                   COMP_PREFIX ## G, COMP_PREFIX ## B)
+
+#endif /* ThreeByteBgr_h_Included */
