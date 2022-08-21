@@ -136,4 +136,137 @@ public class D {
     {
       mv = cw.visitMethod(0, "<init>", "()V", null, null);
       mv.visitCode();
-      mv.visitVar
+      mv.visitVarInsn(ALOAD, 0);
+      mv.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+      mv.visitInsn(RETURN);
+      mv.visitMaxs(1, 1);
+      mv.visitEnd();
+    }
+    {
+      mv = cw.visitMethod(ACC_STATIC, "m", "()I", null, null);
+      mv.visitCode();
+      mv.visitInsn(ICONST_1);
+      mv.visitInsn(IRETURN);
+      mv.visitMaxs(1, 0);
+      mv.visitEnd();
+    }
+    {
+      mv = cw.visitMethod(ACC_PRIVATE, "m", "()I", null, null);
+      mv.visitCode();
+      mv.visitInsn(ICONST_2);
+      mv.visitInsn(IRETURN);
+      mv.visitMaxs(1, 1);
+      mv.visitEnd();
+    }
+    cw.visitEnd();
+
+    return cw.toByteArray();
+  }
+
+  public static byte[] dumpD () {
+
+    ClassWriter cw = new ClassWriter(0);
+    FieldVisitor fv;
+    MethodVisitor mv;
+    AnnotationVisitor av0;
+
+    cw.visit(52, ACC_PUBLIC + ACC_SUPER, "D", null, "java/lang/Object", null);
+
+    {
+      mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
+      mv.visitCode();
+      mv.visitVarInsn(ALOAD, 0);
+      mv.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+      mv.visitInsn(RETURN);
+      mv.visitMaxs(1, 1);
+      mv.visitEnd();
+    }
+    {
+      mv = cw.visitMethod(ACC_PUBLIC + ACC_STATIC, "CallStatic", "()I", null, null);
+      mv.visitCode();
+      mv.visitMethodInsn(INVOKESTATIC, "C", "m", "()I", false);
+      mv.visitVarInsn(ISTORE, 0);
+      mv.visitVarInsn(ILOAD, 0);
+      mv.visitInsn(IRETURN);
+      mv.visitMaxs(1, 1);
+      mv.visitEnd();
+    }
+    {
+      mv = cw.visitMethod(ACC_PUBLIC + ACC_STATIC, "CallInterface", "()I", null, new String[] { "java/lang/AbstractMethodError" });
+      mv.visitCode();
+      Label l0 = new Label();
+      Label l1 = new Label();
+      Label l2 = new Label();
+      mv.visitTryCatchBlock(l0, l1, l2, "java/lang/AbstractMethodError");
+      mv.visitLabel(l0);
+      mv.visitTypeInsn(NEW, "C");
+      mv.visitInsn(DUP);
+      mv.visitMethodInsn(INVOKESPECIAL, "C", "<init>", "()V", false);
+      mv.visitVarInsn(ASTORE, 0);
+      mv.visitVarInsn(ALOAD, 0);
+      mv.visitMethodInsn(INVOKEINTERFACE, "I", "m", "()I", true);
+      mv.visitLabel(l1);
+      mv.visitInsn(IRETURN);
+      mv.visitLabel(l2);
+      mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[] {"java/lang/AbstractMethodError"});
+      mv.visitVarInsn(ASTORE, 0);
+      mv.visitInsn(ICONST_0);
+      mv.visitInsn(IRETURN);
+      mv.visitMaxs(2, 1);
+      mv.visitEnd();
+    }
+    {
+      mv = cw.visitMethod(ACC_PUBLIC + ACC_STATIC, "CallVirtual", "()I", null, null);
+      mv.visitCode();
+      Label l0 = new Label();
+      Label l1 = new Label();
+      Label l2 = new Label();
+      mv.visitTryCatchBlock(l0, l1, l2, "java/lang/IncompatibleClassChangeError");
+      mv.visitLabel(l0);
+      mv.visitTypeInsn(NEW, "C");
+      mv.visitInsn(DUP);
+      mv.visitMethodInsn(INVOKESPECIAL, "C", "<init>", "()V", false);
+      mv.visitVarInsn(ASTORE, 0);
+      mv.visitVarInsn(ALOAD, 0);
+      mv.visitMethodInsn(INVOKEVIRTUAL, "C", "m", "()I", false);
+      mv.visitLabel(l1);
+      mv.visitInsn(IRETURN);
+      mv.visitLabel(l2);
+      mv.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[] {"java/lang/IncompatibleClassChangeError"});
+      mv.visitVarInsn(ASTORE, 0);
+      mv.visitInsn(ICONST_0);
+      mv.visitInsn(IRETURN);
+      mv.visitMaxs(2, 1);
+      mv.visitEnd();
+    }
+    cw.visitEnd();
+
+    return cw.toByteArray();
+  }
+
+  public static byte[] dumpI() {
+
+    ClassWriter cw = new ClassWriter(0);
+    FieldVisitor fv;
+    MethodVisitor mv;
+    AnnotationVisitor av0;
+
+    cw.visit(52, ACC_ABSTRACT + ACC_INTERFACE, "I", null, "java/lang/Object", null);
+
+    {
+      mv = cw.visitMethod(ACC_PUBLIC + ACC_ABSTRACT, "m", "()I", null, null);
+      mv.visitEnd();
+    }
+    {
+      mv = cw.visitMethod(ACC_PUBLIC, "q", "()I", null, null);
+      mv.visitCode();
+      mv.visitInsn(ICONST_3);
+      mv.visitInsn(IRETURN);
+      mv.visitMaxs(1, 1);
+      mv.visitEnd();
+    }
+    cw.visitEnd();
+
+    return cw.toByteArray();
+  }
+}
