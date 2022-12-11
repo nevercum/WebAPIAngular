@@ -37,4 +37,36 @@
  *     public boolean equals(java.lang.Object obj)
  *     Compares the specified Object with this CharValue for equality.
  *     Returns: true if the Object is a CharValue and if applying "=="
- *     to the tw
+ *     to the two mirrored primitives would evaluate to true;
+ *     false otherwise.
+ *     The test works as follows:
+ *     A debugger program - nsk.jdi.CharValue.equals.equals001;
+ *     a debuggee program - nsk.jdi.CharValue.equals.equals001a.
+ *     Using nsk.jdi.share classes,
+ *     the debugger gets the debuggee running on another JavaVM,
+ *     creates the object debuggee.VM,
+ *     establishes a pipe with the debuggee program, and then
+ *     send to the programm commands, to which the debuggee replies
+ *     via the pipe. Upon getting reply,
+ *     the debugger calls corresponding debuggee.VM methods to get
+ *     needed data and compares the data got to the data expected.
+ *     In case of mismatch the test produces the return value 97 and
+ *     a corresponding error message(s).
+ *     Otherwise, the test is passed and produces
+ *     the return value 95 and no message.
+ * COMMENTS:
+ *
+ * @library /vmTestbase
+ *          /test/lib
+ * @build nsk.jdi.CharValue.equals.equals001
+ *        nsk.jdi.CharValue.equals.equals001a
+ * @run main/othervm
+ *      nsk.jdi.CharValue.equals.equals001
+ *      -verbose
+ *      -arch=${os.family}-${os.simpleArch}
+ *      -waittime=5
+ *      -debugee.vmkind=java
+ *      -transport.address=dynamic
+ *      -debugee.vmkeys="${test.vm.opts} ${test.java.opts}"
+ */
+
