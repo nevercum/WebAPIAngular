@@ -69,4 +69,16 @@ public class SignedJar {
                 if (mainArg.equals("testlambda")) {
                     output.shouldMatch(lambdaLoadFromHello);
                 }
-        
+            } catch (Exception e) {
+                TestCommon.checkCommonExecExceptions(output, e);
+            }
+
+            // Test class exists in both signed JAR and unsigned JAR
+            String jars = signedJar + System.getProperty("path.separator") + unsignedJar;
+            output = TestCommon.dump(jars, TestCommon.list(mainClass),
+                                     "-Xlog:cds+class=debug", mainClass, mainArg);
+            TestCommon.checkDump(output, skipMsg);
+            output.shouldNotContain(lambdaInArchive);
+        }
+    }
+}
