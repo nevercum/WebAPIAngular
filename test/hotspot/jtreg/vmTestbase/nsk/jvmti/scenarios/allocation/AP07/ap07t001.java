@@ -73,4 +73,13 @@ public class ap07t001 extends DebugeeClass {
         left       = new ap07t001();
         left.left  = new ap07t001();
         left.right = new ap07t001();
-  
+        setTag(left,       1l);
+        setTag(left.left,  2l);
+        setTag(left.right, 3l);
+
+        setRoot();
+
+        status = checkStatus(status);
+        return status;
+    }
+}
