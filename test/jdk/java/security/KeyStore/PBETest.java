@@ -122,4 +122,46 @@ public class PBETest {
         }
 
         try {
-           
+            keystore2 = load(NEW_KEYSTORE_TYPE, filename, PASSWORD);
+            entry = keystore2.getEntry(ALIAS,
+                new KeyStore.PasswordProtection(PASSWORD));
+            Key key;
+            if (entry instanceof KeyStore.PrivateKeyEntry) {
+                key = ((KeyStore.PrivateKeyEntry) entry).getPrivateKey();
+            } else if (entry instanceof KeyStore.SecretKeyEntry) {
+                key = ((KeyStore.SecretKeyEntry) entry).getSecretKey();
+            } else {
+                throw new Exception("Failed to retrieve key entry");
+            }
+            if (originalKey.equals(key)) {
+                System.out.println("Retrieved key entry named '" + ALIAS + "'");
+                System.out.println();
+            } else {
+                throw new Exception(
+                    "Failed: recovered key does not match the original key");
+            }
+
+        } finally {
+            new File(filename).delete();
+        }
+    }
+
+    private static KeyStore load(String type, String path, char[] password)
+        throws Exception {
+        KeyStore keystore = KeyStore.getInstance(type);
+
+        if (path != null) {
+
+            try (FileInputStream inStream = new FileInputStream(path)) {
+                System.out.println("Loading keystore from: " + path);
+                keystore.load(inStream, password);
+                System.out.println("Loaded keystore with " + keystore.size() +
+                    " entries");
+            }
+        } else {
+            keystore.load(null, null);
+        }
+
+        return keystore;
+    }
+}
