@@ -175,4 +175,134 @@ public class PortFile {
         file.delete();
 
         // Wait until file has been deleted (deletes are asynchronous on Windows!) otherwise we
-        // might shutdown the server and prevent another one fro
+        // might shutdown the server and prevent another one from starting.
+        for (int i = 0; i < 10 && file.exists(); i++) {
+            Thread.sleep(1000);
+        }
+        if (file.exists()) {
+            throw new IOException("Failed to delete file.");
+        }
+    }
+
+    /**
+     * Is the port file still there?
+     */
+    public boolean exists() throws IOException {
+        return file.exists();
+    }
+
+    /**
+     * Is a stop file there?
+     */
+    public boolean markedForStop() throws IOException {
+        if (stopFile.exists()) {
+            try {
+                stopFile.delete();
+            } catch (Exception e) {
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Unlock the port file.
+     */
+    public void unlock() throws IOException {
+        if (lock == null) {
+            return;
+        }
+        lock.release();
+        lock = null;
+        lockSem.release();
+    }
+
+    public boolean hasValidValues() throws IOException, InterruptedException {
+        if (exists()) {
+            lock();
+            getValues();
+            unlock();
+
+            if (containsPortInfo()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Wait for the port file to contain values that look valid.
+     */
+    public void waitForValidValues() throws IOException, InterruptedException {
+        final int MS_BETWEEN_ATTEMPTS = 500;
+        long startTime = System.currentTimeMillis();
+        long timeout = startTime + getServerStartupTimeoutSeconds() * 1000;
+        while (true) {
+            Log.debug("Looking for valid port file values...");
+            if (exists()) {
+                lock();
+                getValues();
+                unlock();
+            }
+            if (containsPortInfo) {
+                Log.debug("Valid port file values found after " + (System.currentTimeMillis() - startTime) + " ms");
+                return;
+            }
+            if (System.currentTimeMillis() > timeout) {
+                break;
+            }
+            Thread.sleep(MS_BETWEEN_ATTEMPTS);
+        }
+        throw new IOException("No port file values materialized. Giving up after " +
+                                      (System.currentTimeMillis() - startTime) + " ms");
+    }
+
+    /**
+     * Check if the portfile still contains my values, assuming that I am the server.
+     */
+    public boolean stillMyValues() throws IOException, FileNotFoundException, InterruptedException {
+        for (;;) {
+            try {
+                lock();
+                getValues();
+                unlock();
+                if (containsPortInfo) {
+                    if (serverPort == myServerPort &&
+                        serverCookie == myServerCookie) {
+                        // Everything is ok.
+                        return true;
+                    }
+                    // Someone has overwritten the port file.
+                    // Probably another javac server, lets quit.
+                    return false;
+                }
+                // Something else is wrong with the portfile. Lets quit.
+                return false;
+            } catch (FileLockInterruptionException e) {
+                continue;
+            }
+            catch (ClosedChannelException e) {
+                // The channel has been closed since the server is exiting.
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Return the name of the port file.
+     */
+    public String getFilename() {
+        return filename;
+    }
+
+    private long getServerStartupTimeoutSeconds() {
+        String str = System.getProperty("serverStartupTimeout");
+        if (str != null) {
+            try {
+                return Integer.parseInt(str);
+            } catch (NumberFormatException e) {
+            }
+        }
+        return 60;
+    }
+}
