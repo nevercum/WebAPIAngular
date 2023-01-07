@@ -79,4 +79,5 @@ class allfields004aClassForCheck extends allfields004aSuperClassForCheck impleme
 class allfields004aSuperClassForCheck  {
 }
 
-interface allfields004aInterfaceForCh
+interface allfields004aInterfaceForCheck {
+}
