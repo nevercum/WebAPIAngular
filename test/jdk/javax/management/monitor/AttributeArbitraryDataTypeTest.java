@@ -213,4 +213,220 @@ public class AttributeArbitraryDataTypeTest implements NotificationListener {
                     gaugeMessageReceived = true;
                     notifyAll();
                 }
-            } else if (type.equals(Monit
+            } else if (type.equals(MonitorNotification.
+                                   STRING_TO_COMPARE_VALUE_MATCHED)) {
+                echo("\t\t" + n.getObservedAttribute() +
+                     " matches the string-to-compare value");
+                echo("\t\tDerived Gauge = " + n.getDerivedGauge());
+                echo("\t\tTrigger = " + n.getTrigger());
+
+                synchronized (this) {
+                    stringMessageReceived = true;
+                    notifyAll();
+                }
+            } else {
+                echo("\t\tSkipping notification of type: " + type);
+            }
+        } catch (Exception e) {
+            echo("\tError in handleNotification!");
+            e.printStackTrace(System.out);
+        }
+    }
+
+    /**
+     * Update the counter and check for notifications
+     */
+    public int counterMonitorNotification(int testCase)
+        throws Exception {
+
+        counterMessageReceived = false;
+        CounterMonitor counterMonitor = null;
+        try {
+            MBeanServer server = MBeanServerFactory.newMBeanServer();
+
+            String domain = server.getDefaultDomain();
+
+            // Create a new CounterMonitor MBean and add it to the MBeanServer.
+            //
+            echo(">>> CREATE a new CounterMonitor MBean");
+            ObjectName counterMonitorName = new ObjectName(
+                            domain + ":type=" + CounterMonitor.class.getName());
+            counterMonitor = new CounterMonitor();
+            server.registerMBean(counterMonitor, counterMonitorName);
+
+            echo(">>> ADD a listener to the CounterMonitor");
+            counterMonitor.addNotificationListener(this, null, null);
+
+            //
+            // MANAGEMENT OF A STANDARD MBEAN
+            //
+
+            echo(">>> CREATE a new ObservedObject MBean");
+
+            ObjectName obsObjName =
+                ObjectName.getInstance(domain + ":type=ObservedObject");
+            ObservedObject obsObj = new ObservedObject();
+            ComplexAttribute ca = new ComplexAttribute();
+            switch (testCase) {
+                case 1:
+                    obsObj.ia = 0;
+                    break;
+                case 2:
+                    ca.setIntegerAttribute(0);
+                    obsObj.setComplexAttribute(ca);
+                    break;
+                case 3:
+                    ca.setArrayAttribute(new Integer[0]);
+                    obsObj.setComplexAttribute(ca);
+                    break;
+            }
+            server.registerMBean(obsObj, obsObjName);
+
+            echo(">>> SET the attributes of the CounterMonitor:");
+
+            counterMonitor.addObservedObject(obsObjName);
+            echo("\tATTRIBUTE \"ObservedObject\"    = " + obsObjName);
+
+            switch (testCase) {
+                case 1:
+                    counterMonitor.setObservedAttribute(
+                         "CompositeDataAttribute.IntegerAttribute");
+                    echo("\tATTRIBUTE \"ObservedAttribute\" = " +
+                         "CompositeDataAttribute.IntegerAttribute");
+                    break;
+                case 2:
+                    counterMonitor.setObservedAttribute(
+                         "ComplexAttribute.integerAttribute");
+                    echo("\tATTRIBUTE \"ObservedAttribute\" = " +
+                         "ComplexAttribute.integerAttribute");
+                    break;
+                case 3:
+                    counterMonitor.setObservedAttribute(
+                         "ComplexAttribute.arrayAttribute.length");
+                    echo("\tATTRIBUTE \"ObservedAttribute\" = " +
+                         "ComplexAttribute.arrayAttribute.length");
+                    break;
+            }
+
+            counterMonitor.setNotify(true);
+            echo("\tATTRIBUTE \"NotifyFlag\"        = true");
+
+            Integer threshold = 2;
+            counterMonitor.setInitThreshold(threshold);
+            echo("\tATTRIBUTE \"Threshold\"         = " + threshold);
+
+            int granularityperiod = 500;
+            counterMonitor.setGranularityPeriod(granularityperiod);
+            echo("\tATTRIBUTE \"GranularityPeriod\" = " + granularityperiod);
+
+            echo(">>> START the CounterMonitor");
+            counterMonitor.start();
+
+            // Wait for granularity period (multiplied by 2 for sure)
+            //
+            Thread.sleep(granularityperiod * 2);
+
+            switch (testCase) {
+                case 1:
+                    obsObj.ia = 1;
+                    break;
+                case 2:
+                    ca.setIntegerAttribute(1);
+                    break;
+                case 3:
+                    ca.setArrayAttribute(new Integer[1]);
+                    break;
+            }
+
+            // Wait for granularity period (multiplied by 2 for sure)
+            //
+            Thread.sleep(granularityperiod * 2);
+
+            switch (testCase) {
+                case 1:
+                    obsObj.ia = 2;
+                    break;
+                case 2:
+                    ca.setIntegerAttribute(2);
+                    break;
+                case 3:
+                    ca.setArrayAttribute(new Integer[2]);
+                    break;
+            }
+
+            // Wait for granularity period (multiplied by 2 for sure)
+            //
+            Thread.sleep(granularityperiod * 2);
+
+            switch (testCase) {
+                case 1:
+                    obsObj.ia = 3;
+                    break;
+                case 2:
+                    ca.setIntegerAttribute(3);
+                    break;
+                case 3:
+                    ca.setArrayAttribute(new Integer[3]);
+                    break;
+            }
+
+            // Check if notification was received
+            //
+            synchronized (this) {
+                while (!counterMessageReceived) {
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        System.err.println("Got unexpected exception: " + e);
+                        e.printStackTrace();
+                        break;
+                    }
+                }
+            }
+            if (counterMessageReceived) {
+                echo("\tOK: CounterMonitor notification received");
+            } else {
+                echo("\tKO: CounterMonitor notification missed or not emitted");
+                return 1;
+            }
+        } finally {
+            if (counterMonitor != null)
+                counterMonitor.stop();
+        }
+
+        return 0;
+    }
+
+    /**
+     * Update the gauge and check for notifications
+     */
+    public int gaugeMonitorNotification(int testCase)
+        throws Exception {
+
+        gaugeMessageReceived = false;
+        GaugeMonitor gaugeMonitor = null;
+        try {
+            MBeanServer server = MBeanServerFactory.newMBeanServer();
+
+            String domain = server.getDefaultDomain();
+
+            // Create a new GaugeMonitor MBean and add it to the MBeanServer.
+            //
+            echo(">>> CREATE a new GaugeMonitor MBean");
+            ObjectName gaugeMonitorName = new ObjectName(
+                            domain + ":type=" + GaugeMonitor.class.getName());
+            gaugeMonitor = new GaugeMonitor();
+            server.registerMBean(gaugeMonitor, gaugeMonitorName);
+
+            echo(">>> ADD a listener to the GaugeMonitor");
+            gaugeMonitor.addNotificationListener(this, null, null);
+
+            //
+            // MANAGEMENT OF A STANDARD MBEAN
+            //
+
+            echo(">>> CREATE a new ObservedObject MBean");
+
+            ObjectName obsObjName =
+                ObjectName.getInstance(domain + ":type=ObservedObject");
+            ObservedObject obsObj 
