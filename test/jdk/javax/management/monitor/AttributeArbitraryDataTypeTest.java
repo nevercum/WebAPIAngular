@@ -634,4 +634,199 @@ public class AttributeArbitraryDataTypeTest implements NotificationListener {
                     stringMonitor.setObservedAttribute(
                          "CompositeDataAttribute.StringAttribute");
                     echo("\tATTRIBUTE \"ObservedAttribute\" = " +
-                         "CompositeDataAttribute.StringAttribut
+                         "CompositeDataAttribute.StringAttribute");
+                    break;
+                case 2:
+                    stringMonitor.setObservedAttribute(
+                         "ComplexAttribute.stringAttribute");
+                    echo("\tATTRIBUTE \"ObservedAttribute\" = " +
+                         "ComplexAttribute.stringAttribute");
+                    break;
+                case 3:
+                    stringMonitor.setObservedAttribute(
+                         "ComplexAttribute.enumAttribute.name");
+                    echo("\tATTRIBUTE \"ObservedAttribute\" = " +
+                         "ComplexAttribute.enumAttribute.name");
+                    break;
+            }
+
+            stringMonitor.setNotifyMatch(true);
+            echo("\tATTRIBUTE \"NotifyMatch\"       = true");
+
+            stringMonitor.setNotifyDiffer(false);
+            echo("\tATTRIBUTE \"NotifyDiffer\"      = false");
+
+            stringMonitor.setStringToCompare("do_match_now");
+            echo("\tATTRIBUTE \"StringToCompare\"   = \"do_match_now\"");
+
+            int granularityperiod = 500;
+            stringMonitor.setGranularityPeriod(granularityperiod);
+            echo("\tATTRIBUTE \"GranularityPeriod\" = " + granularityperiod);
+
+            echo(">>> START the StringMonitor");
+            stringMonitor.start();
+
+            // Wait for granularity period (multiplied by 2 for sure)
+            //
+            Thread.sleep(granularityperiod * 2);
+
+            switch (testCase) {
+                case 1:
+                    obsObj.sa = "do_not_match_1";
+                    break;
+                case 2:
+                    ca.setStringAttribute("do_not_match_1");
+                    break;
+                case 3:
+                    ca.setEnumAttribute(Match.do_not_match_1);
+                    break;
+            }
+
+            // Wait for granularity period (multiplied by 2 for sure)
+            //
+            Thread.sleep(granularityperiod * 2);
+
+            switch (testCase) {
+                case 1:
+                    obsObj.sa = "do_match_now";
+                    break;
+                case 2:
+                    ca.setStringAttribute("do_match_now");
+                    break;
+                case 3:
+                    ca.setEnumAttribute(Match.do_match_now);
+                    break;
+            }
+
+            // Wait for granularity period (multiplied by 2 for sure)
+            //
+            Thread.sleep(granularityperiod * 2);
+
+            switch (testCase) {
+                case 1:
+                    obsObj.sa = "do_not_match_2";
+                    break;
+                case 2:
+                    ca.setStringAttribute("do_not_match_2");
+                    break;
+                case 3:
+                    ca.setEnumAttribute(Match.do_not_match_2);
+                    break;
+            }
+
+            // Check if notification was received
+            //
+            synchronized (this) {
+                while (!stringMessageReceived) {
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        System.err.println("Got unexpected exception: " + e);
+                        e.printStackTrace();
+                        break;
+                    }
+                }
+            }
+            if (stringMessageReceived) {
+                echo("\tOK: StringMonitor notification received");
+            } else {
+                echo("\tKO: StringMonitor notification missed or not emitted");
+                return 1;
+            }
+        } finally {
+            if (stringMonitor != null)
+                stringMonitor.stop();
+        }
+
+        return 0;
+    }
+
+    /**
+     * Test the monitor notifications.
+     */
+    public int monitorNotifications() throws Exception {
+        echo(">>> ----------------------------------------");
+        int error = counterMonitorNotification(1);
+        echo(">>> ----------------------------------------");
+        error += counterMonitorNotification(2);
+        echo(">>> ----------------------------------------");
+        error += counterMonitorNotification(3);
+        echo(">>> ----------------------------------------");
+        error += gaugeMonitorNotification(1);
+        echo(">>> ----------------------------------------");
+        error += gaugeMonitorNotification(2);
+        echo(">>> ----------------------------------------");
+        error += gaugeMonitorNotification(3);
+        echo(">>> ----------------------------------------");
+        error += stringMonitorNotification(1);
+        echo(">>> ----------------------------------------");
+        error += stringMonitorNotification(2);
+        echo(">>> ----------------------------------------");
+        error += stringMonitorNotification(3);
+        echo(">>> ----------------------------------------");
+        return error;
+    }
+
+    /*
+     * Print message
+     */
+    private static void echo(String message) {
+        System.out.println(message);
+    }
+
+    public static Object elementFromComplex(Object complex, String element)
+    throws AttributeNotFoundException {
+        try {
+            if (complex.getClass().isArray() && element.equals("length")) {
+                return Array.getLength(complex);
+            } else if (complex instanceof CompositeData) {
+                return ((CompositeData) complex).get(element);
+            } else {
+                // Java Beans introspection
+                //
+                BeanInfo bi = java.beans.Introspector.getBeanInfo(complex.getClass());
+                PropertyDescriptor[] pds = bi.getPropertyDescriptors();
+                System.out.println("PDs: " + pds.length);
+                for (PropertyDescriptor pd : pds) {
+                    System.out.println("Property: " + pd.getName());
+                    if (pd.getName().equals(element))
+                        return pd.getReadMethod().invoke(complex);
+                }
+                throw new AttributeNotFoundException(
+                    "Could not find the getter method for the property " +
+                    element + " using the Java Beans introspector");
+            }
+        } catch (InvocationTargetException e) {
+            throw new IllegalArgumentException(e);
+        } catch (AttributeNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            AttributeNotFoundException anfe =
+                new AttributeNotFoundException(e.getMessage());
+            anfe.initCause(e);
+            throw anfe;
+        }
+    }
+
+    /*
+     * Standalone entry point.
+     *
+     * Run the test and report to stdout.
+     */
+    public static void main (String args[]) throws Exception {
+        Match match = Match.do_match_now;
+        String name = (String) elementFromComplex(match, "name");
+        System.out.println("name: " + name);
+        AttributeArbitraryDataTypeTest test =
+            new AttributeArbitraryDataTypeTest();
+        int error = test.monitorNotifications();
+        if (error > 0) {
+            echo(">>> Unhappy Bye, Bye!");
+            throw new IllegalStateException("Test FAILED: Didn't get all " +
+                                            "the notifications that were " +
+                                            "expected by the test!");
+        } else {
+            echo(">>> Happy Bye, Bye!");
+        }
+    }
+}
