@@ -429,4 +429,209 @@ public class AttributeArbitraryDataTypeTest implements NotificationListener {
 
             ObjectName obsObjName =
                 ObjectName.getInstance(domain + ":type=ObservedObject");
-            ObservedObject obsObj 
+            ObservedObject obsObj = new ObservedObject();
+            ComplexAttribute ca = new ComplexAttribute();
+            switch (testCase) {
+                case 1:
+                    obsObj.da = 0.0;
+                    break;
+                case 2:
+                    ca.setDoubleAttribute(0.0);
+                    obsObj.setComplexAttribute(ca);
+                    break;
+                case 3:
+                    ca.setArrayAttribute(new Integer[0]);
+                    obsObj.setComplexAttribute(ca);
+                    break;
+            }
+            server.registerMBean(obsObj, obsObjName);
+
+            echo(">>> SET the attributes of the GaugeMonitor:");
+
+            gaugeMonitor.addObservedObject(obsObjName);
+            echo("\tATTRIBUTE \"ObservedObject\"    = " + obsObjName);
+
+            switch (testCase) {
+                case 1:
+                    gaugeMonitor.setObservedAttribute(
+                         "CompositeDataAttribute.DoubleAttribute");
+                    echo("\tATTRIBUTE \"ObservedAttribute\" = " +
+                         "CompositeDataAttribute.DoubleAttribute");
+                    break;
+                case 2:
+                    gaugeMonitor.setObservedAttribute(
+                         "ComplexAttribute.doubleAttribute");
+                    echo("\tATTRIBUTE \"ObservedAttribute\" = " +
+                         "ComplexAttribute.doubleAttribute");
+                    break;
+                case 3:
+                    gaugeMonitor.setObservedAttribute(
+                         "ComplexAttribute.arrayAttribute.length");
+                    echo("\tATTRIBUTE \"ObservedAttribute\" = " +
+                         "ComplexAttribute.arrayAttribute.length");
+                    break;
+            }
+
+            gaugeMonitor.setNotifyLow(false);
+            gaugeMonitor.setNotifyHigh(true);
+            echo("\tATTRIBUTE \"Notify Low  Flag\"  = false");
+            echo("\tATTRIBUTE \"Notify High Flag\"  = true");
+
+            switch (testCase) {
+                case 1:
+                case 2:
+                    Double highThresholdD = 3.0, lowThresholdD = 2.5;
+                    gaugeMonitor.setThresholds(highThresholdD, lowThresholdD);
+                    echo("\tATTRIBUTE \"Low  Threshold\"    = " + lowThresholdD);
+                    echo("\tATTRIBUTE \"High Threshold\"    = " + highThresholdD);
+                    break;
+                case 3:
+                    Integer highThreshold = 2, lowThreshold = 1;
+                    gaugeMonitor.setThresholds(highThreshold, lowThreshold);
+                    echo("\tATTRIBUTE \"Low  Threshold\"    = " + lowThreshold);
+                    echo("\tATTRIBUTE \"High Threshold\"    = " + highThreshold);
+                    break;
+            }
+
+            int granularityperiod = 500;
+            gaugeMonitor.setGranularityPeriod(granularityperiod);
+            echo("\tATTRIBUTE \"GranularityPeriod\" = " + granularityperiod);
+
+            echo(">>> START the GaugeMonitor");
+            gaugeMonitor.start();
+
+            // Wait for granularity period (multiplied by 2 for sure)
+            //
+            Thread.sleep(granularityperiod * 2);
+
+            switch (testCase) {
+                case 1:
+                    obsObj.da = 2.0;
+                    break;
+                case 2:
+                    ca.setDoubleAttribute(2.0);
+                    break;
+                case 3:
+                    ca.setArrayAttribute(new Integer[2]);
+                    break;
+            }
+
+            // Wait for granularity period (multiplied by 2 for sure)
+            //
+            Thread.sleep(granularityperiod * 2);
+
+            switch (testCase) {
+                case 1:
+                    obsObj.da = 4.0;
+                    break;
+                case 2:
+                    ca.setDoubleAttribute(4.0);
+                    break;
+                case 3:
+                    ca.setArrayAttribute(new Integer[4]);
+                    break;
+            }
+
+            // Wait for granularity period (multiplied by 2 for sure)
+            //
+            Thread.sleep(granularityperiod * 2);
+
+            switch (testCase) {
+                case 1:
+                    obsObj.da = 6.0;
+                    break;
+                case 2:
+                    ca.setDoubleAttribute(6.0);
+                    break;
+                case 3:
+                    ca.setArrayAttribute(new Integer[6]);
+                    break;
+            }
+
+            // Check if notification was received
+            //
+            synchronized (this) {
+                while (!gaugeMessageReceived) {
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        System.err.println("Got unexpected exception: " + e);
+                        e.printStackTrace();
+                        break;
+                    }
+                }
+            }
+            if (gaugeMessageReceived) {
+                echo("\tOK: GaugeMonitor notification received");
+            } else {
+                echo("\tKO: GaugeMonitor notification missed or not emitted");
+                return 1;
+            }
+        } finally {
+            if (gaugeMonitor != null)
+                gaugeMonitor.stop();
+        }
+
+        return 0;
+    }
+
+    /**
+     * Update the string and check for notifications
+     */
+    public int stringMonitorNotification(int testCase)
+        throws Exception {
+
+        stringMessageReceived = false;
+        StringMonitor stringMonitor = null;
+        try {
+            MBeanServer server = MBeanServerFactory.newMBeanServer();
+
+            String domain = server.getDefaultDomain();
+
+            // Create a new StringMonitor MBean and add it to the MBeanServer.
+            //
+            echo(">>> CREATE a new StringMonitor MBean");
+            ObjectName stringMonitorName = new ObjectName(
+                            domain + ":type=" + StringMonitor.class.getName());
+            stringMonitor = new StringMonitor();
+            server.registerMBean(stringMonitor, stringMonitorName);
+
+            echo(">>> ADD a listener to the StringMonitor");
+            stringMonitor.addNotificationListener(this, null, null);
+
+            //
+            // MANAGEMENT OF A STANDARD MBEAN
+            //
+
+            echo(">>> CREATE a new ObservedObject MBean");
+
+            ObjectName obsObjName =
+                ObjectName.getInstance(domain + ":type=ObservedObject");
+            ObservedObject obsObj = new ObservedObject();
+            ComplexAttribute ca = new ComplexAttribute();
+            switch (testCase) {
+                case 1:
+                    obsObj.sa = "do_not_match_0";
+                    break;
+                case 2:
+                    ca.setStringAttribute("do_not_match_0");
+                    obsObj.setComplexAttribute(ca);
+                    break;
+                case 3:
+                    ca.setEnumAttribute(Match.do_not_match_0);
+                    obsObj.setComplexAttribute(ca);
+                    break;
+            }
+            server.registerMBean(obsObj, obsObjName);
+
+            echo(">>> SET the attributes of the StringMonitor:");
+
+            stringMonitor.addObservedObject(obsObjName);
+            echo("\tATTRIBUTE \"ObservedObject\"    = " + obsObjName);
+
+            switch (testCase) {
+                case 1:
+                    stringMonitor.setObservedAttribute(
+                         "CompositeDataAttribute.StringAttribute");
+                    echo("\tATTRIBUTE \"ObservedAttribute\" = " +
+                         "CompositeDataAttribute.StringAttribut
