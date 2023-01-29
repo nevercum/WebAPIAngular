@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,20 +21,26 @@
  * questions.
  */
 
-package jdk.test.lib.jittester.loops;
+/**
+ * @test
+ * @bug 6270015
+ * @summary  Light weight HTTP server
+ * @library /test/lib
+ * @run main Test11
+ * @run main/othervm -Djava.net.preferIPv6Addresses=true Test11
+ */
 
-import jdk.test.lib.jittester.IRNode;
-import jdk.test.lib.jittester.Initialization;
-import jdk.test.lib.jittester.VariableInfo;
-import jdk.test.lib.jittester.visitors.Visitor;
+import java.net.*;
+import java.util.concurrent.*;
+import java.io.*;
+import com.sun.net.httpserver.*;
+import jdk.test.lib.net.URIBuilder;
 
-public class CounterInitializer extends Initialization {
-    public CounterInitializer(VariableInfo varInfo, IRNode expression) {
-        super(varInfo, expression);
-    }
-
-    @Override
-    public<T> T accept(Visitor<T> v) {
-        return v.visit(this);
-    }
-}
+public class Test11 {
+    static class Handler implements HttpHandler {
+        public void handle(HttpExchange t) throws IOException {
+            read (t.getRequestBody());
+            String response = "response";
+            t.sendResponseHeaders (200, response.length());
+            OutputStream os = t.getResponseBody();
+           
