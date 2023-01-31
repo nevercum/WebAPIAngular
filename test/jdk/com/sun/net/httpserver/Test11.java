@@ -43,4 +43,42 @@ public class Test11 {
             String response = "response";
             t.sendResponseHeaders (200, response.length());
             OutputStream os = t.getResponseBody();
-           
+            os.write (response.getBytes ("ISO8859_1"));
+            t.close();
+        }
+
+        void read (InputStream is ) throws IOException {
+            byte[] b = new byte [8096];
+            while (is.read (b) != -1) {}
+        }
+    }
+
+    public static void main (String[] args) throws Exception {
+        System.out.print ("Test 11: ");
+        InetAddress loopback = InetAddress.getLoopbackAddress();
+        HttpServer server = HttpServer.create(new InetSocketAddress(loopback, 0), 0);
+        ExecutorService s = Executors.newCachedThreadPool();
+        try {
+            HttpContext ctx = server.createContext (
+                "/foo/bar/", new Handler ()
+            );
+            s =  Executors.newCachedThreadPool();
+            server.start ();
+            URL url = URIBuilder.newBuilder()
+                      .scheme("http")
+                      .loopback()
+                      .port(server.getAddress().getPort())
+                      .path("/Foo/bar/test.html")
+                      .toURL();
+            HttpURLConnection urlc = (HttpURLConnection)url.openConnection(Proxy.NO_PROXY);
+            int r = urlc.getResponseCode();
+            if (r == 200) {
+                throw new RuntimeException ("wrong response received");
+            }
+            System.out.println ("OK");
+        } finally {
+            s.shutdown();
+            server.stop(2);
+        }
+    }
+}
