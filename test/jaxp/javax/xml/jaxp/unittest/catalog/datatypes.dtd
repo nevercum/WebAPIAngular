@@ -114,3 +114,91 @@
 
         restriction is shared between simpleType and
         simpleContent and complexContent (in XMLSchema.xsd).
+        restriction1 is for the latter cases, when this
+        is restricting a complex type, as is attrDecls.
+  -->
+<!ELEMENT %list; ((%annotation;)?,(%simpleType;)?)>
+<!ATTLIST %list;
+    itemType      %QName;             #IMPLIED
+    id        ID       #IMPLIED
+    %listAttrs;>
+<!--
+        itemType and simpleType child are mutually exclusive,
+        one is required
+  -->
+<!ELEMENT %union; ((%annotation;)?,(%simpleType;)*)>
+<!ATTLIST %union;
+    id            ID       #IMPLIED
+    memberTypes   %QNames;            #IMPLIED
+    %unionAttrs;>
+<!--
+        At least one item in memberTypes or one simpleType
+        child is required
+  -->
+
+<!ELEMENT %maxExclusive; %facetModel;>
+<!ATTLIST %maxExclusive;
+        %facetAttr;
+        %fixedAttr;
+        %maxExclusiveAttrs;>
+<!ELEMENT %minExclusive; %facetModel;>
+<!ATTLIST %minExclusive;
+        %facetAttr;
+        %fixedAttr;
+        %minExclusiveAttrs;>
+
+<!ELEMENT %maxInclusive; %facetModel;>
+<!ATTLIST %maxInclusive;
+        %facetAttr;
+        %fixedAttr;
+        %maxInclusiveAttrs;>
+<!ELEMENT %minInclusive; %facetModel;>
+<!ATTLIST %minInclusive;
+        %facetAttr;
+        %fixedAttr;
+        %minInclusiveAttrs;>
+
+<!ELEMENT %totalDigits; %facetModel;>
+<!ATTLIST %totalDigits;
+        %facetAttr;
+        %fixedAttr;
+        %totalDigitsAttrs;>
+<!ELEMENT %fractionDigits; %facetModel;>
+<!ATTLIST %fractionDigits;
+        %facetAttr;
+        %fixedAttr;
+        %fractionDigitsAttrs;>
+
+<!ELEMENT %length; %facetModel;>
+<!ATTLIST %length;
+        %facetAttr;
+        %fixedAttr;
+        %lengthAttrs;>
+<!ELEMENT %minLength; %facetModel;>
+<!ATTLIST %minLength;
+        %facetAttr;
+        %fixedAttr;
+        %minLengthAttrs;>
+<!ELEMENT %maxLength; %facetModel;>
+<!ATTLIST %maxLength;
+        %facetAttr;
+        %fixedAttr;
+        %maxLengthAttrs;>
+
+<!-- This one can be repeated -->
+<!ELEMENT %enumeration; %facetModel;>
+<!ATTLIST %enumeration;
+        %facetAttr;
+        %enumerationAttrs;>
+
+<!ELEMENT %whiteSpace; %facetModel;>
+<!ATTLIST %whiteSpace;
+        %facetAttr;
+        %fixedAttr;
+        %whiteSpaceAttrs;>
+
+<!-- This one can be repeated -->
+<!ELEMENT %pattern; %facetModel;>
+<!ATTLIST %pattern;
+        %facetAttr;
+        %patternAttrs;>
