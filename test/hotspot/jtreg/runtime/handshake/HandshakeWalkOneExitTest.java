@@ -57,4 +57,21 @@ public class HandshakeWalkOneExitTest  implements Runnable {
                     for (int i = 0; i<t.length ; i++) {
                         wb.handshakeWalkStack(t[i], false);
                     }
-        
+                }
+            }
+        };
+        Thread hst = new Thread(hser);
+        for (int k = 0; k<testRuns ; k++) {
+            threads = new Thread[testThreads];
+            for (int i = 0; i<threads.length ; i++) {
+                threads[i] = new Thread(test);
+                threads[i].start();
+            }
+            if (k == 0) {
+                hst.start();
+            }
+        }
+        exit_now = true;
+        hst.join();
+    }
+}
