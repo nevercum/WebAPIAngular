@@ -47,4 +47,183 @@ public class TestZoneInfo310 {
 
         String TESTDIR = System.getProperty("test.dir", ".");
         Path tzdir = Paths.get(System.getProperty("test.root"),
-      
+            "../../src/java.base/share/data/tzdata");
+        String tzfiles = "africa antarctica asia australasia europe northamerica southamerica backward etcetera gmt";
+        Path jdk_tzdir = Paths.get(System.getProperty("test.src"), "tzdata_jdk");
+        String jdk_tzfiles = "jdk11_backward";
+        String zidir = TESTDIR + File.separator + "zi";
+        File fZidir = new File(zidir);
+        if (!fZidir.exists()) {
+            fZidir.mkdirs();
+        }
+        Matcher m = Pattern.compile("tzdata(?<ver>[0-9]{4}[A-z])")
+                           .matcher(new String(Files.readAllBytes(tzdir.resolve("VERSION")), "ascii"));
+        String ver = m.find() ? m.group("ver") : "NULL";
+
+        ArrayList<String> alist = new ArrayList<>();
+        alist.add("-V");
+        alist.add(ver);
+        alist.add("-d");
+        alist.add(zidir);
+        for (String f : tzfiles.split(" ")) {
+            alist.add(tzdir.resolve(f).toString());
+        }
+        for (String f : jdk_tzfiles.split(" ")) {
+            alist.add(jdk_tzdir.resolve(f).toString());
+        }
+        System.out.println("Compiling tz files!");
+        Main.main(alist.toArray(new String[alist.size()]));
+
+        //////////////////////////////////
+        System.out.println("testing!");
+        ZoneInfoFile.ziDir = zidir;
+        long t0, t1;
+
+        t0 = System.nanoTime();
+        ZoneInfoOld.getTimeZone("America/Los_Angeles");
+        t1 = System.nanoTime();
+        System.out.printf("OLD.getZoneInfoOld()[1]=%d%n", (t1 - t0) / 1000);
+
+        t0 = System.nanoTime();
+        ZoneInfoOld.getTimeZone("America/New_York");
+        t1 = System.nanoTime();
+        System.out.printf("OLD.getZoneInfoOld()[2]=%d%n", (t1 - t0) / 1000);
+
+        t0 = System.nanoTime();
+        ZoneInfoOld.getTimeZone("America/Denver");
+        t1 = System.nanoTime();
+        System.out.printf("OLD.getZoneInfoOld()[3]=%d%n", (t1 - t0) / 1000);
+
+        t0 = System.nanoTime();
+        String[] zids_old = ZoneInfoOld.getAvailableIDs();
+        t1 = System.nanoTime();
+        System.out.printf("OLD.getAvailableIDs()=%d, total=%d%n",
+                          (t1 - t0) / 1000, zids_old.length);
+        Arrays.sort(zids_old);
+
+        t0 = System.nanoTime();
+        String[] alias_old = ZoneInfoOld.getAliasTable()
+                                 .keySet().toArray(new String[0]);
+        t1 = System.nanoTime();
+        System.out.printf("OLD.getAliasTable()=%d, total=%d%n",
+                          (t1 - t0) / 1000, alias_old.length);
+        Arrays.sort(alias_old);
+
+        t0 = System.currentTimeMillis();
+        for (String zid : zids_old) {
+            ZoneInfoOld.getTimeZone(zid);
+        }
+        t1 = System.currentTimeMillis();
+        System.out.printf("OLD.TotalTZ()=%d (ms)%n", t1 - t0);
+
+/*
+        t0 = System.nanoTime();
+        ZoneId.of("America/Los_Angeles").getRules();
+        t1 = System.nanoTime();
+        System.out.printf("NEW.ZoneId.of()[1]=%d%n", (t1 - t0) / 1000);
+*/
+        t0 = System.nanoTime();
+        TimeZone tz = TimeZone.getTimeZone("America/Los_Angeles");
+        t1 = System.nanoTime();
+        System.out.printf("NEW.getTimeZone()[1]=%d%n", (t1 - t0) / 1000);
+
+        t0 = System.nanoTime();
+        tz = TimeZone.getTimeZone("America/New_York");
+        t1 = System.nanoTime();
+        System.out.printf("NEW.getTimeZone()[2]=%d%n", (t1 - t0) / 1000);
+
+        t0 = System.nanoTime();
+        tz = TimeZone.getTimeZone("America/Denver");
+        t1 = System.nanoTime();
+        System.out.printf("NEW.getTimeZone()[3]=%d%n", (t1 - t0) / 1000);
+
+        t0 = System.nanoTime();
+        String[] zids_new = TimeZone.getAvailableIDs();
+        t1 = System.nanoTime();
+        System.out.printf("NEW.getAvailableIDs()=%d, total=%d%n",
+                          (t1 - t0) / 1000, zids_new.length);
+        Arrays.sort(zids_new);
+
+        t0 = System.nanoTime();
+        String[] alias_new = sun.util.calendar.ZoneInfo.getAliasTable()
+                                 .keySet().toArray(new String[0]);
+        t1 = System.nanoTime();
+        System.out.printf("NEW.getAliasTable()=%d, total=%d%n",
+                          (t1 - t0) / 1000, alias_new.length);
+        Arrays.sort(alias_new);
+
+        t0 = System.currentTimeMillis();
+        for (String zid : zids_new) {
+            TimeZone.getTimeZone(zid);
+        }
+        t1 = System.currentTimeMillis();
+        System.out.printf("NEW.TotalTZ()=%d (ms)%n", t1 - t0);
+
+        if (!Arrays.equals(zids_old, zids_new)) {
+            throw new RuntimeException("  FAILED:  availableIds don't match");
+        }
+
+        if (!Arrays.equals(alias_old, alias_new)) {
+            throw new RuntimeException("  FAILED:  aliases don't match");
+        }
+
+        for (String zid : zids_new) {
+            ZoneInfoOld zi = toZoneInfoOld(TimeZone.getTimeZone(zid));
+            ZoneInfoOld ziOLD = (ZoneInfoOld)ZoneInfoOld.getTimeZone(zid);
+            /*
+             * Temporary ignoring the failing TimeZones which are having zone
+             * rules defined till year 2037 and/or above and have negative DST
+             * save time in IANA tzdata. This bug is tracked via JDK-8223388.
+             *
+             * These are the zones/rules that employ negative DST in vanguard
+             * format (as of 2019a), Palestine added in 2022d:
+             *
+             *  - Rule "Eire"
+             *  - Rule "Morocco"
+             *  - Rule "Namibia"
+             *  - Rule "Palestine"
+             *  - Zone "Europe/Prague"
+             *
+             * Tehran/Iran rule has rules beyond 2037, in which javazic assumes
+             * to be the last year. Thus javazic's rule is based on year 2037
+             * (Mar 20th/Sep 20th are the cutover dates), while the real rule
+             * has year 2087 where Mar 21st/Sep 21st are the cutover dates.
+             */
+            if (zid.equals("Africa/Casablanca") || // uses "Morocco" rule
+                zid.equals("Africa/El_Aaiun") || // uses "Morocco" rule
+                zid.equals("Africa/Windhoek") || // uses "Namibia" rule
+                zid.equals("Eire") ||
+                zid.equals("Europe/Bratislava") || // link to "Europe/Prague"
+                zid.equals("Europe/Dublin") || // uses "Eire" rule
+                zid.equals("Europe/Prague") ||
+                zid.equals("Asia/Tehran") || // last rule mismatch
+                zid.equals("Asia/Gaza") || // uses "Palestine" rule
+                zid.equals("Asia/Hebron") || // uses "Palestine" rule
+                zid.equals("Iran")) { // last rule mismatch
+                    continue;
+            }
+            if (! zi.equalsTo(ziOLD)) {
+                System.out.println(zi.diffsTo(ziOLD));
+                throw new RuntimeException("  FAILED:  " + zid);
+            }
+        }
+        delete(fZidir);
+
+        // test tzdb version
+        if (!ver.equals(sun.util.calendar.ZoneInfoFile.getVersion())) {
+            System.out.printf("  FAILED:  ver=%s, expected=%s%n",
+                              sun.util.calendar.ZoneInfoFile.getVersion(), ver);
+            throw new RuntimeException("Version test failed");
+        }
+
+        // test getAvailableIDs(raw);
+        zids_new = TimeZone.getAvailableIDs(-8 * 60 * 60 * 1000);
+        Arrays.sort(zids_new);
+        zids_old = ZoneInfoOld.getAvailableIDs(-8 * 60 * 60 * 1000);
+        Arrays.sort(zids_old);
+        if (!Arrays.equals(zids_new, zids_old)) {
+            System.out.println("------------------------");
+            System.out.println("NEW.getAvailableIDs(-8:00)");
+            for (String zid : zids_new) {
+                System.out.println(zid);
+     
