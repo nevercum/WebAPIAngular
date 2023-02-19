@@ -226,4 +226,66 @@ public class TestZoneInfo310 {
             System.out.println("NEW.getAvailableIDs(-8:00)");
             for (String zid : zids_new) {
                 System.out.println(zid);
-     
+            }
+            System.out.println("------------------------");
+            System.out.println("OLD.getAvailableIDs(-8:00)");
+            for (String zid : zids_old) {
+                System.out.println(zid);
+            }
+            throw new RuntimeException("  FAILED:  availableIds(offset) don't match");
+        }
+    }
+
+    private static void delete(File f) {
+        if (f.isDirectory()) {
+            for (File f0 : f.listFiles()) {
+               delete(f0);
+            }
+        }
+        f.delete();
+     }
+
+    // to access sun.util.calendar.ZoneInfo's private fields
+    static Class<?> ziClz;
+    static Field rawOffset;
+    static Field checksum;
+    static Field dstSavings;
+    static Field transitions;
+    static Field offsets;
+    static Field simpleTimeZoneParams;
+    static Field willGMTOffsetChange;
+    static {
+        try {
+            ziClz = Class.forName("sun.util.calendar.ZoneInfo");
+            rawOffset = ziClz.getDeclaredField("rawOffset");
+            checksum = ziClz.getDeclaredField("checksum");
+            dstSavings = ziClz.getDeclaredField("dstSavings");
+            transitions = ziClz.getDeclaredField("transitions");
+            offsets = ziClz.getDeclaredField("offsets");
+            simpleTimeZoneParams = ziClz.getDeclaredField("simpleTimeZoneParams");
+            willGMTOffsetChange = ziClz.getDeclaredField("willGMTOffsetChange");
+            rawOffset.setAccessible(true);
+            checksum.setAccessible(true);
+            dstSavings.setAccessible(true);
+            transitions.setAccessible(true);
+            offsets.setAccessible(true);
+            simpleTimeZoneParams.setAccessible(true);
+            willGMTOffsetChange.setAccessible(true);
+        } catch (Exception x) {
+            throw new RuntimeException(x);
+        }
+    }
+
+    private static ZoneInfoOld toZoneInfoOld(TimeZone tz) throws Exception {
+        return new ZoneInfoOld(tz.getID(),
+                               rawOffset.getInt(tz),
+                               dstSavings.getInt(tz),
+                               checksum.getInt(tz),
+                               (long[])transitions.get(tz),
+                               (int[])offsets.get(tz),
+                               (int[])simpleTimeZoneParams.get(tz),
+                               willGMTOffsetChange.getBoolean(tz));
+    }
+
+
+}
